@@ -46,3 +46,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# added by Vercel CLI; keep the example template tracked
+.env*
+!.env.example
