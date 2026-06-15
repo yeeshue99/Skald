@@ -62,7 +62,7 @@ export function Composer({
       setImageUrl("");
       setScheduleOpen(false);
       setLocalWhen("");
-      window.dispatchEvent(new Event("twttr:posted"));
+      window.dispatchEvent(new Event("skald:posted"));
     }
   }, [state]);
 

@@ -8,7 +8,7 @@ import { PostCard } from "./PostCard";
 import { Button } from "./ui";
 
 const POLL_MS = 12_000;
-export const FEED_POSTED_EVENT = "twttr:posted";
+export const FEED_POSTED_EVENT = "skald:posted";
 
 export function FeedList({
   slug,

@@ -38,8 +38,8 @@ function build(): Db {
 }
 
 // Reuse one client across warm serverless invocations / HMR.
-const globalForDb = globalThis as unknown as { __twttrDb?: Db };
-export const db: Db = globalForDb.__twttrDb ?? build();
-globalForDb.__twttrDb = db;
+const globalForDb = globalThis as unknown as { __skaldDb?: Db };
+export const db: Db = globalForDb.__skaldDb ?? build();
+globalForDb.__skaldDb = db;
 
 export { schema };

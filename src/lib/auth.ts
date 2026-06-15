@@ -6,7 +6,7 @@ import { db } from "@/db";
 import { sessions, users } from "@/db/schema";
 import { generateSessionToken, hashToken } from "./ids";
 
-export const SESSION_COOKIE = "twttr_session";
+export const SESSION_COOKIE = "skald_session";
 const SESSION_DAYS = 30;
 
 export type PublicUser = {
