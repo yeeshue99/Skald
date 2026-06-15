@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+/*
+  Map runtime CSS custom properties (set per-campaign via inline style) onto
+  Tailwind v4 design tokens. `inline` means the generated utilities reference
+  the raw var(), so swapping a campaign's theme re-skins everything live.
+  Utilities: bg-bg, bg-surface, text-text, text-muted, text-primary,
+  border-border, rounded-base, font-display, font-body, etc.
+*/
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-on-primary: var(--on-primary);
+  --color-accent: var(--accent);
+  --color-like: var(--like);
+  --color-repost: var(--repost);
+  --color-link: var(--link);
+
+  --radius-base: var(--app-radius);
+
+  --font-display: var(--app-font-display);
+  --font-body: var(--app-font-body);
+}
+
+/* Default theme (Skald) — used on signed-out pages and as the page backdrop. */
+:root {
+  --bg: #0b0e14;
+  --surface: #151a23;
+  --surface-hover: #1d2430;
+  --border: #232b38;
+  --text: #e7ecf3;
+  --muted: #93a1b5;
+  --primary: #2f6fed;
+  --primary-hover: #2560d8;
+  --on-primary: #ffffff;
+  --accent: #8b5cf6;
+  --like: #f4467f;
+  --repost: #22c55e;
+  --link: #5ea0f2;
+  --app-radius: 1rem;
+  --app-font-display: "Space Grotesk", system-ui, sans-serif;
+  --app-font-body: "Inter", system-ui, sans-serif;
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  font-family: var(--app-font-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--primary) 35%, transparent);
+}
+
+/* Themed, unobtrusive scrollbars. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
