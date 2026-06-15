@@ -19,7 +19,7 @@ export function PageHeader({
 }) {
   return (
     <header
-      className={`sticky top-0 z-10 items-center gap-3 border-b border-border bg-bg/80 px-4 py-2.5 backdrop-blur ${desktopOnly ? "hidden md:flex" : "flex"}`}
+      className={`chrome-bar sticky top-0 z-10 items-center gap-3 border-b border-border bg-bg/80 px-4 py-2.5 backdrop-blur ${desktopOnly ? "hidden md:flex" : "flex"}`}
     >
       {backHref ? (
         <Link

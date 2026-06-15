@@ -95,7 +95,8 @@ export function FeedList({
   function revealNew() {
     prepend(pendingNew);
     setPendingNew([]);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
   }
 
   function loadMore() {
@@ -110,13 +111,13 @@ export function FeedList({
   }
 
   return (
-    <div>
+    <div className="feed-list">
       {pendingNew.length > 0 ? (
         <div className="pointer-events-none fixed inset-x-0 top-16 z-30 flex justify-center px-4">
           <button
             type="button"
             onClick={revealNew}
-            className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-on-primary shadow-lg transition-transform hover:scale-[1.03]"
+            className="feed-pill pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-on-primary shadow-lg motion-safe:transition-transform motion-safe:hover:scale-[1.03]"
           >
             <ArrowUp className="size-4" />
             {pendingNew.length} new post{pendingNew.length === 1 ? "" : "s"}

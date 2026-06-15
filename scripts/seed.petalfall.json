@@ -1,0 +1,1829 @@
+{
+    "campaign": {
+        "name": "Petalfall",
+        "tagline": "Every voice in Elarosea, before it falls silent.",
+        "description": "A queendom in the 301st year of the Gilded Peace, kept stable by an immortal queen who hunts and eats the gods. Divine magic is fading, the gods are being erased from memory, and a beautiful world is quietly dying petal by petal.",
+        "presetId": "bloomr",
+        "themeRationale": "Botanical naming runs through everything (city-states, noble houses, the Thorns and Roots), and the central image is a world wilting flower by flower, which is exactly bloomr's pastoral-fae register turned mournful."
+    },
+    "worldBible": {
+        "setting": "Elarosea is a queendom of five plant-named city-states under the immortal Queen Acantha Rosaceae, who has held the Gilded Peace for 301 years by consuming gods and scrubbing them from history. Divine magic is failing everywhere: oaths unravel, enchanted steel rots, children dream less. The feed is centred on Blackthorn, the military city, where a murdered officer's last letters keep surfacing in rust on the walls, and where the Crown is about to roll a tactical machine onto the Blood-Sand to replace the city's dying war-god.",
+        "factions": [
+            {
+                "name": "The Crown",
+                "summary": "Queen Acantha's regime, voiced publicly by the Crown Herald and the doctrine of the Gilded Peace.",
+                "goal": "Maintain enforced stability and finish consuming the realm's remaining gods without the public noticing the cost."
+            },
+            {
+                "name": "The Thorns",
+                "summary": "The Crown's military enforcers and god-hunters. 'By Her Will, We Pierce.'",
+                "goal": "Capture the fugitive party and run the city operations, starting with Operation Ghost in the Machine in Blackthorn."
+            },
+            {
+                "name": "The Roots",
+                "summary": "The Crown's intelligence and conversion arm. Spies, soul-sniffers, and handlers. 'The Soil Knows.'",
+                "goal": "Turn assets and remove threats quietly; in Blackthorn, steer Cassimir into severing the war-god from the honoured dead."
+            },
+            {
+                "name": "The Golden Bough",
+                "summary": "Crown-backed merchant conglomerate strangling free trade in Medlar.",
+                "goal": "Make the harbour-god Aeolus look unreliable so the Crown can legally 'repossess' him, while distracting from a deeper crisis."
+            },
+            {
+                "name": "The Murmuration",
+                "summary": "An ancient underground network run by the broker called the Jackdaw, speaking in coded bird-calls.",
+                "goal": "Collect divine artifacts and pull fugitives out of the Crown's reach, in service of one private, hidden purpose."
+            },
+            {
+                "name": "Faithful of the Weeping Star",
+                "summary": "Hunted heretics who name the consumed gods aloud and wait for a fallen star.",
+                "goal": "Keep the dead gods remembered and prepare for the 'bloom' they believe is coming."
+            }
+        ],
+        "timeline": [
+            "Loquat is placed under full Thorn lockdown after the Grand Archive is breached and seven 'Benz terrorists' slip out of the city.",
+            "Levy conscription columns sweep the Blackthorn road, emptying villages like Gallowfen of their young.",
+            "In Blackthorn, the Steel Recall worsens: enchanted weapons rot and 'leak' handwriting, and the wall-writing spreads street by street.",
+            "From Medlar, free traders report the Fairwind faltering and the Golden Bough buying the coastline one stranded family at a time.",
+            "Thorn-Captain Briar is reassigned to the Glimmerwood to net the party, while Thorn-Agent Nettle breaks protocol to hunt them personally.",
+            "The Crown announces a public demonstration of the Tactical Aether-Golem on Blackthorn's Blood-Sand, presided over by Lord Corvus Blackthorn.",
+            "A stranger calling herself Maret Voss begins reaching out to Cassimir about his dead brother's letters, days before the demonstration."
+        ],
+        "hooks": [
+            "The writing on Blackthorn's walls is a murdered officer's two undelivered letters, leaking through the war-god Valerius; if the golem replaces the god, every fragment goes silent forever.",
+            "The Aether-Golem demonstration is two days out and the hunters expect the party to be in the crowd.",
+            "Val's father and sister were taken by the Levy while he was away; where the Levy sends people is unclear.",
+            "Maret Voss is a Thorn handler steering Cassimir toward 'unmaking the wall to read it', which is exactly what the operation needs.",
+            "Medlar's oath-bound economy is quietly going soft, a symptom of a dying god of contracts no one is allowed to name.",
+            "Cleke can see that his own origin-thread does not lead into this world, and neither does one other person's on the feed."
+        ]
+    },
+    "personas": [
+        {
+            "ref": "npc_herald",
+            "kind": "npc",
+            "handle": "CrownHerald",
+            "displayName": "The Crown Herald 🌹",
+            "bio": "Official voice of the Crown and the Gilded Peace. Proclamations, decrees, and gentle reminders. By Her Will, the realm is kept safe. Rumour is a weed; pull it.",
+            "player": "",
+            "avatarHint": "a gilded rose sigil pressed into deep-crimson wax, embossed and official",
+            "voice": "Stately proclamation register, royal 'By Her Will', reframes every crisis as order being restored, never admits a crack, occasional rose emoji. (DM: pure Crown propaganda.)"
+        },
+        {
+            "ref": "npc_lord",
+            "kind": "npc",
+            "handle": "Lord_Blackthorn",
+            "displayName": "Lord Corvus Blackthorn",
+            "bio": "Lord of Blackthorn. I bury soldiers so their mothers don't have to. I do not post often. I have nothing to sell you.",
+            "player": "",
+            "avatarHint": "a grey-bearded military lord in black iron, tired eyes, a raven-crest pauldron",
+            "voice": "Terse, weary, soldierly, short blunt lines with grief just under them, rarely engages. (DM: does not know the golem will execute his city's god, nor that the wall-writing is his murdered elder son.)"
+        },
+        {
+            "ref": "npc_briar",
+            "kind": "npc",
+            "handle": "ThornCapt_Briar",
+            "displayName": "Thorn-Captain Briar",
+            "bio": "Thorn-Captain. I solve problems. The Glimmerwood is a problem. You may be one too. This is not a threat. It is arithmetic.",
+            "player": "",
+            "avatarHint": "a scarred woman in thorn-etched black armour, an old burn across the nose-bridge, eyes like a survey map",
+            "voice": "Cold, precise, speaks in probabilities and tactics, no emoji, signs off #arithmetic, never cruel, simply certain."
+        },
+        {
+            "ref": "npc_nettle",
+            "kind": "npc",
+            "handle": "Agent_Nettle",
+            "displayName": "Thorn-Agent Nettle",
+            "bio": "Of the Roots. I taste what others miss. Ozone and dried herbs. I am close to a promotion and closer to you than you think.",
+            "player": "",
+            "avatarHint": "a tall thin figure in a mask of petrified weeping willow, herb-stained gloves, a faint ozone shimmer",
+            "voice": "Sensory and obsessive, talks in smells and tastes, menacing intimacy, hungry for recognition. (DM: her willow mask is slowly petrifying her face; the cure is her leash.)"
+        },
+        {
+            "ref": "npc_jackdaw",
+            "kind": "npc",
+            "handle": "the_Jackdaw",
+            "displayName": "The Jackdaw",
+            "bio": "A little bird that has watched a long time. I trade in what the wind already knows. Every favour is a thread. Call the right flock and it answers.",
+            "player": "",
+            "avatarHint": "a hooded figure wreathed in a swirl of starlings, silver-grey eyes, a single jackdaw feather at the throat",
+            "voice": "Cryptic, antique, riddling, bird-and-garden metaphors, warm but never harmless, three centuries of secrets behind every line. (DM: Elara Vane, who loves the Queen she is trying to save.)"
+        },
+        {
+            "ref": "npc_rourke",
+            "kind": "npc",
+            "handle": "Capt_Rourke",
+            "displayName": "Capt. Rourke · Free Trader",
+            "bio": "Free trader out of Medlar. No Crown paper on my hull. The Fairwind kept this port two hundred years. I'll keep faith with Her a while yet. #Medlar",
+            "player": "",
+            "avatarHint": "a weather-beaten sea captain in an oilskin coat, brass spyglass, salt-crusted beard",
+            "voice": "Salt-and-vinegar tavern bluntness, rails at the Golden Bough and its weather-mages, fierce about the harbour, occasionally lands a hard truth by accident."
+        },
+        {
+            "ref": "npc_pell",
+            "kind": "npc",
+            "handle": "Pells_Skewers",
+            "displayName": "Pell's Skewers · Quinn Market",
+            "bio": "Skewers two for a copper at Quinn Market, char's good. Been feeding Blackthorn longer than you've been alive. The wall keeps writing on me stall. 🍢",
+            "player": "",
+            "avatarHint": "a burly apron-wearing food vendor at a smoky charcoal grill, soot on his forearms, an easy grin",
+            "voice": "Folksy Blackthorn vendor, comic relief that turns accidentally wise, lots of food talk, warm, skewer emoji."
+        },
+        {
+            "ref": "npc_wall",
+            "kind": "npc",
+            "handle": "the_wall_remembers",
+            "displayName": "the wall remembers",
+            "bio": "i am the words on the stone. i am trying to deliver a letter. please read slowly. please do not unmake me to read me.",
+            "player": "",
+            "avatarHint": "rust-coloured handwriting bleeding up through grey fortress stone, trailing off mid-word",
+            "voice": "Fragmented, lowercase, surfaces mid-word, addresses Father / Brother / Cassimir, pleading and archival and dying. (DM: Valerius the War-Mind leaking the murdered Theron the Elder's two undelivered letters.)"
+        },
+        {
+            "ref": "npc_cassimir",
+            "kind": "npc",
+            "handle": "Cassimir_Blackthorn",
+            "displayName": "Cassimir",
+            "bio": "Lord Blackthorn's other son. I keep count of things. I copy the writing off the training-ground walls by lantern light. Twelve years. I am still missing the Brother letter.",
+            "player": "",
+            "avatarHint": "a hollow-eyed young man in a worn officer's coat, a lantern in one hand, ink-stained fingers, a notebook of fragments",
+            "voice": "Earnest, sleepless, raw, counts everything, aches for his father and his dead twin, cautious hope. (DM: Theron the Younger, the unwitting instrument of Operation Ghost in the Machine.)"
+        },
+        {
+            "ref": "npc_maret",
+            "kind": "npc",
+            "handle": "Maret_Voss",
+            "displayName": "Maret Voss",
+            "bio": "Maret Voss. Served under Theron the Elder in his last campaign, discharged after. I've been collecting the writing too. Some of us still remember the man he was.",
+            "player": "",
+            "avatarHint": "a plain, kind-faced woman in a faded infantry coat, careful eyes, a folded and aged letter in hand",
+            "voice": "Warm, unhurried, specific, uses names, offers exactly what is longed for, never pushes, lets silence work. (DM: this is the Thorn handler Sable. The empathy is real; the care is not.)"
+        },
+        {
+            "ref": "npc_prophet",
+            "kind": "npc",
+            "handle": "PetalProphet",
+            "displayName": "Bro. Sorrel, Petal-Prophet",
+            "bio": "Last preacher of the Weeping Star. Lost causes, forgotten stories, beautiful failures, second chances. When the last petal falls, kneel in the dark. 🌑🌹",
+            "player": "",
+            "avatarHint": "a ragged wandering preacher crowned with wilting red petals, bare feet, eyes turned upward",
+            "voice": "Apocalyptic, liturgical, floral, names the consumed gods aloud (which is illegal), calls everyone friend or child, flower emoji."
+        },
+        {
+            "ref": "pc_dez",
+            "kind": "pc",
+            "handle": "Maro_Coppersmart",
+            "displayName": "Maro",
+            "bio": "Maro Coppersmart. Wagon guard, Loquat outer districts. No family worth mentioning. Don't like nobles, don't like questions, don't like you. (Probably.)",
+            "player": "Dez, the party's street-smart conscience with a chip on his shoulder",
+            "avatarHint": "a lean, guarded young man in a road-dust cloak, a dull crystal pendant hidden under his collar",
+            "voice": "Cynical, deadpan, mocks authority, secretly loyal, hates nobility on sight. (DM: Dez, dormant Forbidden-Love shard, Zendikar Lake-People heritage.)"
+        },
+        {
+            "ref": "pc_cleke",
+            "kind": "pc",
+            "handle": "Kael_Aloft",
+            "displayName": "Kael",
+            "bio": "Kael. Appori-trained courier, hired for the road. Blindfolded by observance. I don't talk much. I see more than I say.",
+            "player": "Cleke, the wind-touched pilot",
+            "avatarHint": "a slender aarakokra courier, grey feathers, a clean cloth blindfold, a travel satchel",
+            "voice": "Sparse and cryptic, one careful post at a time, signs '(Kael)'. (DM: Cleke, isekai'd, Displacement / True Sight; his awakening turns on accepting he belongs here.)"
+        },
+        {
+            "ref": "pc_layla",
+            "kind": "pc",
+            "handle": "Capt_Sera_Voss",
+            "displayName": "Capt. Sera Voss (ret.)",
+            "bio": "Retired guard captain, private security for a small Cinquefoil dealer. I make broken systems run. Lately I mostly notice how they're rigged to break.",
+            "player": "Layla, the corporate captain and party tactician",
+            "avatarHint": "a composed woman in a guard captain's half-armour, clipboard energy, a level unimpressed stare",
+            "voice": "Dry corporate-tactician wit, org-chart and audit metaphors, a hard moral spine, calls out fraud by name. (DM: Layla, isekai'd office worker in a SubCaptain's body, Order / Systems.)"
+        },
+        {
+            "ref": "pc_calanthe",
+            "kind": "pc",
+            "handle": "Maren_Thessaly",
+            "displayName": "Maren Thessaly",
+            "bio": "Art dealer's apprentice, Cinquefoil. On an artistic journey. Do NOT ask me to paint. I dance. There is a difference and it is everything.",
+            "player": "Calanthe Orchidaceae, the runaway heir and party socialite",
+            "avatarHint": "an expressive young noblewoman in travel-worn finery, paint on her sleeves she cannot actually use",
+            "voice": "Theatrical, vain, very funny, quietly growing, declares her 'periods' and 'installations', a bad artist and a good dancer. (DM: Calanthe, Potential / Becoming, hidden celestial ancestry.)"
+        },
+        {
+            "ref": "pc_kirill",
+            "kind": "pc",
+            "handle": "Ren_on_the_road",
+            "displayName": "Ren",
+            "bio": "Ren. Animal handler, on the road with my cow. The sky's been kind. Be gentle with the small things. The heron approves.",
+            "player": "Kirill Amaterasu, the sun soul monk",
+            "avatarHint": "a young monk in homespun robes leading a calf, a sunburst tattoo, an open friendly face",
+            "voice": "Earnest, sweet, guileless, talks to and about animals, quietly fierce about protecting the innocent. (DM: Kirill, Verdant Mendicant, Innocence / Cycles, secretly guarding a godling calf.)"
+        },
+        {
+            "ref": "pc_spadae",
+            "kind": "pc",
+            "handle": "Edric_Vance",
+            "displayName": "Edric Vance",
+            "bio": "Junior archivist, cataloguing textile patterns. I keep names. The Crown's favourite trick is making you forget them. I won't.",
+            "player": "Spadae Rosaceae-Vance, the grieving archivist",
+            "avatarHint": "a pale bookish young man, ink-stained cuffs, a sealed silver compass on a chain",
+            "voice": "Quiet, careful, mournful, keeper of names and the dead, signs '(Edric)', speaks the forgotten aloud. (DM: Spadae, Grief / Memory, the seventh Weeping Star fragment.)"
+        },
+        {
+            "ref": "pc_val",
+            "kind": "pc",
+            "handle": "Vlad_hiresword",
+            "displayName": "Vlad",
+            "bio": "Vlad. Hired sword, southern frontier, no surname. Big, quiet, bad at conversation. Family is everything. Touch mine and find out.",
+            "player": "Val, the banner knight",
+            "avatarHint": "a broad scarred swordsman in a banner-knight's worn tabard, jaw set, eyes that dare you",
+            "voice": "Blunt, plain, unsentimental except about family, a brutal consistent code (slavery earns death), protective to the bone. (DM: Val, born in Blackthorn's poor districts; his father and sister were just taken by the Levy.)"
+        },
+        {
+            "ref": "pc_vesperae",
+            "kind": "pc",
+            "handle": "Lienne_Ashford",
+            "displayName": "Lienne Ashford",
+            "bio": "Cinquefoil textile dealer, dyed cloth and commissioned portraits. See something, do something. Power is a debt, not a prize.",
+            "player": "Vesperae Locke, the archivist's daughter",
+            "avatarHint": "a poised young businesswoman in fine muted travel clothes, a ledger-satchel, a steady warm gaze",
+            "voice": "Composed, principled, reform-minded, an insider's manners turned against the system, signs '(Lienne)'. (DM: Vesperae Locke, daughter of Loquat's Grand Archivist, raised in the privilege she now works to dismantle.)"
+        }
+    ],
+    "posts": [
+        {
+            "ref": "p1",
+            "author": "npc_herald",
+            "type": "post",
+            "content": "By Her Will, the Gilded Peace holds for three hundred and one years. Loquat's Grand Archive suffered a regrettable disturbance; the city is secured while order is restored. Citizens are reminded that rumour is a weed. Report it. Pull it. #GildedPeace",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-13d2h",
+            "likedBy": [
+                "npc_lord",
+                "npc_briar",
+                "npc_nettle"
+            ]
+        },
+        {
+            "ref": "p2",
+            "author": "npc_jackdaw",
+            "type": "quote",
+            "content": "A cage rattles in Loquat and the Crown calls it 'a disturbance'. Funny word for a door left open. The starlings saw who walked out. They aren't saying. Yet.",
+            "replyTo": null,
+            "quoteOf": "p1",
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-12d20h",
+            "likedBy": [
+                "pc_dez",
+                "npc_rourke",
+                "npc_prophet",
+                "pc_vesperae"
+            ]
+        },
+        {
+            "ref": "p3",
+            "author": "npc_rourke",
+            "type": "post",
+            "content": "Third weather-mage 'courtesy contract' shoved under my nose this week. The Fairwind got this port through two centuries and now suddenly She's 'unreliable'? Pull the other one, it's got a bell on it. @CrownHerald 's friends at the Bough can keep their paper. #Medlar",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-12d14h",
+            "likedBy": [
+                "npc_jackdaw",
+                "pc_layla",
+                "pc_vesperae",
+                "npc_pell"
+            ]
+        },
+        {
+            "ref": "p4",
+            "author": "npc_prophet",
+            "type": "post",
+            "content": "They eat the gods and call the silence peace. But listen: when the last petal falls, the Weeping Star wakes, and every lost cause comes home. Forgotten stories. Beautiful failures. Second chances. Kneel in the dark, friends. The bloom is coming. 🌑🌹",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-12d6h",
+            "likedBy": [
+                "pc_spadae",
+                "pc_kirill",
+                "npc_jackdaw"
+            ]
+        },
+        {
+            "ref": "p5",
+            "author": "npc_pell",
+            "type": "post",
+            "content": "Scrubbed words off me stall wall again this morning. Third time this month. Comes back by noon every time. Cost me a whole bucket of lye. On the bright side: skewers two for a copper at Quinn Market, char on 'em like the Crucible itself. Come hungry. 🍢",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-12d3h",
+            "likedBy": [
+                "pc_kirill",
+                "pc_val",
+                "npc_cassimir"
+            ]
+        },
+        {
+            "ref": "p6",
+            "author": "npc_wall",
+            "type": "post",
+            "content": "—ather, if you are reading this, then they did not let me—",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "grey fortress stone, letters surfacing in rust-coloured corrosion, the sentence breaking off mid-word",
+            "postedAt": "-11d20h",
+            "likedBy": [
+                "npc_cassimir",
+                "pc_spadae"
+            ]
+        },
+        {
+            "ref": "p7",
+            "author": "npc_cassimir",
+            "type": "reply",
+            "content": "I know this hand. I have known it for twelve years. It comes up out of the stone like it's drowning and trying to say something before it goes back under. I copy every fragment. I have most of one letter. I am missing almost all of the other. @the_wall_remembers please. slower.",
+            "replyTo": "p6",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-11d16h",
+            "likedBy": [
+                "pc_val",
+                "pc_kirill",
+                "npc_prophet",
+                "pc_spadae"
+            ]
+        },
+        {
+            "ref": "p8",
+            "author": "pc_dez",
+            "type": "post",
+            "content": "Road work. Guard a wagon, glare at strangers, eat dust. 'Maro Coppersmart' they call me on the paper. Sure. Whatever keeps the questions short. Nobility makes me itch and this whole road stinks of it. Wake me when we're somewhere with a roof.",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-11d8h",
+            "likedBy": [
+                "pc_val",
+                "pc_calanthe",
+                "npc_pell"
+            ]
+        },
+        {
+            "ref": "p9",
+            "author": "pc_kirill",
+            "type": "reply",
+            "content": "It's not so bad, Maro! The sky's been kind and the cow likes the clover. I think travelling is mostly about who you do it with. Also I saw a heron this morning. It looked at me for a long time. I think it approved.",
+            "replyTo": "p8",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-11d6h",
+            "likedBy": [
+                "pc_calanthe",
+                "pc_vesperae",
+                "npc_pell",
+                "pc_spadae"
+            ]
+        },
+        {
+            "ref": "p10",
+            "author": "pc_calanthe",
+            "type": "reply",
+            "content": "Maro you are SUCH a thundercloud. We're on an artistic journey. I'm calling this my 'dust and disillusionment' period. Very raw. Very real. I'll dance it at the next inn and you'll all weep. (Note: do not ask me to paint it. We agreed.)",
+            "replyTo": "p8",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-11d5h",
+            "likedBy": [
+                "pc_dez",
+                "pc_vesperae",
+                "pc_kirill",
+                "npc_pell"
+            ]
+        },
+        {
+            "ref": "p11",
+            "author": "pc_vesperae",
+            "type": "post",
+            "content": "Watched a Levy column take three boys off a turnip cart today. Their mother ran the road after them until she couldn't. 'See something, do something', my father always said. He never told me what to do when doing something gets the whole cart conscripted. So I wrote it down instead. For now. (Lienne)",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-10d22h",
+            "likedBy": [
+                "pc_val",
+                "pc_layla",
+                "pc_spadae",
+                "npc_jackdaw",
+                "npc_rourke"
+            ]
+        },
+        {
+            "ref": "p12",
+            "author": "pc_val",
+            "type": "reply",
+            "content": "Don't write it down. Remember it. The Levy is slavery with a flag on it. I left home so my sister would never stand in that line. We'll see if the road agreed with me.",
+            "replyTo": "p11",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-10d20h",
+            "likedBy": [
+                "pc_vesperae",
+                "pc_dez",
+                "npc_cassimir"
+            ]
+        },
+        {
+            "ref": "p13",
+            "author": "npc_briar",
+            "type": "post",
+            "content": "Notice. Seven persons of interest, styled the 'Benz incident', departed Loquat before closure. They travel as a trade retinue. They are not traders. Glimmerwood sector reassigned to me. Probability of evasion decreases daily. This is not a threat. It is arithmetic. #arithmetic",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-10d12h",
+            "likedBy": [
+                "npc_nettle",
+                "npc_herald",
+                "npc_lord"
+            ]
+        },
+        {
+            "ref": "p14",
+            "author": "npc_nettle",
+            "type": "quote",
+            "content": "Arithmetic is yours, Captain. Mine is older. I have tasted these seven. Ozone and grief and something that should not exist in this world. I will know them through a city wall. I am not waiting for the Glimmerwood. #Roots",
+            "replyTo": null,
+            "quoteOf": "p13",
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-10d10h",
+            "likedBy": [
+                "npc_briar"
+            ]
+        },
+        {
+            "ref": "p15",
+            "author": "npc_herald",
+            "type": "boost",
+            "content": "",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": "p13",
+            "imageHint": "",
+            "postedAt": "-10d8h",
+            "likedBy": []
+        },
+        {
+            "ref": "p16",
+            "author": "pc_layla",
+            "type": "quote",
+            "content": "Fascinating org chart. A 'Captain' on the field and an 'Agent' freelancing the same target, no shared reporting line, both incentivised to claim the win. That's not a manhunt, that's two departments racing to miss. I've shipped product in worse orgs. Barely. @ThornCapt_Briar staffing notes available on request.",
+            "replyTo": null,
+            "quoteOf": "p13",
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-10d6h",
+            "likedBy": [
+                "pc_dez",
+                "pc_vesperae",
+                "npc_rourke",
+                "pc_calanthe"
+            ]
+        },
+        {
+            "ref": "p17",
+            "author": "npc_jackdaw",
+            "type": "reply",
+            "content": "You taste, Agent. The clever ones listen. A starling tells me your mask sits one season further across your face than it did at the equinox. Catch your seven; you still won't catch the thing eating you. Tick. Tick.",
+            "replyTo": "p14",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-10d4h",
+            "likedBy": [
+                "pc_dez",
+                "npc_rourke",
+                "pc_spadae"
+            ]
+        },
+        {
+            "ref": "p18",
+            "author": "npc_rourke",
+            "type": "post",
+            "content": "Refugees came in on the tide from the Empty Sea today. Whole families. Said the wind just stopped. No Fairwind, no passage, boats sitting dead on flat water for a week. The Bough's mages 'graciously' towed them in. For a fee. For a LIEN. They're buying a coastline one drowning family at a time.",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-9d18h",
+            "likedBy": [
+                "npc_jackdaw",
+                "pc_vesperae",
+                "npc_prophet",
+                "pc_layla"
+            ]
+        },
+        {
+            "ref": "p19",
+            "author": "npc_prophet",
+            "type": "reply",
+            "content": "The Wind-Trader is dying in his own air, brother. Aeolus. Say his name while you still can; the Crown is filing the edges off it. Every god they swallow, the world forgets a little more how to be itself. The petals are falling. Who will catch them?",
+            "replyTo": "p18",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-9d14h",
+            "likedBy": [
+                "pc_spadae",
+                "pc_kirill",
+                "npc_rourke"
+            ]
+        },
+        {
+            "ref": "p20",
+            "author": "npc_wall",
+            "type": "post",
+            "content": "—rother. they did not die fighting. i was made to lose. eleven battles. the names of the dead are—",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "rust-coloured script bleeding across a weapon rack, the blades pitted as if the metal itself is corroding into letters",
+            "postedAt": "-9d8h",
+            "likedBy": [
+                "npc_cassimir",
+                "pc_spadae",
+                "pc_val"
+            ]
+        },
+        {
+            "ref": "p21",
+            "author": "npc_cassimir",
+            "type": "reply",
+            "content": "'Made to lose.' I have read that fragment ninety times tonight. My brother died a hero. They built statues. They named a gate. If that is a lie then what did we bury? I keep the count of everything. I do not know how to count this.",
+            "replyTo": "p20",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-9d6h",
+            "likedBy": [
+                "pc_val",
+                "pc_spadae",
+                "npc_prophet",
+                "pc_kirill"
+            ]
+        },
+        {
+            "ref": "p22",
+            "author": "pc_spadae",
+            "type": "reply",
+            "content": "Speak his name. Out loud, where the wall can hear you. The Crown's favourite trick is to make grief feel like madness so you'll stop digging. You are not mad. You are the only one still listening. (Edric)",
+            "replyTo": "p21",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-9d5h",
+            "likedBy": [
+                "npc_cassimir",
+                "pc_val",
+                "pc_kirill",
+                "pc_vesperae"
+            ]
+        },
+        {
+            "ref": "p23",
+            "author": "npc_pell",
+            "type": "reply",
+            "content": "Lad, I sold your brother skewers when you were both knee-high. Theron the Elder always paid for the kid behind him in line and told him not to tell. That's the man I knew. Whatever's coming up out them walls, it sounds like him. Sounds exactly like him.",
+            "replyTo": "p21",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-9d3h",
+            "likedBy": [
+                "npc_cassimir",
+                "pc_val",
+                "pc_kirill",
+                "pc_spadae",
+                "pc_vesperae"
+            ]
+        },
+        {
+            "ref": "p24",
+            "author": "npc_herald",
+            "type": "post",
+            "content": "PROCLAMATION. Blackthorn is honoured to host the unveiling of the Crown's Tactical Aether-Golem: flawless strategic forecasting, so that no son of Blackthorn need ever again die for a general's error. Public demonstration on the Blood-Sand. Lord @Lord_Blackthorn presiding. The future does not grieve. #Blackthorn #GildedPeace",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "a polished brass-and-aether war-construct under a crimson banner on a sand arena",
+            "postedAt": "-8d12h",
+            "likedBy": [
+                "npc_lord",
+                "npc_briar",
+                "npc_nettle"
+            ]
+        },
+        {
+            "ref": "p25",
+            "author": "npc_lord",
+            "type": "reply",
+            "content": "I have buried enough soldiers. If the machine spares one mother what I carry, it is worth the steel. That is all I will say on it.",
+            "replyTo": "p24",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-8d10h",
+            "likedBy": [
+                "npc_herald",
+                "npc_pell",
+                "npc_cassimir"
+            ]
+        },
+        {
+            "ref": "p26",
+            "author": "pc_layla",
+            "type": "quote",
+            "content": "'Flawless forecasting.' I've sat in this meeting in another life. Someone always sells the board a machine that 'removes human error', and what it removes is the one person in the room willing to say the plan is wrong. Forecasts don't bleed. They just reassign who does. @Lord_Blackthorn count your exits.",
+            "replyTo": null,
+            "quoteOf": "p24",
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-8d8h",
+            "likedBy": [
+                "pc_vesperae",
+                "pc_dez",
+                "npc_rourke",
+                "npc_jackdaw"
+            ]
+        },
+        {
+            "ref": "p27",
+            "author": "pc_val",
+            "type": "post",
+            "content": "Home. First time in years. Walked my own street as 'Vlad' so the neighbours wouldn't shout the wrong name. Knocked on my family's door. My mother answered alone. My father and my sister were taken by the Levy while I was off getting strong enough to stop exactly this. I was on the wrong road. I will not be on the wrong road twice.",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-8d6h",
+            "likedBy": [
+                "pc_vesperae",
+                "pc_dez",
+                "pc_layla",
+                "pc_kirill",
+                "pc_spadae",
+                "pc_calanthe",
+                "npc_cassimir"
+            ]
+        },
+        {
+            "ref": "p28",
+            "author": "pc_vesperae",
+            "type": "reply",
+            "content": "Then we find them. You carried me out of a forest you had no reason to enter. I know which fork to use at a Crown table and I know how to make a clerk lose a file. Different tools, same door. We open it together, Vlad. (Lienne)",
+            "replyTo": "p27",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-8d5h",
+            "likedBy": [
+                "pc_val",
+                "pc_layla",
+                "pc_kirill",
+                "pc_spadae"
+            ]
+        },
+        {
+            "ref": "p29",
+            "author": "pc_dez",
+            "type": "reply",
+            "content": "Nobles take a city's sons for their wars and call it duty. Same song everywhere, just different walls. I'm in, Vlad. Not because I like you. Because I hate them more.",
+            "replyTo": "p27",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-8d4h",
+            "likedBy": [
+                "pc_val",
+                "pc_calanthe",
+                "pc_layla",
+                "npc_jackdaw"
+            ]
+        },
+        {
+            "ref": "p30",
+            "author": "pc_calanthe",
+            "type": "post",
+            "content": "Blackthorn is the most committed monochrome installation I have ever stood inside. Everything is soot, iron, and meaning it. The food is a war crime. I asked for something with a SAUCE and the man laughed at me. I have never felt more alive or more endangered. 'Maren' is keeping a sketchbook. 'Maren' should not be trusted with a sketchbook.",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-8d2h",
+            "likedBy": [
+                "pc_kirill",
+                "pc_dez",
+                "npc_pell",
+                "pc_vesperae"
+            ]
+        },
+        {
+            "ref": "p31",
+            "author": "npc_pell",
+            "type": "reply",
+            "content": "That were me what laughed, love. We don't do sauce. We do stew, and the stew does the job. Come by Quinn Market, I'll char you a skewer and you can call it 'rustic'. First one's free if you stop calling my bread 'a texture'.",
+            "replyTo": "p30",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-8d1h",
+            "likedBy": [
+                "pc_calanthe",
+                "pc_kirill",
+                "pc_dez",
+                "pc_val"
+            ]
+        },
+        {
+            "ref": "p32",
+            "author": "pc_kirill",
+            "type": "post",
+            "content": "Met a fellow named Cassimir at the training ground after dark. He sits by the cold walls with a lantern, copying words that rise up out of the stone, and his hands shake but he never stops. I think he's the bravest sad person I've ever met. Ren approves. Ren is going back tomorrow with stew.",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-7d18h",
+            "likedBy": [
+                "npc_cassimir",
+                "pc_val",
+                "pc_spadae",
+                "pc_vesperae",
+                "pc_calanthe"
+            ]
+        },
+        {
+            "ref": "p33",
+            "author": "npc_cassimir",
+            "type": "reply",
+            "content": "Ren and his big quiet friend sat with me and didn't once tell me I was imagining it. Do you know how long it's been since someone just sat? Twelve years I've done this alone. I showed them my wall of fragments, the string between them. They didn't laugh. I don't know what to do with that.",
+            "replyTo": "p32",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-7d16h",
+            "likedBy": [
+                "pc_kirill",
+                "pc_val",
+                "pc_spadae",
+                "npc_pell",
+                "pc_vesperae"
+            ]
+        },
+        {
+            "ref": "p34",
+            "author": "npc_wall",
+            "type": "post",
+            "content": "—o my Father. the victories were purchased. with our own men. ask Valerius. he keeps every name. he will not let me lie even now—",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "letters surfacing on the underside of a fortress weapons rack, dripping rust",
+            "postedAt": "-7d10h",
+            "likedBy": [
+                "npc_cassimir",
+                "pc_spadae",
+                "pc_val",
+                "pc_kirill"
+            ]
+        },
+        {
+            "ref": "p35",
+            "author": "npc_herald",
+            "type": "reply",
+            "content": "This account traffics in malfunction and superstition. The so-called 'writing' is corrosion from aging enchantments, the very inefficiency the Aether-Golem will retire. Spreading hauntings is sedition. The walls do not speak. Maintenance has been dispatched. #GildedPeace",
+            "replyTo": "p34",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-7d9h",
+            "likedBy": [
+                "npc_briar",
+                "npc_lord"
+            ]
+        },
+        {
+            "ref": "p36",
+            "author": "npc_cassimir",
+            "type": "quote",
+            "content": "You scrub them every week. They come back every week. You have 'dispatched maintenance' for twelve years and the stone keeps confessing. At what point, Herald, does the wall win? @CrownHerald",
+            "replyTo": null,
+            "quoteOf": "p35",
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-7d7h",
+            "likedBy": [
+                "pc_val",
+                "pc_dez",
+                "npc_pell",
+                "npc_jackdaw",
+                "pc_spadae",
+                "pc_vesperae"
+            ]
+        },
+        {
+            "ref": "p37",
+            "author": "npc_jackdaw",
+            "type": "quote",
+            "content": "'The walls do not speak.' Three centuries of practice and the Crown still thinks silence is a thing you can order. You can swallow a god, Herald. You cannot swallow the part of a man that wrote a letter the night before you killed him. The bough remembers what the gardener buries.",
+            "replyTo": null,
+            "quoteOf": "p35",
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-7d6h",
+            "likedBy": [
+                "pc_dez",
+                "pc_spadae",
+                "npc_rourke",
+                "npc_cassimir",
+                "pc_vesperae",
+                "pc_calanthe"
+            ]
+        },
+        {
+            "ref": "p38",
+            "author": "pc_spadae",
+            "type": "reply",
+            "content": "'He keeps every name.' That is what a god of memory is FOR. The Crown eats them precisely because a thing that remembers every name is the one weapon they can't out-talk. I keep names too. I'll keep his. Theron the Elder. Say it where it costs them. (Edric)",
+            "replyTo": "p34",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-7d5h",
+            "likedBy": [
+                "npc_cassimir",
+                "pc_val",
+                "pc_kirill",
+                "npc_prophet",
+                "pc_vesperae"
+            ]
+        },
+        {
+            "ref": "p39",
+            "author": "npc_pell",
+            "type": "post",
+            "content": "Right, it's not just my stall wall now. The whole of Quinn Market's gone strange. Sword-seller's stock is rusting through in the shape of LETTERS. A bloke's grandad's blade spelled out a name and then he sat down in the road and cried. Demo crowds buying skewers though. Can't fault the footfall. 🍢",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-5d20h",
+            "likedBy": [
+                "pc_calanthe",
+                "pc_dez",
+                "npc_cassimir",
+                "pc_val"
+            ]
+        },
+        {
+            "ref": "p40",
+            "author": "npc_briar",
+            "type": "post",
+            "content": "Glimmerwood update. Trail confirmed eight days old at the Loquat road, four days old at Gallowfen, where a coma-bound child briefly woke and described a red flower. The seven were there. They are not in the Glimmerwood. They went to ground in a city. There is only one city on that road. #arithmetic",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-5d12h",
+            "likedBy": [
+                "npc_nettle",
+                "npc_herald"
+            ]
+        },
+        {
+            "ref": "p41",
+            "author": "pc_dez",
+            "type": "quote",
+            "content": "Imagine being this confident and this loud about it. If I were one of these seven 'persons of interest', which I'm obviously not, I'm just a guy who guards carts, I'd say thanks for the itinerary, Captain. Real considerate. Anyway. Lovely weather in a city. Some city. Not telling you which.",
+            "replyTo": null,
+            "quoteOf": "p40",
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-5d10h",
+            "likedBy": [
+                "pc_calanthe",
+                "pc_val",
+                "pc_layla",
+                "pc_vesperae"
+            ]
+        },
+        {
+            "ref": "p42",
+            "author": "pc_layla",
+            "type": "reply",
+            "content": "Maro. We talked about this. The thread where you taunt the hunter from inside the trap is not the thread we post in. Delete and stew. Please.",
+            "replyTo": "p41",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-5d9h",
+            "likedBy": [
+                "pc_vesperae",
+                "pc_calanthe",
+                "pc_val",
+                "pc_spadae"
+            ]
+        },
+        {
+            "ref": "p43",
+            "author": "npc_nettle",
+            "type": "reply",
+            "content": "You reason your way to the city, Captain. I am already breathing its air. Smoke and salt and, there, under it: grief that doesn't belong to this world. A boy who remembers too much. A girl made of becoming. They are HERE. Tell the Stem I found them first.",
+            "replyTo": "p40",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-5d8h",
+            "likedBy": [
+                "npc_briar"
+            ]
+        },
+        {
+            "ref": "p44",
+            "author": "pc_calanthe",
+            "type": "quote",
+            "content": "Okay this one's actually unsettling and I would like it to stop. 'A girl made of becoming' is a STUNNING line and I hate that it's about me. Wrong context entirely. 'Maren' is having a normal one. 'Maren' is going to go stand near a great many people now.",
+            "replyTo": null,
+            "quoteOf": "p43",
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-5d6h",
+            "likedBy": [
+                "pc_dez",
+                "pc_layla",
+                "pc_vesperae",
+                "pc_kirill"
+            ]
+        },
+        {
+            "ref": "p45",
+            "author": "pc_kirill",
+            "type": "reply",
+            "content": "I don't like the way you talk about people like they're a smell. Whatever you're hunting, it's somebody's friend. Somebody's son. The calf I look after can't be hurt while she's under my care. I'm starting to think that rule should be bigger than one calf.",
+            "replyTo": "p43",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-5d5h",
+            "likedBy": [
+                "pc_vesperae",
+                "pc_spadae",
+                "pc_val",
+                "pc_calanthe",
+                "npc_cassimir"
+            ]
+        },
+        {
+            "ref": "p46",
+            "author": "pc_cleke",
+            "type": "post",
+            "content": "I can see the thread on a person, where they came from, the line that ties them to it. Most lead somewhere I could follow home. On this whole feed, three don't: the wall that writes, one of you lot I won't name, and me. I'm choosing not to think about what that means tonight. (Kael)",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-5d2h",
+            "likedBy": [
+                "pc_dez",
+                "pc_layla",
+                "npc_jackdaw",
+                "pc_spadae",
+                "pc_vesperae"
+            ]
+        },
+        {
+            "ref": "p47",
+            "author": "npc_jackdaw",
+            "type": "reply",
+            "content": "Clever bird. Pull that thread carefully. Some of them are the only thing holding a person in the world. Yours included. When you're ready to know who cut it and why, you know which flock to call. We have been waiting longer than you'd believe.",
+            "replyTo": "p46",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-5d1h",
+            "likedBy": [
+                "pc_cleke",
+                "pc_spadae"
+            ]
+        },
+        {
+            "ref": "p48",
+            "author": "npc_wall",
+            "type": "post",
+            "content": "—i am not angry. tell my boys i am not angry. tell Cassimir to stop counting the silences and start counting the men they spent. eleven battles. the ledger is in me. i am the ledger. before they take me, let me—",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "a long bleed of rust-script down the Blood-Sand strategy floor wall, the most complete fragment yet, addressed to two sons",
+            "postedAt": "-4d14h",
+            "likedBy": [
+                "npc_cassimir",
+                "pc_spadae",
+                "pc_val",
+                "pc_kirill",
+                "npc_prophet",
+                "pc_vesperae"
+            ]
+        },
+        {
+            "ref": "p49",
+            "author": "npc_cassimir",
+            "type": "reply",
+            "content": "It said my name. Twelve years and it said my NAME. 'Stop counting the silences.' I've counted every time my father didn't look at me. Every fragment. Every night. And now the one voice that ever answered me is telling me they're coming to take it away. Who is coming? WHAT are they bringing onto that Blood-Sand?",
+            "replyTo": "p48",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-4d12h",
+            "likedBy": [
+                "pc_val",
+                "pc_kirill",
+                "pc_spadae",
+                "npc_pell",
+                "pc_vesperae",
+                "npc_prophet"
+            ]
+        },
+        {
+            "ref": "p50",
+            "author": "pc_val",
+            "type": "reply",
+            "content": "The thing they're wheeling onto the Blood-Sand. The 'golem'. Cassimir, I've stood in that yard since I was five. Nothing replaces a god of this city for our benefit. Ren and I are with you. Don't let anyone you just met talk you into 'fixing' this fast. Slow is how you keep things.",
+            "replyTo": "p49",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-4d10h",
+            "likedBy": [
+                "npc_cassimir",
+                "pc_kirill",
+                "pc_spadae",
+                "pc_vesperae"
+            ]
+        },
+        {
+            "ref": "p51",
+            "author": "npc_maret",
+            "type": "reply",
+            "content": "Cassimir. You don't know me. I'm Maret, Maret Voss. I served under your brother in his last campaign; I was at the engagement where he fell. I've been seeing the writing too, for years, in places I'd wager you've never checked. I have fragments you're missing. I almost didn't reach out. Twelve years is a long time to carry something alone. You shouldn't have to finish it alone.",
+            "replyTo": "p49",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-3d20h",
+            "likedBy": [
+                "npc_cassimir"
+            ]
+        },
+        {
+            "ref": "p52",
+            "author": "npc_cassimir",
+            "type": "reply",
+            "content": "You were THERE? You knew him? I have so few of the 'Brother' fragments. Almost none. If you have pieces I don't, Maret, I don't know whether to trust this or whether I've just wanted it too long. But yes. Yes. Talk to me.",
+            "replyTo": "p51",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-3d18h",
+            "likedBy": [
+                "npc_maret"
+            ]
+        },
+        {
+            "ref": "p53",
+            "author": "npc_jackdaw",
+            "type": "quote",
+            "content": "A stranger arrives the very week the Crown needs a certain young man pointed in a certain direction, bearing exactly the fragment he aches for most. How fortunate. How warm. Child, I have watched kind strangers for three hundred years. The kindest knock are the ones that were sent. Read the letter. Don't follow it.",
+            "replyTo": null,
+            "quoteOf": "p51",
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-3d16h",
+            "likedBy": [
+                "pc_spadae",
+                "pc_val",
+                "pc_dez",
+                "pc_vesperae",
+                "npc_prophet"
+            ]
+        },
+        {
+            "ref": "p54",
+            "author": "pc_spadae",
+            "type": "reply",
+            "content": "Cassimir, keep every fragment you've already copied, in your own hand, somewhere only you know. If anyone offers to 'complete' the letters by changing where you look, that's not help, that's redirection. The truth doesn't need you to go somewhere new. It is already in the walls. (Edric)",
+            "replyTo": "p52",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-3d15h",
+            "likedBy": [
+                "npc_cassimir",
+                "pc_val",
+                "pc_kirill",
+                "npc_jackdaw",
+                "pc_vesperae"
+            ]
+        },
+        {
+            "ref": "p55",
+            "author": "npc_rourke",
+            "type": "post",
+            "content": "Quiet word from a counting-house clerk, three cups in: the old oath-notes are 'twitching'. Soul-Promise paper that's held firm for centuries, going soft at the edges. He wouldn't say more. Went grey and left. If Medlar's contracts are failing, friends, it isn't the wind we should be afraid of losing. #Medlar",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-3d8h",
+            "likedBy": [
+                "npc_jackdaw",
+                "pc_layla",
+                "pc_vesperae",
+                "npc_prophet"
+            ]
+        },
+        {
+            "ref": "p56",
+            "author": "npc_prophet",
+            "type": "reply",
+            "content": "Pactor. The Binding Voice. Say it. They have him in the dark under the counting-houses and they have drunk three hundred years of his word to make your coins feel solid. When he dies, every promise in Medlar comes due at once. The Crown will owe a debt even a god-eater cannot swallow. The petals are falling, merchant. 🌹",
+            "replyTo": "p55",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-3d6h",
+            "likedBy": [
+                "npc_rourke",
+                "pc_spadae",
+                "pc_vesperae"
+            ]
+        },
+        {
+            "ref": "p57",
+            "author": "npc_herald",
+            "type": "post",
+            "content": "Two days to the Aether-Golem demonstration. Schools and foundries are granted a half-shift to attend. Witness the dawn of a Blackthorn where strategy never falters and no order is ever wrong. By Her Will, we are made safe. Persons spreading 'wall-writing' superstition will be detained. #Blackthorn",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-2d18h",
+            "likedBy": [
+                "npc_lord",
+                "npc_briar",
+                "npc_nettle"
+            ]
+        },
+        {
+            "ref": "p58",
+            "author": "pc_layla",
+            "type": "quote",
+            "content": "'No order is ever wrong.' There it is, in their own wordmark. The product isn't forecasting. The product is a strategy you're never allowed to question, with a god's name scrubbed off the box. I've audited this exact fraud. It always ends with the people who could've said 'stop' replaced by something that never will.",
+            "replyTo": null,
+            "quoteOf": "p57",
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-2d16h",
+            "likedBy": [
+                "pc_vesperae",
+                "pc_dez",
+                "npc_jackdaw",
+                "npc_cassimir",
+                "pc_val"
+            ]
+        },
+        {
+            "ref": "p59",
+            "author": "pc_vesperae",
+            "type": "reply",
+            "content": "'Detained' for repeating what is literally written on a public wall. My family built systems like this one, brick by brick, and called it order. I left to take them apart. Two days. We are not going to spend them quietly. (Lienne)",
+            "replyTo": "p57",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-2d15h",
+            "likedBy": [
+                "pc_val",
+                "pc_layla",
+                "pc_dez",
+                "pc_kirill",
+                "pc_spadae"
+            ]
+        },
+        {
+            "ref": "p60",
+            "author": "npc_lord",
+            "type": "post",
+            "content": "They tell me the writing has reached my own desk. A corridor. The underside of a rack. I have had it scrubbed each time and called it vandalism. My steward says my son goes to the walls at night. I told him to leave the boy to his grief. I am beginning to wonder which of us is the one not looking.",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-2d10h",
+            "likedBy": [
+                "npc_cassimir",
+                "npc_pell",
+                "pc_spadae",
+                "pc_val",
+                "pc_vesperae"
+            ]
+        },
+        {
+            "ref": "p61",
+            "author": "npc_cassimir",
+            "type": "reply",
+            "content": "Father. You wrote 'my son' where the whole city could read it. You haven't said it to my face in fourteen months. The words on your desk are in Theron's hand. I would know it blind. Read one. Just one. All the way through. Please. Before the demonstration. Before they put that thing on the Blood-Sand.",
+            "replyTo": "p60",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-2d9h",
+            "likedBy": [
+                "pc_val",
+                "pc_kirill",
+                "pc_spadae",
+                "npc_pell",
+                "pc_vesperae",
+                "npc_prophet"
+            ]
+        },
+        {
+            "ref": "p62",
+            "author": "npc_maret",
+            "type": "reply",
+            "content": "Cassimir, I have the piece that finishes the 'Brother' letter. I'm sure of it now. But the rest won't come up out of cold stone on its own; it's tangled in Valerius, held back inside him. There's a way to draw the whole of it out at once. I can show you. Not the walls. The source. Come find me before the demonstration, and let me help you finally hear all of him.",
+            "replyTo": "p61",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-1d20h",
+            "likedBy": [
+                "npc_cassimir"
+            ]
+        },
+        {
+            "ref": "p63",
+            "author": "pc_val",
+            "type": "quote",
+            "content": "No. Cassimir, NO. 'Don't trust the walls, trust the source, come alone before the big day', I've heard hungry men make cleaner offers. Whoever this is wants you next to that god right when the Crown does. That isn't coincidence, that's a leash. Come to us first. Bring the fragments. We'll read them in daylight. Slow.",
+            "replyTo": null,
+            "quoteOf": "p62",
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-1d18h",
+            "likedBy": [
+                "pc_kirill",
+                "pc_spadae",
+                "pc_vesperae",
+                "npc_jackdaw",
+                "pc_dez",
+                "npc_pell"
+            ]
+        },
+        {
+            "ref": "p64",
+            "author": "npc_cassimir",
+            "type": "reply",
+            "content": "Two voices. One says come to the source before the demonstration. One says come to daylight and go slow. Twelve years no one offered me anything and now everyone has a door. I haven't slept. I keep the count of everything and I cannot make this one add up. I have to choose by the dawn after next.",
+            "replyTo": "p63",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-1d16h",
+            "likedBy": [
+                "pc_val",
+                "pc_kirill",
+                "pc_spadae",
+                "npc_prophet",
+                "pc_vesperae",
+                "npc_pell"
+            ]
+        },
+        {
+            "ref": "p65",
+            "author": "npc_jackdaw",
+            "type": "reply",
+            "content": "Then let an old bird weigh it for you. The warm stranger appeared the week you became useful. Your friends appeared and asked for nothing but to sit. Ask which of them needs you to walk somewhere specific. Need is the tell, child. Kindness that requires your feet to move is a hand on a string.",
+            "replyTo": "p64",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-1d14h",
+            "likedBy": [
+                "pc_val",
+                "pc_spadae",
+                "pc_dez",
+                "pc_kirill",
+                "npc_cassimir",
+                "pc_vesperae"
+            ]
+        },
+        {
+            "ref": "p66",
+            "author": "pc_dez",
+            "type": "post",
+            "content": "So to recap our restful stop in a city I won't name: a god is bleeding a murder onto the walls, a machine is rolling in to eat it, a soul-sniffer says she can smell us, a Thorn captain's doing maths at the gates, and the saddest man in town is being courted by an obvious snake. 'Maro' would like a refund on this holiday.",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-1d6h",
+            "likedBy": [
+                "pc_calanthe",
+                "pc_val",
+                "pc_layla",
+                "pc_vesperae",
+                "pc_kirill",
+                "npc_pell"
+            ]
+        },
+        {
+            "ref": "p67",
+            "author": "npc_pell",
+            "type": "reply",
+            "content": "Maro mate you forgot the skewers. Sold out by midday three days running off them demo crowds. Whole city come to watch a machine and they're all hungry. I should be glad. I keep thinking about that lad and his walls though. Funny how a city can queue for a miracle and a murder on the same morning. Two for a copper. Char's good today. 🍢",
+            "replyTo": "p66",
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-1d5h",
+            "likedBy": [
+                "pc_dez",
+                "pc_calanthe",
+                "pc_val",
+                "npc_cassimir",
+                "pc_spadae"
+            ]
+        },
+        {
+            "ref": "p68",
+            "author": "npc_briar",
+            "type": "post",
+            "content": "To the seven, who I am now certain read these notices: you chose walls over trees. Understandable. Walls feel safe. But a fortress is a box with the exits counted, and I count exits for a living. I will be at the demonstration. So, I think, will you. Probability of contact: rising. #arithmetic",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-20h",
+            "likedBy": [
+                "npc_nettle",
+                "npc_herald",
+                "npc_lord"
+            ]
+        },
+        {
+            "ref": "p69",
+            "author": "pc_layla",
+            "type": "quote",
+            "content": "She's right about one thing: we'll be there. Not because she counted us. Because there's a man two days from a mistake, a god two days from a grave, and a machine that 'never says stop'. Somebody in that crowd has to be willing to. Might as well be the retired captain with nothing left to salute.",
+            "replyTo": null,
+            "quoteOf": "p68",
+            "boostOf": null,
+            "imageHint": "",
+            "postedAt": "-8h",
+            "likedBy": [
+                "pc_val",
+                "pc_vesperae",
+                "pc_dez",
+                "pc_spadae",
+                "pc_kirill",
+                "pc_calanthe",
+                "npc_cassimir"
+            ]
+        },
+        {
+            "ref": "p70",
+            "author": "npc_wall",
+            "type": "post",
+            "content": "—the Blood-Sand is where i keep them. all eleven battles. all the names. if the floor goes quiet, the names go with it. Cassimir. whatever the kind one tells you. do not unmake the wall to read it. i would rather stay unfinished than be the silence they—",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": null,
+            "imageHint": "a single fresh line of rust-script surfacing on the Blood-Sand strategy floor, trailing off mid-word as if interrupted",
+            "postedAt": "-2h",
+            "likedBy": [
+                "npc_cassimir",
+                "pc_spadae",
+                "pc_val",
+                "pc_kirill",
+                "pc_vesperae",
+                "npc_prophet",
+                "pc_calanthe"
+            ]
+        },
+        {
+            "ref": "p71",
+            "author": "pc_calanthe",
+            "type": "boost",
+            "content": "",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": "p37",
+            "imageHint": "",
+            "postedAt": "-7d4h",
+            "likedBy": []
+        },
+        {
+            "ref": "p72",
+            "author": "npc_pell",
+            "type": "boost",
+            "content": "",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": "p36",
+            "imageHint": "",
+            "postedAt": "-7d2h",
+            "likedBy": []
+        },
+        {
+            "ref": "p73",
+            "author": "pc_vesperae",
+            "type": "boost",
+            "content": "",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": "p48",
+            "imageHint": "",
+            "postedAt": "-4d8h",
+            "likedBy": []
+        },
+        {
+            "ref": "p74",
+            "author": "npc_prophet",
+            "type": "boost",
+            "content": "",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": "p55",
+            "imageHint": "",
+            "postedAt": "-3d4h",
+            "likedBy": []
+        },
+        {
+            "ref": "p75",
+            "author": "pc_val",
+            "type": "boost",
+            "content": "",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": "p65",
+            "imageHint": "",
+            "postedAt": "-1d10h",
+            "likedBy": []
+        },
+        {
+            "ref": "p76",
+            "author": "npc_cassimir",
+            "type": "boost",
+            "content": "",
+            "replyTo": null,
+            "quoteOf": null,
+            "boostOf": "p70",
+            "imageHint": "",
+            "postedAt": "-1h",
+            "likedBy": []
+        }
+    ],
+    "follows": [
+        {
+            "follower": "pc_val",
+            "following": "pc_vesperae"
+        },
+        {
+            "follower": "pc_vesperae",
+            "following": "pc_val"
+        },
+        {
+            "follower": "pc_val",
+            "following": "pc_kirill"
+        },
+        {
+            "follower": "pc_kirill",
+            "following": "pc_val"
+        },
+        {
+            "follower": "pc_dez",
+            "following": "pc_calanthe"
+        },
+        {
+            "follower": "pc_calanthe",
+            "following": "pc_dez"
+        },
+        {
+            "follower": "pc_dez",
+            "following": "pc_layla"
+        },
+        {
+            "follower": "pc_layla",
+            "following": "pc_dez"
+        },
+        {
+            "follower": "pc_layla",
+            "following": "pc_vesperae"
+        },
+        {
+            "follower": "pc_vesperae",
+            "following": "pc_layla"
+        },
+        {
+            "follower": "pc_calanthe",
+            "following": "pc_kirill"
+        },
+        {
+            "follower": "pc_kirill",
+            "following": "pc_calanthe"
+        },
+        {
+            "follower": "pc_spadae",
+            "following": "pc_val"
+        },
+        {
+            "follower": "pc_spadae",
+            "following": "pc_kirill"
+        },
+        {
+            "follower": "pc_cleke",
+            "following": "pc_layla"
+        },
+        {
+            "follower": "pc_cleke",
+            "following": "pc_dez"
+        },
+        {
+            "follower": "pc_calanthe",
+            "following": "pc_vesperae"
+        },
+        {
+            "follower": "pc_vesperae",
+            "following": "pc_kirill"
+        },
+        {
+            "follower": "pc_spadae",
+            "following": "pc_dez"
+        },
+        {
+            "follower": "pc_val",
+            "following": "pc_dez"
+        },
+        {
+            "follower": "pc_val",
+            "following": "npc_cassimir"
+        },
+        {
+            "follower": "pc_kirill",
+            "following": "npc_cassimir"
+        },
+        {
+            "follower": "pc_spadae",
+            "following": "npc_cassimir"
+        },
+        {
+            "follower": "pc_vesperae",
+            "following": "npc_cassimir"
+        },
+        {
+            "follower": "pc_calanthe",
+            "following": "npc_cassimir"
+        },
+        {
+            "follower": "pc_calanthe",
+            "following": "npc_pell"
+        },
+        {
+            "follower": "pc_dez",
+            "following": "npc_pell"
+        },
+        {
+            "follower": "pc_val",
+            "following": "npc_pell"
+        },
+        {
+            "follower": "pc_spadae",
+            "following": "npc_wall"
+        },
+        {
+            "follower": "pc_val",
+            "following": "npc_wall"
+        },
+        {
+            "follower": "pc_kirill",
+            "following": "npc_wall"
+        },
+        {
+            "follower": "pc_cleke",
+            "following": "npc_wall"
+        },
+        {
+            "follower": "pc_dez",
+            "following": "npc_jackdaw"
+        },
+        {
+            "follower": "pc_spadae",
+            "following": "npc_jackdaw"
+        },
+        {
+            "follower": "pc_cleke",
+            "following": "npc_jackdaw"
+        },
+        {
+            "follower": "pc_vesperae",
+            "following": "npc_jackdaw"
+        },
+        {
+            "follower": "pc_layla",
+            "following": "npc_jackdaw"
+        },
+        {
+            "follower": "pc_layla",
+            "following": "npc_herald"
+        },
+        {
+            "follower": "pc_dez",
+            "following": "npc_herald"
+        },
+        {
+            "follower": "pc_vesperae",
+            "following": "npc_herald"
+        },
+        {
+            "follower": "pc_spadae",
+            "following": "npc_prophet"
+        },
+        {
+            "follower": "pc_kirill",
+            "following": "npc_prophet"
+        },
+        {
+            "follower": "pc_vesperae",
+            "following": "npc_rourke"
+        },
+        {
+            "follower": "pc_layla",
+            "following": "npc_rourke"
+        },
+        {
+            "follower": "pc_dez",
+            "following": "npc_briar"
+        },
+        {
+            "follower": "pc_layla",
+            "following": "npc_briar"
+        },
+        {
+            "follower": "pc_layla",
+            "following": "npc_nettle"
+        },
+        {
+            "follower": "pc_val",
+            "following": "npc_maret"
+        },
+        {
+            "follower": "pc_spadae",
+            "following": "npc_maret"
+        },
+        {
+            "follower": "npc_briar",
+            "following": "npc_herald"
+        },
+        {
+            "follower": "npc_briar",
+            "following": "npc_nettle"
+        },
+        {
+            "follower": "npc_briar",
+            "following": "npc_lord"
+        },
+        {
+            "follower": "npc_nettle",
+            "following": "npc_herald"
+        },
+        {
+            "follower": "npc_nettle",
+            "following": "npc_briar"
+        },
+        {
+            "follower": "npc_lord",
+            "following": "npc_herald"
+        },
+        {
+            "follower": "npc_herald",
+            "following": "npc_lord"
+        },
+        {
+            "follower": "npc_cassimir",
+            "following": "npc_wall"
+        },
+        {
+            "follower": "npc_cassimir",
+            "following": "npc_maret"
+        },
+        {
+            "follower": "npc_cassimir",
+            "following": "npc_pell"
+        },
+        {
+            "follower": "npc_cassimir",
+            "following": "npc_herald"
+        },
+        {
+            "follower": "npc_cassimir",
+            "following": "pc_kirill"
+        },
+        {
+            "follower": "npc_cassimir",
+            "following": "pc_val"
+        },
+        {
+            "follower": "npc_cassimir",
+            "following": "pc_spadae"
+        },
+        {
+            "follower": "npc_maret",
+            "following": "npc_cassimir"
+        },
+        {
+            "follower": "npc_rourke",
+            "following": "npc_jackdaw"
+        },
+        {
+            "follower": "npc_rourke",
+            "following": "npc_herald"
+        },
+        {
+            "follower": "npc_rourke",
+            "following": "npc_pell"
+        },
+        {
+            "follower": "npc_pell",
+            "following": "npc_herald"
+        },
+        {
+            "follower": "npc_pell",
+            "following": "npc_cassimir"
+        },
+        {
+            "follower": "npc_pell",
+            "following": "npc_lord"
+        },
+        {
+            "follower": "npc_prophet",
+            "following": "npc_jackdaw"
+        },
+        {
+            "follower": "npc_prophet",
+            "following": "npc_wall"
+        },
+        {
+            "follower": "npc_jackdaw",
+            "following": "npc_wall"
+        },
+        {
+            "follower": "npc_jackdaw",
+            "following": "npc_cassimir"
+        },
+        {
+            "follower": "npc_jackdaw",
+            "following": "npc_rourke"
+        },
+        {
+            "follower": "npc_jackdaw",
+            "following": "npc_prophet"
+        },
+        {
+            "follower": "npc_jackdaw",
+            "following": "npc_nettle"
+        },
+        {
+            "follower": "npc_wall",
+            "following": "npc_cassimir"
+        }
+    ]
+}

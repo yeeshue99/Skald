@@ -6,7 +6,11 @@ import { updateThemeAction } from "@/app/actions/campaigns";
 import {
   AVAILABLE_FONTS,
   PRESETS,
+  normalizeTheme,
+  themeDataAttrs,
   themeToCssVars,
+  type AmbientEffect,
+  type Decorations,
   type Theme,
 } from "@/lib/themes";
 import { emptyFormState } from "@/lib/form";
@@ -40,6 +44,153 @@ const RADII: [string, string][] = [
   ["1.5rem", "Pill"],
 ];
 
+// Single-select decoration dimensions (effects is a separate multi-select).
+// Values are the canonical union strings; the label is the editor display name.
+const DECORATION_FIELDS: {
+  key: Exclude<keyof Decorations, "effects">;
+  label: string;
+  options: [string, string][];
+}[] = [
+  {
+    key: "texture",
+    label: "Backdrop texture",
+    options: [
+      ["none", "None"],
+      ["starchart", "Star chart"],
+      ["constellations", "Constellations"],
+      ["parchment", "Paper & books"],
+      ["circuit", "Circuit"],
+      ["squiggle", "Squiggle"],
+      ["florets", "Florets"],
+      ["vinework", "Vinework"],
+    ],
+  },
+  {
+    key: "bgScroll",
+    label: "Background motion",
+    options: [
+      ["static", "Static"],
+      ["down", "Scroll down"],
+      ["up", "Scroll up"],
+      ["left", "Scroll left"],
+      ["right", "Scroll right"],
+      ["diagonal", "Diagonal"],
+      ["sineDown", "Sine wave (down)"],
+      ["sway", "Sway"],
+      ["sineUp", "Sine wave (up)"],
+    ],
+  },
+  {
+    key: "divider",
+    label: "Post divider",
+    options: [
+      ["plain", "Plain"],
+      ["asterism", "Asterism"],
+      ["diamond", "Diamond"],
+      ["dataline", "Data line"],
+      ["vine", "Vine sprig"],
+      ["laurel", "Laurel"],
+    ],
+  },
+  {
+    key: "buttons",
+    label: "Button FX",
+    options: [
+      ["flat", "Flat"],
+      ["arcaneGlow", "Arcane glow"],
+      ["wax", "Wax seal"],
+      ["neon", "Neon"],
+      ["petal", "Petal press"],
+      ["dew", "Dewdrop"],
+    ],
+  },
+  {
+    key: "avatarFrame",
+    label: "Avatar frame",
+    options: [
+      ["none", "None"],
+      ["manaHalo", "Mana halo"],
+      ["medallion", "Medallion"],
+      ["hudBracket", "HUD bracket"],
+      ["wreath", "Laurel wreath"],
+      ["blossom", "Blossom halo"],
+    ],
+  },
+  {
+    key: "depth",
+    label: "Card depth",
+    options: [
+      ["flat", "Flat"],
+      ["violetAmbient", "Violet ambient"],
+      ["paperMatte", "Paper matte"],
+      ["cyanBloom", "Cyan bloom"],
+      ["verdantAmbient", "Verdant ambient"],
+      ["roseGlow", "Rose glow"],
+    ],
+  },
+  {
+    key: "reactions",
+    label: "Reaction flourish",
+    options: [
+      ["none", "None"],
+      ["sparkle", "Sparkle"],
+      ["stamp", "Wax stamp"],
+      ["pulse", "Energy pulse"],
+      ["petals", "Petal scatter"],
+      ["bloom", "Bloom"],
+    ],
+  },
+  {
+    key: "cardFrame",
+    label: "Card frame",
+    options: [
+      ["plain", "Plain"],
+      ["gilded", "Gilded rule"],
+      ["deckled", "Deckled edge"],
+      ["chamfer", "Chamfered HUD"],
+      ["botanical", "Botanical vine"],
+      ["pressed", "Pressed flower"],
+    ],
+  },
+  {
+    key: "wordmark",
+    label: "Wordmark",
+    options: [
+      ["plain", "Plain"],
+      ["sigil", "Arcane sigil"],
+      ["dropcap", "Drop-cap"],
+      ["caret", "Blinking caret"],
+      ["sprig", "Leaf sprig"],
+      ["rosette", "Rosette"],
+    ],
+  },
+  {
+    key: "chrome",
+    label: "Top-bar chrome",
+    options: [
+      ["plain", "Plain"],
+      ["stainedGlass", "Stained glass"],
+      ["banner", "Banner edge"],
+      ["hudStrip", "HUD strip"],
+      ["trellis", "Trellis"],
+      ["garland", "Garland"],
+    ],
+  },
+];
+
+// Multi-select ambient effects — combine any. Labels for the editor checkboxes.
+const EFFECT_OPTIONS: [AmbientEffect, string][] = [
+  ["embers", "Embers"],
+  ["motes", "Motes"],
+  ["dust", "Dust"],
+  ["scanlines", "Scanlines"],
+  ["fog", "Fog"],
+  ["pagecurl", "Page-curl on hover"],
+  ["petalfall", "Petal fall"],
+  ["pollen", "Pollen"],
+  ["leaves", "Drifting leaves"],
+];
+
 export function ThemeEditorForm({
   slug,
   initial,
@@ -47,7 +198,11 @@ export function ThemeEditorForm({
   slug: string;
   initial: Theme;
 }) {
-  const [theme, setTheme] = useState<Theme>(initial);
+  // Seed from a normalized theme so `decorations` always has all five keys.
+  // Otherwise changing one dropdown on a campaign with no saved decorations
+  // would serialize a partial object, which the theme schema rejects (the save
+  // silently fails). With a full object, every change saves.
+  const [theme, setTheme] = useState<Theme>(() => normalizeTheme(initial));
   const [state, action] = useActionState(updateThemeAction, emptyFormState);
 
   function patch(p: Partial<Theme>) {
@@ -55,6 +210,27 @@ export function ThemeEditorForm({
   }
   function setColor(key: keyof Theme["colors"], value: string) {
     setTheme((t) => ({ ...t, colors: { ...t.colors, [key]: value } }));
+  }
+  function setDecoration<K extends keyof Decorations>(
+    key: K,
+    value: Decorations[K],
+  ) {
+    setTheme((t) => ({
+      ...t,
+      decorations: { ...t.decorations, [key]: value } as Decorations,
+    }));
+  }
+  function toggleEffect(effect: AmbientEffect) {
+    setTheme((t) => {
+      const current = t.decorations?.effects ?? [];
+      const next = current.includes(effect)
+        ? current.filter((e) => e !== effect)
+        : [...current, effect];
+      return {
+        ...t,
+        decorations: { ...t.decorations, effects: next } as Decorations,
+      };
+    });
   }
   function applyPreset(p: Theme) {
     setTheme((t) => ({
@@ -65,7 +241,16 @@ export function ThemeEditorForm({
   }
 
   return (
-    <form action={action} className="space-y-6">
+    <form
+      action={action}
+      // React 19 auto-resets a form after its action runs. That native reset
+      // snaps controlled <select>/<input> elements back to their first option
+      // (the value prop is unchanged, so React doesn't re-sync the DOM) — the
+      // edit looks like it reverted even though state + DB saved. Cancel it;
+      // every field here is controlled by `theme`, so there's nothing to reset.
+      onReset={(e) => e.preventDefault()}
+      className="space-y-6"
+    >
       <input type="hidden" name="slug" value={slug} />
       <input type="hidden" name="theme" value={JSON.stringify(theme)} />
 
@@ -195,19 +380,80 @@ export function ThemeEditorForm({
         </div>
       </div>
 
+      {/* decorations */}
+      <div>
+        <span className="mb-2 block text-sm font-medium text-text">
+          Decorations
+        </span>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {DECORATION_FIELDS.map((d) => (
+            <Field key={d.key} label={d.label}>
+              <select
+                value={theme.decorations?.[d.key] ?? d.options[0][0]}
+                onChange={(e) =>
+                  setDecoration(
+                    d.key,
+                    e.target.value as Decorations[typeof d.key],
+                  )
+                }
+                className="w-full rounded-base border border-border bg-bg/60 px-3 py-2 text-text"
+              >
+                {d.options.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          ))}
+        </div>
+        {/* ambient effects — multi-select, combine any */}
+        <div className="mt-4">
+          <span className="mb-1 block text-sm font-medium text-text">
+            Ambient effects
+          </span>
+          <p className="mb-2 text-xs text-muted">
+            Combine any. All respect reduced-motion. Shown on the feed, not this
+            preview.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {EFFECT_OPTIONS.map(([value, label]) => {
+              const on = (theme.decorations?.effects ?? []).includes(value);
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => toggleEffect(value)}
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-sm transition-colors",
+                    on
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-muted hover:bg-surface-hover",
+                  )}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
       {/* live preview */}
       <div>
         <span className="mb-2 block text-sm font-medium text-text">Preview</span>
         <div
+          {...themeDataAttrs(theme)}
           style={themeToCssVars(theme)}
           className="overflow-hidden rounded-base border border-border"
         >
           <div className="bg-bg p-4 font-body text-text">
-            <div className="font-display text-2xl font-bold text-primary">
+            <div className="wordmark font-display text-2xl font-bold text-primary">
               {theme.appName || "Your campaign"}
             </div>
             <p className="text-sm text-muted">{theme.tagline}</p>
-            <div className="mt-3 rounded-base border border-border bg-surface p-3">
+            <div className="post-card mt-3 rounded-base border border-border bg-surface p-3">
               <div className="flex items-center gap-2">
                 <Avatar name="Mystic Raven" size={36} />
                 <div className="text-sm">
@@ -227,7 +473,7 @@ export function ThemeEditorForm({
             </div>
             <button
               type="button"
-              className="mt-3 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-on-primary"
+              className="ui-button mt-4 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-on-primary"
             >
               Post
             </button>

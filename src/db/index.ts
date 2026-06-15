@@ -29,7 +29,13 @@ export type Db = ReturnType<typeof probe>;
 function build(): Db {
   if (useNeon) {
     neonConfig.webSocketConstructor = ws;
-    neonConfig.poolQueryViaFetch = true;
+    // Query over fetch in production (serverless-optimal on Vercel). In local
+    // dev on Node 24 the fetch path hits an undici TransformStream regression
+    // ("controller[kState].transformAlgorithm is not a function") that breaks
+    // RSC streaming mid-render, so the page fails and the client retries in a
+    // loop (infinite loading). The WebSocket query path avoids it. Direct TCP
+    // (the pg driver) isn't an option here — Neon refuses raw 5432 locally.
+    neonConfig.poolQueryViaFetch = process.env.NODE_ENV === "production";
     return drizzleNeon(new NeonPool({ connectionString: url }), { schema });
   }
   return drizzlePg(new PgPool({ connectionString: url }), {

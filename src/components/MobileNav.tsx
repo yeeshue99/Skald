@@ -45,7 +45,7 @@ export function MobileNav({
 
   return (
     <>
-      <header className="sticky top-0 z-20 flex items-center justify-between gap-2 border-b border-border bg-bg/85 px-3 py-2 backdrop-blur md:hidden">
+      <header className="chrome-bar sticky top-0 z-20 flex items-center justify-between gap-2 border-b border-border bg-bg/85 px-3 py-2 backdrop-blur md:hidden">
         <Link href={base}>
           <Wordmark name={appName} className="text-xl text-primary" />
         </Link>
@@ -64,7 +64,7 @@ export function MobileNav({
         ))}
         <Link
           href={`${base}/compose`}
-          className="-mt-4 flex size-12 items-center justify-center rounded-full bg-primary text-on-primary shadow-lg"
+          className="fx-btn -mt-4 flex size-12 items-center justify-center rounded-full bg-primary text-on-primary shadow-lg"
           aria-label="Post"
         >
           <Plus className="size-6" />
@@ -100,7 +100,7 @@ function Tab({
       href={href}
       aria-label={label}
       className={cn(
-        "flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px]",
+        "fx-btn flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px]",
         active ? "text-primary" : "text-muted",
       )}
     >

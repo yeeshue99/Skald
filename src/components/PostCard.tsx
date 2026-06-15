@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Repeat2 } from "lucide-react";
 import type { PostView } from "@/lib/queries";
 import { relativeTime } from "@/lib/format";
@@ -70,11 +71,25 @@ export function PostCard({
   const when = new Date(data.publishedAt ?? data.createdAt);
   const profileHref = `/c/${slug}/u/${author.handle.toLowerCase()}`;
   const postHref = `/c/${slug}/post/${data.id}`;
+  const router = useRouter();
+
+  // Make the whole card open the post, but let the inner links/buttons/menu/
+  // image and text selection behave normally.
+  function onCardClick(e: React.MouseEvent) {
+    if (
+      e.defaultPrevented ||
+      (e.target as HTMLElement).closest("a, button, img, [role='menu'], [role='dialog']")
+    )
+      return;
+    if (window.getSelection()?.toString()) return; // don't hijack text selection
+    router.push(postHref);
+  }
 
   return (
     <article
+      onClick={onCardClick}
       className={cn(
-        "border-b border-border px-4 py-3 transition-colors",
+        "post-card cursor-pointer border-b border-border px-4 py-3 transition-colors",
         highlight ? "bg-surface" : "hover:bg-surface/50",
       )}
     >
@@ -141,7 +156,7 @@ export function PostCard({
           {!isBoost && data.repostOf ? (
             <Link
               href={`/c/${slug}/post/${data.repostOf.id}`}
-              className="mt-2 block rounded-base border border-border p-3 transition-colors hover:bg-surface-hover"
+              className="quote-card mt-2 block rounded-base border border-border p-3 transition-colors hover:bg-surface-hover"
             >
               <div className="flex items-center gap-1.5 text-sm">
                 <Avatar

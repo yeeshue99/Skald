@@ -33,7 +33,7 @@ export function buttonClasses(
   extra?: string,
 ): string {
   return cn(
-    "inline-flex select-none items-center justify-center gap-2 rounded-full font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:cursor-not-allowed",
+    "ui-button inline-flex select-none items-center justify-center gap-2 rounded-full font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:cursor-not-allowed",
     VARIANTS[variant],
     SIZES[size],
     extra,
@@ -112,7 +112,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "rounded-base border border-border bg-surface",
+        "ui-card rounded-base border border-border bg-surface",
         className,
       )}
     >

@@ -29,10 +29,15 @@ export function PostActions({
   const [like, setLike] = useState({ on: liked, count: likeCount });
   const [boost, setBoost] = useState({ on: reposted, count: repostCount });
   const [copied, setCopied] = useState(false);
+  // bumped each time a reaction turns ON; the key change remounts the burst
+  // span so its themed CSS animation replays. CSS gates it on reduced-motion.
+  const [likeBurst, setLikeBurst] = useState(0);
+  const [boostBurst, setBoostBurst] = useState(0);
   const [, start] = useTransition();
 
   function onLike() {
     if (!canInteract) return;
+    if (!like.on) setLikeBurst((k) => k + 1);
     const optimistic = {
       on: !like.on,
       count: like.count + (like.on ? -1 : 1),
@@ -50,6 +55,7 @@ export function PostActions({
 
   function onBoost() {
     if (!canInteract) return;
+    if (!boost.on) setBoostBurst((k) => k + 1);
     const optimistic = {
       on: !boost.on,
       count: boost.count + (boost.on ? -1 : 1),
@@ -80,7 +86,7 @@ export function PostActions({
     <div className="mt-2 flex items-center justify-between pr-6 text-muted">
       <Link
         href={`/c/${slug}/post/${postId}`}
-        className="group flex items-center gap-1.5 text-sm transition-colors hover:text-link"
+        className="action-btn group flex items-center gap-1.5 text-sm transition-colors hover:text-link"
         aria-label="Replies"
       >
         <span className="rounded-full p-1.5 transition-colors group-hover:bg-link/10">
@@ -95,12 +101,15 @@ export function PostActions({
         disabled={!canInteract}
         aria-pressed={boost.on}
         className={cn(
-          "group flex items-center gap-1.5 text-sm transition-colors enabled:hover:text-repost disabled:cursor-default",
+          "action-btn group flex items-center gap-1.5 text-sm transition-colors enabled:hover:text-repost disabled:cursor-default",
           boost.on && "text-repost",
         )}
         aria-label="Boost"
       >
-        <span className="rounded-full p-1.5 transition-colors group-enabled:group-hover:bg-repost/10">
+        <span className="relative rounded-full p-1.5 transition-colors group-enabled:group-hover:bg-repost/10">
+          {boostBurst > 0 ? (
+            <span key={boostBurst} className="reaction-burst" aria-hidden />
+          ) : null}
           <Repeat2 className="size-[18px]" />
         </span>
         {boost.count > 0 ? compactNumber(boost.count) : null}
@@ -112,12 +121,15 @@ export function PostActions({
         disabled={!canInteract}
         aria-pressed={like.on}
         className={cn(
-          "group flex items-center gap-1.5 text-sm transition-colors enabled:hover:text-like disabled:cursor-default",
+          "action-btn group flex items-center gap-1.5 text-sm transition-colors enabled:hover:text-like disabled:cursor-default",
           like.on && "text-like",
         )}
         aria-label="Like"
       >
-        <span className="rounded-full p-1.5 transition-colors group-enabled:group-hover:bg-like/10">
+        <span className="relative rounded-full p-1.5 transition-colors group-enabled:group-hover:bg-like/10">
+          {likeBurst > 0 ? (
+            <span key={likeBurst} className="reaction-burst" aria-hidden />
+          ) : null}
           <Heart className={cn("size-[18px]", like.on && "fill-current")} />
         </span>
         {like.count > 0 ? compactNumber(like.count) : null}
@@ -126,7 +138,7 @@ export function PostActions({
       <button
         type="button"
         onClick={onShare}
-        className="group flex items-center gap-1.5 text-sm transition-colors hover:text-link"
+        className="action-btn group flex items-center gap-1.5 text-sm transition-colors hover:text-link"
         aria-label="Copy link"
       >
         <span className="rounded-full p-1.5 transition-colors group-hover:bg-link/10">

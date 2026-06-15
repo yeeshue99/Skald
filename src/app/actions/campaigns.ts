@@ -208,6 +208,91 @@ const themeInputSchema = z.object({
     repost: hex,
     link: hex,
   }),
+  // Optional so old payloads (no decorations) and new ones both validate.
+  // Keys mirror the canonical Decorations unions in theme-types.ts.
+  decorations: z
+    .object({
+      texture: z.enum([
+        "none",
+        "starchart",
+        "parchment",
+        "circuit",
+        "constellations",
+        "squiggle",
+        "florets",
+        "vinework",
+      ]),
+      bgScroll: z.enum([
+        "static",
+        "down",
+        "up",
+        "left",
+        "right",
+        "diagonal",
+        "sineDown",
+        "sway",
+        "sineUp",
+      ]),
+      divider: z.enum([
+        "plain",
+        "asterism",
+        "diamond",
+        "dataline",
+        "vine",
+        "laurel",
+      ]),
+      buttons: z.enum(["flat", "arcaneGlow", "wax", "neon", "petal", "dew"]),
+      avatarFrame: z.enum([
+        "none",
+        "manaHalo",
+        "medallion",
+        "hudBracket",
+        "wreath",
+        "blossom",
+      ]),
+      depth: z.enum([
+        "flat",
+        "violetAmbient",
+        "paperMatte",
+        "cyanBloom",
+        "verdantAmbient",
+        "roseGlow",
+      ]),
+      reactions: z.enum(["none", "sparkle", "stamp", "pulse", "petals", "bloom"]),
+      cardFrame: z.enum([
+        "plain",
+        "gilded",
+        "deckled",
+        "chamfer",
+        "botanical",
+        "pressed",
+      ]),
+      wordmark: z.enum(["plain", "sigil", "dropcap", "caret", "sprig", "rosette"]),
+      chrome: z.enum([
+        "plain",
+        "stainedGlass",
+        "banner",
+        "hudStrip",
+        "trellis",
+        "garland",
+      ]),
+      effects: z
+        .array(
+          z.enum([
+            "embers",
+            "motes",
+            "dust",
+            "scanlines",
+            "fog",
+            "pagecurl",
+            "petalfall",
+            "pollen",
+            "leaves",
+          ]),
+        )
+        .max(9),
+    })
+    .optional(),
 });
 
 export async function updateThemeAction(

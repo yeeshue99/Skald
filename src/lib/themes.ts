@@ -1,7 +1,13 @@
 import type { CSSProperties } from "react";
-import type { Theme } from "./theme-types";
+import type { Theme, Decorations } from "./theme-types";
 
-export type { Theme, ThemeColors, ThemeMode } from "./theme-types";
+export type {
+  Theme,
+  ThemeColors,
+  ThemeMode,
+  Decorations,
+  AmbientEffect,
+} from "./theme-types";
 
 // ---------------------------------------------------------------------------
 // Fonts. We load a small bounded set of Google Fonts so any theme (preset or
@@ -46,7 +52,26 @@ export const GOOGLE_FONTS_HREF =
   "&display=swap";
 
 // ---------------------------------------------------------------------------
-// Presets. The three flavored ones came from independent design passes; the
+// Phase 1 decorations. DEFAULT_DECORATIONS is the understated fallback source
+// used by normalizeTheme to fill any missing keys, so a legacy row with no
+// (or partial) decorations renders with the current plain appearance.
+// ---------------------------------------------------------------------------
+export const DEFAULT_DECORATIONS: Decorations = {
+  texture: "none",
+  bgScroll: "static",
+  divider: "plain",
+  buttons: "flat",
+  avatarFrame: "none",
+  depth: "flat",
+  reactions: "none",
+  cardFrame: "plain",
+  wordmark: "plain",
+  chrome: "plain",
+  effects: [],
+};
+
+// ---------------------------------------------------------------------------
+// Presets. The four flavored ones came from independent design passes; the
 // neutral "Skald" default is used on signed-out pages and as the starting
 // point for a new campaign.
 // ---------------------------------------------------------------------------
@@ -72,6 +97,7 @@ export const DEFAULT_THEME: Theme = {
     repost: "#22C55E",
     link: "#5EA0F2",
   },
+  decorations: DEFAULT_DECORATIONS,
 };
 
 export const STRIX_THEME: Theme = {
@@ -95,6 +121,19 @@ export const STRIX_THEME: Theme = {
     like: "#FF6B9D",
     repost: "#5BE0C8",
     link: "#6FB7FF",
+  },
+  decorations: {
+    texture: "constellations",
+    bgScroll: "down",
+    divider: "asterism",
+    buttons: "arcaneGlow",
+    avatarFrame: "manaHalo",
+    depth: "violetAmbient",
+    reactions: "sparkle",
+    cardFrame: "gilded",
+    wordmark: "sigil",
+    chrome: "stainedGlass",
+    effects: ["motes", "embers"],
   },
 };
 
@@ -120,6 +159,59 @@ export const SCROLLR_THEME: Theme = {
     repost: "#3F6B3A",
     link: "#7A3E12",
   },
+  decorations: {
+    texture: "parchment",
+    bgScroll: "static",
+    divider: "diamond",
+    buttons: "wax",
+    avatarFrame: "medallion",
+    depth: "paperMatte",
+    reactions: "stamp",
+    cardFrame: "deckled",
+    wordmark: "dropcap",
+    chrome: "banner",
+    effects: ["dust", "pagecurl"],
+  },
+};
+
+export const BLOOMR_THEME: Theme = {
+  id: "bloomr",
+  appName: "Bloomr",
+  tagline: "Every bloom has its tale.",
+  mode: "light",
+  fonts: { display: "Cinzel", body: "EB Garamond" },
+  radius: "0.5rem",
+  colors: {
+    // An illuminated herbal: vellum tinted green, with damask rose, marigold
+    // gold and violet picked out against a leaf-green garden field.
+    background: "#EEF1DE",
+    surface: "#F8F6E8",
+    surfaceHover: "#E6EBD0",
+    border: "#C3CBA2",
+    text: "#25301B",
+    textMuted: "#5F6B45",
+    primary: "#A8336A",
+    primaryHover: "#8C2957",
+    onPrimary: "#FBF7EE",
+    accent: "#C79A2B",
+    like: "#BE3B5E",
+    repost: "#4E7C3A",
+    link: "#7A5AA8",
+  },
+  decorations: {
+    texture: "florets",
+    bgScroll: "sway",
+    divider: "vine",
+    buttons: "petal",
+    avatarFrame: "wreath",
+    // paperMatte over a colored glow: tinted blooms read poorly on light parchment.
+    depth: "paperMatte",
+    reactions: "bloom",
+    cardFrame: "botanical",
+    wordmark: "sprig",
+    chrome: "garland",
+    effects: ["petalfall", "pollen"],
+  },
 };
 
 export const HOLONET_THEME: Theme = {
@@ -144,12 +236,26 @@ export const HOLONET_THEME: Theme = {
     repost: "#3DF5A6",
     link: "#5BE8FF",
   },
+  decorations: {
+    texture: "circuit",
+    bgScroll: "down",
+    divider: "dataline",
+    buttons: "neon",
+    avatarFrame: "hudBracket",
+    depth: "cyanBloom",
+    reactions: "pulse",
+    cardFrame: "chamfer",
+    wordmark: "caret",
+    chrome: "hudStrip",
+    effects: ["scanlines"],
+  },
 };
 
 export const PRESETS: Theme[] = [
   DEFAULT_THEME,
   STRIX_THEME,
   SCROLLR_THEME,
+  BLOOMR_THEME,
   HOLONET_THEME,
 ];
 
@@ -158,12 +264,148 @@ export function getPreset(id: string): Theme {
 }
 
 // ---------------------------------------------------------------------------
+// Normalize. Returns a shallow copy with `decorations` guaranteed present.
+// Missing OR partially-present decorations are filled per-key from
+// DEFAULT_DECORATIONS, so a row with `{ texture: "starchart" }` still gets the
+// other four keys. Pure: never mutates the input.
+// ---------------------------------------------------------------------------
+const AVATAR_FRAMES: Decorations["avatarFrame"][] = [
+  "none",
+  "manaHalo",
+  "medallion",
+  "hudBracket",
+  "wreath",
+  "blossom",
+];
+
+export function normalizeTheme(theme: Theme): Theme {
+  const decorations = { ...DEFAULT_DECORATIONS, ...(theme.decorations ?? {}) };
+  // Coerce retired frame values (e.g. an old "laurel"/"bookstack") to "none".
+  if (!AVATAR_FRAMES.includes(decorations.avatarFrame)) {
+    decorations.avatarFrame = "none";
+  }
+  return { ...theme, decorations };
+}
+
+// ---------------------------------------------------------------------------
+// Data attributes for the campaign wrapper. Normalizes internally then returns
+// a plain data-* map (kebab-case keys) so callers can spread it directly onto a
+// JSX element. The CSS in globals.css scopes every decoration rule under these.
+// ---------------------------------------------------------------------------
+export function themeDataAttrs(theme: Theme): Record<string, string> {
+  const d = normalizeTheme(theme).decorations!;
+  return {
+    "data-texture": d.texture,
+    "data-divider": d.divider,
+    "data-buttons": d.buttons,
+    "data-avatar-frame": d.avatarFrame,
+    "data-depth": d.depth,
+    "data-reactions": d.reactions,
+    "data-card-frame": d.cardFrame,
+    "data-wordmark": d.wordmark,
+    "data-chrome": d.chrome,
+    // static => omit so no scroll animation matches; else the direction.
+    ...(d.bgScroll !== "static" ? { "data-bg-scroll": d.bgScroll } : {}),
+    "data-campaign": "true",
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Apply a theme by emitting CSS custom properties. Because they reference the
 // raw vars, a per-campaign <div style={themeToCssVars(theme)}> re-skins every
-// child at runtime with no rebuild.
+// child at runtime with no rebuild. Normalizes internally so legacy rows still
+// get the decoration-driven vars (resolving to the plain/flat look).
 // ---------------------------------------------------------------------------
 export function themeToCssVars(theme: Theme): CSSProperties {
-  const c = theme.colors;
+  const t = normalizeTheme(theme);
+  const c = t.colors;
+  const d = t.decorations!;
+
+  // depth => card shadow + glow language
+  // Kept in sync with the [data-depth] blocks in globals.css. These inline vars
+  // win over the CSS fallback at render time, so they carry the stronger v2
+  // values; the CSS restates them for any legacy row that predates the var.
+  // Depth glow colors are EXPLICIT so the option name matches what's rendered
+  // (e.g. "Cyan bloom" is cyan on every theme, not the theme's primary). Using
+  // var(--accent)/var(--primary) made the color depend on the palette, so on
+  // STR/X (accent=teal, primary=violet) the violet/cyan options came out swapped.
+  const VIOLET = "#8b5cf6";
+  const CYAN = "#22d3ee";
+  // Garden hues for the flora depth options: a leaf green ambient and a damask
+  // rose bloom. Explicit hexes (like VIOLET/CYAN) so the option name matches the
+  // rendered glow on every palette, not the per-theme primary/accent.
+  const LEAF = "#4e7c3a";
+  const ROSE = "#b23a6e";
+  const DEPTH_SHADOW: Record<Decorations["depth"], string> = {
+    flat: "none",
+    violetAmbient: `0 10px 30px -12px color-mix(in srgb,${VIOLET} 60%,transparent), 0 3px 10px color-mix(in srgb,#000 50%,transparent), 0 0 0 1px color-mix(in srgb,${VIOLET} 24%,transparent)`,
+    // paperMatte must read on BOTH light (warm-ish dark drop) and dark (white
+    // top-inset + faint rim, since a dark shadow is invisible on a dark bg).
+    paperMatte:
+      "0 2px 6px color-mix(in srgb,#000 22%,transparent), 0 12px 24px -10px color-mix(in srgb,#000 26%,transparent), inset 0 1px 0 color-mix(in srgb,#fff 9%,transparent), 0 0 0 1px color-mix(in srgb,#fff 8%,transparent)",
+    cyanBloom: `0 0 0 1px color-mix(in srgb,${CYAN} 42%,transparent), 0 4px 14px -4px color-mix(in srgb,#000 55%,transparent), 0 0 22px -2px color-mix(in srgb,${CYAN} 48%,transparent)`,
+    verdantAmbient: `0 10px 30px -12px color-mix(in srgb,${LEAF} 60%,transparent), 0 3px 10px color-mix(in srgb,#000 50%,transparent), 0 0 0 1px color-mix(in srgb,${LEAF} 24%,transparent)`,
+    roseGlow: `0 0 0 1px color-mix(in srgb,${ROSE} 42%,transparent), 0 4px 14px -4px color-mix(in srgb,#000 45%,transparent), 0 0 22px -2px color-mix(in srgb,${ROSE} 44%,transparent)`,
+  };
+  const DEPTH_GLOW: Record<Decorations["depth"], string> = {
+    flat: "none",
+    violetAmbient: `inset 0 0 30px color-mix(in srgb,${VIOLET} 22%,transparent)`,
+    paperMatte: "none",
+    cyanBloom: `0 0 30px -6px color-mix(in srgb,${CYAN} 55%,transparent)`,
+    verdantAmbient: `inset 0 0 30px color-mix(in srgb,${LEAF} 22%,transparent)`,
+    roseGlow: `0 0 30px -6px color-mix(in srgb,${ROSE} 50%,transparent)`,
+  };
+
+  // buttons => interaction glow
+  // A bare COLOR (not a full shadow fragment): every consumer in globals.css
+  // supplies its own offset/blur and uses this only for the glow hue, e.g.
+  // `box-shadow: 0 0 18px var(--btn-glow)`. Emitting a fragment here would make
+  // those declarations invalid (too many lengths) and silently drop the glow.
+  const BTN_GLOW: Record<Decorations["buttons"], string> = {
+    flat: "transparent",
+    arcaneGlow: "color-mix(in srgb,var(--accent) 50%,transparent)",
+    wax: "transparent",
+    neon: "color-mix(in srgb,var(--primary) 70%,transparent)",
+    petal: "color-mix(in srgb,var(--accent) 55%,transparent)",
+    dew: "color-mix(in srgb,var(--primary) 55%,transparent)",
+  };
+
+  // avatarFrame => ring spec consumed by .avatar-frame
+  // Kept in sync with the resting box-shadow rings under [data-avatar-frame]
+  // in globals.css (which are authoritative for rendering). This keeps
+  // --frame-ring consistent for any consumer that reads it directly.
+  const FRAME_RING: Record<Decorations["avatarFrame"], string> = {
+    none: "none",
+    manaHalo:
+      "0 0 0 2px color-mix(in srgb,var(--accent) 85%,transparent), 0 0 14px 1px color-mix(in srgb,var(--accent) 60%,transparent), 0 0 22px 2px color-mix(in srgb,var(--primary) 35%,transparent)",
+    medallion:
+      "0 0 0 2px #c8a33a, 0 0 0 4px #6e551f, 0 0 0 5px color-mix(in srgb,#2b2118 55%,transparent)",
+    hudBracket:
+      "0 0 0 1px color-mix(in srgb,var(--primary) 70%,transparent), 0 0 8px -1px color-mix(in srgb,var(--primary) 55%,transparent)",
+    // wreath: a green laurel rim over a dark gold band, struck like a coin.
+    wreath:
+      "0 0 0 2px color-mix(in srgb,var(--repost) 80%,#2b3a1e), 0 0 0 4px #6e551f, 0 0 0 5px color-mix(in srgb,#2b2118 45%,transparent)",
+    // blossom: a soft petal halo (accent ring + accent/primary outer bloom).
+    blossom:
+      "0 0 0 2px color-mix(in srgb,var(--accent) 80%,transparent), 0 0 10px 1px color-mix(in srgb,var(--accent) 45%,transparent), 0 0 16px 2px color-mix(in srgb,var(--primary) 28%,transparent)",
+  };
+
+  // backdrop opacity, per texture. The v1 dark value (0.06) was effectively
+  // invisible on #0E0B1A / #070A12; the dark fields now carry near-opaque
+  // star/trace colors so a higher dial reads as atmospheric, not loud. Light
+  // parchment nudges up slightly for the added aged-edge vignette.
+  const TEXTURE_OPACITY: Record<Decorations["texture"], string> = {
+    none: "0",
+    parchment: "0.14",
+    starchart: "0.22",
+    circuit: "0.2",
+    constellations: "0.3",
+    squiggle: "0.18",
+    florets: "0.16",
+    vinework: "0.15",
+  };
+  const textureOpacity = TEXTURE_OPACITY[d.texture];
+
   return {
     "--bg": c.background,
     "--surface": c.surface,
@@ -178,9 +420,14 @@ export function themeToCssVars(theme: Theme): CSSProperties {
     "--like": c.like,
     "--repost": c.repost,
     "--link": c.link,
-    "--radius": theme.radius,
-    "--font-display": fontStack(theme.fonts.display),
-    "--font-body": fontStack(theme.fonts.body),
-    colorScheme: theme.mode,
+    "--radius": t.radius,
+    "--font-display": fontStack(t.fonts.display),
+    "--font-body": fontStack(t.fonts.body),
+    "--shadow-card": DEPTH_SHADOW[d.depth],
+    "--glow": DEPTH_GLOW[d.depth],
+    "--btn-glow": BTN_GLOW[d.buttons],
+    "--frame-ring": FRAME_RING[d.avatarFrame],
+    "--texture-opacity": textureOpacity,
+    colorScheme: t.mode,
   } as CSSProperties;
 }

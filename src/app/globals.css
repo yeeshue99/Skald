@@ -78,3 +78,1817 @@ body {
   background: var(--border);
   border-radius: 999px;
 }
+
+/* ===========================================================================
+   Phase 1 decorations — v2 refinement.
+
+   Everything below is scoped under [data-campaign] so auth, signed-out, and
+   marketing pages are never touched. Selection is keyed off the data-*
+   attributes the wrapper emits (themeDataAttrs) and a few stable class hooks
+   (.post-card, .ui-button, .ui-card, .feed-pill, .avatar-frame, .action-btn).
+
+   The decoration-driven vars (--shadow-card, --glow, --btn-glow, --frame-ring,
+   --texture-opacity) are emitted inline by themeToCssVars and read here with a
+   raw var(), NOT through @theme inline.
+
+   What changed vs v1:
+   - .action-btn never gets a resting box (the arcaneGlow square-box bug). All
+     three button FX leave .action-btn unboxed; the only treatment is a
+     hover-only glow on the inner round icon chip (.action-btn > span).
+   - dark textures (starchart, circuit) rebuilt with brighter, larger, layered
+     features so they read at 100% zoom; parchment gains an aged-edge vignette.
+     A separate static ::after wash carries the nebula / vignette / scanline
+     bloom so the drifting ::before never moves the atmosphere.
+   - dividers rebuilt: asterism = accent celestial star + glow + fading rules;
+     diamond = manuscript fleuron/lozenge; dataline = segmented data-bus +
+     end ticks + center node + restrained glow.
+   - avatar rings + card depth strengthened (box-shadow / pseudo-elements only,
+     no layout shift). The resting ring is a box-shadow so it reads on both
+     <img> and <span> avatars; ::after layers (pulse, brackets, gleam) enhance
+     the <span> case and degrade gracefully on replaced <img> elements.
+
+   Every "none / plain / flat" value intentionally draws nothing beyond the
+   pre-existing look, so legacy campaigns (which normalize to all-default)
+   render unchanged. All motion is gated behind
+   @media (prefers-reduced-motion: no-preference); the static decoration form
+   lives outside that block. Focus rings survive via :not(:focus-visible) on
+   every resting box-shadow rule, and .action-btn carries no resting box-shadow
+   at all. Textures are CSS gradients + tiny inline SVG data-URIs, no raster.
+   =========================================================================== */
+
+[data-campaign] {
+  position: relative;
+  isolation: isolate;
+}
+
+/* ---- Texture backdrop (data-texture) ----------------------------------
+   The repeating field lives on ::before (oversized by 80px on each edge so the
+   drift/scan animations can translate it on the compositor without exposing an
+   uncovered edge). A separate fixed ::after layer carries the static
+   atmospheric wash (nebula glow, aged-edge vignette, scanline bloom) so the
+   drift transform never moves the atmosphere. Both sit at z-index:-1 behind the
+   isolated content. The inline --texture-opacity is the single global dial. */
+[data-campaign]::before {
+  content: "";
+  position: fixed;
+  inset: -80px;
+  z-index: -1;
+  pointer-events: none;
+  opacity: var(--texture-opacity, 0);
+  background-repeat: repeat;
+}
+
+[data-campaign][data-texture="none"]::before {
+  display: none;
+}
+
+/* The static wash layer. Present only for the three real textures. */
+[data-campaign][data-texture="starchart"]::after,
+[data-campaign][data-texture="parchment"]::after,
+[data-campaign][data-texture="circuit"]::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Ambient-motion particle layer (motes/embers/dust). Inert by default; the
+   per-theme particle backgrounds + rise animations live in the reduced-motion
+   block below and only switch on for data-motion="on". Extends below the
+   viewport so the rising-tile loop has no gap. */
+/* Ambient effect container. Holds one .fx child per selected effect (the
+   layout renders them from decorations.effects). Extends below the viewport so
+   the rising-tile loops have no gap. */
+.campaign-motion {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: calc(100% + 340px);
+  z-index: -1;
+  pointer-events: none;
+}
+.fx {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* starchart (STR/X) on #0E0B1A: layered multi-size star dots in three tiers
+   (bright hero / mid / fine dust) + two faint constellation hairlines. Star
+   colors are baked near-opaque so the field reads even at a modest layer
+   opacity; the per-tier alphas are tuned for the ~0.22 dark multiplier. */
+[data-campaign][data-texture="starchart"]::before {
+  background-image:
+    /* bright hero stars (teal accent). Soft falloff (center -> transparent 70%)
+       so the tiny dots anti-alias smoothly under sub-pixel drift instead of
+       shimmering against the pixel grid the way a hard 1px edge does. */
+    radial-gradient(2.2px 2.2px at 18% 26%,
+      color-mix(in srgb, var(--accent) 95%, #fff) 0%, transparent 70%),
+    radial-gradient(2.2px 2.2px at 82% 64%,
+      color-mix(in srgb, var(--accent) 90%, #fff) 0%, transparent 70%),
+    /* mid stars (violet primary) */
+    radial-gradient(1.9px 1.9px at 64% 22%,
+      color-mix(in srgb, var(--primary) 92%, #fff) 0%, transparent 70%),
+    radial-gradient(1.9px 1.9px at 36% 78%,
+      color-mix(in srgb, var(--primary) 85%, #fff) 0%, transparent 70%),
+    /* fine white dust */
+    radial-gradient(1.5px 1.5px at 50% 50%, #ffffffcc 0%, transparent 70%),
+    radial-gradient(1.5px 1.5px at 8% 70%, #ffffffaa 0%, transparent 70%),
+    radial-gradient(1.5px 1.5px at 92% 12%, #ffffffaa 0%, transparent 70%),
+    /* two faint constellation hairlines */
+    linear-gradient(122deg, transparent 49.5%,
+      color-mix(in srgb, var(--accent) 45%, transparent) 49.8%,
+      color-mix(in srgb, var(--accent) 45%, transparent) 50.2%, transparent 50.5%),
+    linear-gradient(38deg, transparent 49.6%,
+      color-mix(in srgb, var(--primary) 38%, transparent) 49.85%,
+      color-mix(in srgb, var(--primary) 38%, transparent) 50.15%, transparent 50.4%);
+  background-size:
+    240px 240px, 320px 320px,
+    200px 200px, 280px 280px,
+    150px 150px, 170px 170px, 190px 190px,
+    560px 560px, 640px 640px;
+}
+
+/* nebula glow wash — two soft radial clouds, off-center, static. */
+[data-campaign][data-texture="starchart"]::after {
+  background-image:
+    radial-gradient(60% 50% at 22% 18%,
+      color-mix(in srgb, var(--primary) 22%, transparent), transparent 70%),
+    radial-gradient(55% 45% at 80% 82%,
+      color-mix(in srgb, var(--accent) 18%, transparent), transparent 72%);
+  opacity: 0.9;
+}
+
+/* parchment (Scrollr, light): a tiled "paper stacks & books" motif (a stack of
+   books, a shelf of upright books, and a written sheet with a folded corner) +
+   fiber grain + a warm aged-edge vignette so the page reads as a scriptorium. */
+[data-campaign][data-texture="parchment"]::before {
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cg fill='none' stroke='%237a5a2c' stroke-opacity='0.55' stroke-width='2' stroke-linejoin='round'%3E%3Crect x='16' y='104' width='52' height='12' rx='2'/%3E%3Crect x='22' y='92' width='44' height='12' rx='2'/%3E%3Crect x='12' y='80' width='50' height='12' rx='2'/%3E%3Crect x='92' y='30' width='9' height='40' rx='1'/%3E%3Crect x='104' y='26' width='9' height='44' rx='1'/%3E%3Crect x='116' y='32' width='9' height='38' rx='1'/%3E%3Cpath d='M44 30 h26 l8 8 v34 h-34 z'/%3E%3Cpath d='M70 30 v8 h8'/%3E%3Cline x1='50' y1='48' x2='70' y2='48'/%3E%3Cline x1='50' y1='56' x2='70' y2='56'/%3E%3Cline x1='50' y1='64' x2='66' y2='64'/%3E%3C/g%3E%3C/svg%3E"),
+    repeating-linear-gradient(
+      0deg,
+      color-mix(in srgb, var(--border) 22%, transparent) 0 1px,
+      transparent 1px 4px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--border) 16%, transparent) 0 1px,
+      transparent 1px 5px
+    );
+  background-size: 140px 140px, 7px 7px, 9px 9px;
+}
+
+/* aged-edge vignette — warm brown darkening toward the frame edges. Static. */
+[data-campaign][data-texture="parchment"]::after {
+  background:
+    radial-gradient(120% 120% at 50% 45%, transparent 58%,
+      color-mix(in srgb, #5a4220 16%, transparent) 88%,
+      color-mix(in srgb, #4a3518 24%, transparent) 100%);
+  opacity: 0.85;
+}
+
+/* circuit (HOLONET) on #070A12: a fine cyan grid + a few brighter trace
+   segments + node dots at the crossings. Brighter than v1 so it reads on
+   near-black; the bright traces are sparse (200px tiles) so it stays a HUD,
+   not a wall of lines. The scanlines + corner bloom live on the ::after wash. */
+[data-campaign][data-texture="circuit"]::before {
+  background-image:
+    /* node dots at grid crossings */
+    radial-gradient(1.6px 1.6px at 0 0,
+      color-mix(in srgb, var(--primary) 90%, #fff) 50%, transparent 52%),
+    /* brighter horizontal trace every 5th line */
+    repeating-linear-gradient(
+      0deg,
+      color-mix(in srgb, var(--primary) 55%, transparent) 0 1px,
+      transparent 1px 200px
+    ),
+    /* brighter vertical trace every 5th line */
+    repeating-linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--primary) 55%, transparent) 0 1px,
+      transparent 1px 200px
+    ),
+    /* fine base grid — horizontal */
+    repeating-linear-gradient(
+      0deg,
+      color-mix(in srgb, var(--primary) 26%, transparent) 0 1px,
+      transparent 1px 40px
+    ),
+    /* fine base grid — vertical */
+    repeating-linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--primary) 26%, transparent) 0 1px,
+      transparent 1px 40px
+    );
+  background-size:
+    40px 40px,
+    200px 200px,
+    200px 200px,
+    40px 40px,
+    40px 40px;
+}
+
+/* constellations: a starry field with connecting constellation lines (single
+   200px tile so it scrolls seamlessly). White on the dark sky. */
+[data-campaign][data-texture="constellations"]::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Cg stroke='%23ffffff' stroke-opacity='0.34' stroke-width='1' fill='none'%3E%3Cpath d='M30 40 L70 72 L60 120 L112 150'/%3E%3Cpath d='M140 28 L170 82 L128 104'/%3E%3Cpath d='M70 72 L120 52'/%3E%3C/g%3E%3Cg fill='%23ffffff'%3E%3Ccircle cx='30' cy='40' r='1.8'/%3E%3Ccircle cx='70' cy='72' r='2.3'/%3E%3Ccircle cx='60' cy='120' r='1.6'/%3E%3Ccircle cx='112' cy='150' r='2'/%3E%3Ccircle cx='120' cy='52' r='1.5'/%3E%3Ccircle cx='140' cy='28' r='1.9'/%3E%3Ccircle cx='170' cy='82' r='2.1'/%3E%3Ccircle cx='128' cy='104' r='1.6'/%3E%3Ccircle cx='22' cy='168' r='1.2' fill-opacity='0.7'/%3E%3Ccircle cx='185' cy='160' r='1.2' fill-opacity='0.7'/%3E%3Ccircle cx='96' cy='24' r='1' fill-opacity='0.6'/%3E%3Ccircle cx='44' cy='92' r='0.9' fill-opacity='0.6'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 200px 200px;
+}
+
+/* squiggle: rows of wavy lines (single 120px square tile -> seamless any
+   direction). Neutral light grey so it reads on light or dark. */
+[data-campaign][data-texture="squiggle"]::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='none' stroke='%23c8ccd2' stroke-opacity='0.65' stroke-width='2'%3E%3Cpath d='M0 20 Q15 6 30 20 T60 20 T90 20 T120 20'/%3E%3Cpath d='M0 60 Q15 46 30 60 T60 60 T90 60 T120 60'/%3E%3Cpath d='M0 100 Q15 86 30 100 T60 100 T90 100 T120 100'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 120px 120px;
+}
+
+/* Per-texture tile size for the scroll keyframes (so the loop point lands on a
+   whole tile and stays seamless). starchart is multi-tile so it is not offered
+   as a default scroll, but still gets a best-effort value. */
+[data-campaign][data-texture="starchart"] {
+  --bg-tile: 320px;
+}
+[data-campaign][data-texture="constellations"] {
+  --bg-tile: 200px;
+}
+[data-campaign][data-texture="parchment"] {
+  --bg-tile: 140px;
+}
+[data-campaign][data-texture="circuit"] {
+  --bg-tile: 200px;
+}
+[data-campaign][data-texture="squiggle"] {
+  --bg-tile: 120px;
+}
+
+/* scanlines + a faint magenta-accent corner bloom — static wash. */
+[data-campaign][data-texture="circuit"]::after {
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      color-mix(in srgb, #000000 28%, transparent) 0 1px,
+      transparent 1px 3px
+    ),
+    radial-gradient(70% 60% at 85% 10%,
+      color-mix(in srgb, var(--accent) 12%, transparent), transparent 72%);
+  opacity: 0.7;
+}
+
+/* ---- Divider ornament (data-divider) ---------------------------------
+   plain: no rule — the existing border-b border-border on .post-card is it.
+
+   For every non-plain value: neutralize the hard line, then draw a centered
+   ornament on ::after spanning the card width, with flanking hairline rules
+   that fade to transparent at the outer edges. */
+[data-campaign]:not([data-divider="plain"]) .post-card {
+  border-bottom-color: transparent;
+  position: relative;
+}
+[data-campaign]:not([data-divider="plain"]) .post-card::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 16px;
+  pointer-events: none;
+  background-repeat: no-repeat;
+}
+
+/* asterism (STR/X): a refined accent-colored celestial star (4-pt over a
+   smaller rotated 4-pt = subtle 8-pt sparkle, with two tiny flanking dots) and
+   a soft drop-shadow glow, centered on flanking rules that fade to transparent.
+   The SVG uses currentColor so the star tracks the theme accent. */
+[data-campaign][data-divider="asterism"] .post-card::after {
+  color: var(--accent);
+  bottom: -8px;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='18' viewBox='0 0 34 18'%3E%3Cg fill='currentColor'%3E%3Cpath opacity='0.55' d='M17 1l1.4 5.6L24 9l-5.6 1.4L17 17l-1.4-6.6L10 9l5.6-2.4z' transform='rotate(45 17 9)'/%3E%3Cpath d='M17 1.5l1.8 5.7L24 9l-5.2 1.8L17 16.5l-1.8-5.7L10 9l5.2-1.8z'/%3E%3Ccircle cx='5' cy='9' r='1' opacity='0.7'/%3E%3Ccircle cx='29' cy='9' r='1' opacity='0.7'/%3E%3C/g%3E%3C/svg%3E"),
+    /* left rule: fades from the center gap outward */
+    linear-gradient(90deg, transparent 0%,
+      color-mix(in srgb, var(--accent) 55%, transparent) 92%, transparent 100%),
+    /* right rule: fades from the center gap outward */
+    linear-gradient(270deg, transparent 0%,
+      color-mix(in srgb, var(--accent) 55%, transparent) 92%, transparent 100%);
+  background-position: center bottom, left center, right center;
+  background-size: 34px 18px, calc(50% - 22px) 1px, calc(50% - 22px) 1px;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent) 60%, transparent));
+}
+
+/* diamond (Scrollr): a proper manuscript fleuron — an oxblood lozenge with a
+   gold inner facet and two small leaf flourishes, on tapering ink hairlines. */
+[data-campaign][data-divider="diamond"] .post-card::after {
+  bottom: -8px;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='54' height='16' viewBox='0 0 54 16'%3E%3Cg fill='%239B2D26'%3E%3Cpath d='M27 2l7 6-7 6-7-6z'/%3E%3Cpath d='M27 4.6l4 3.4-4 3.4-4-3.4z' fill='%23FBF3E1'/%3E%3Cpath d='M27 5.6l3 2.4-3 2.4-3-2.4z' fill='%23A8791C'/%3E%3Cpath d='M14 8c-3-2-6-2-9 0 3 2 6 2 9 0z' opacity='0.85'/%3E%3Cpath d='M40 8c3-2 6-2 9 0-3 2-6 2-9 0z' opacity='0.85'/%3E%3C/g%3E%3C/svg%3E"),
+    linear-gradient(90deg, transparent 0%,
+      color-mix(in srgb, var(--text) 28%, transparent) 94%, transparent 100%),
+    linear-gradient(270deg, transparent 0%,
+      color-mix(in srgb, var(--text) 28%, transparent) 94%, transparent 100%);
+  background-position: center bottom, left center, right center;
+  background-size: 54px 16px, calc(50% - 30px) 1px, calc(50% - 30px) 1px;
+}
+
+/* dataline (HOLONET): a restrained segmented data-bus. No full-width bright
+   line: a dim dashed cyan bus tapers from the center, two end ticks cap it, and
+   a small glowing node sits dead center, with the glow contained to the node. */
+[data-campaign][data-divider="dataline"] .post-card {
+  border-bottom-color: transparent;
+}
+[data-campaign][data-divider="dataline"] .post-card::after {
+  height: 8px;
+  bottom: -4px;
+  background-image:
+    /* dashed bus — short cyan dashes, dim */
+    repeating-linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--primary) 50%, transparent) 0 6px,
+      transparent 6px 14px
+    ),
+    /* left end tick */
+    linear-gradient(
+      color-mix(in srgb, var(--primary) 80%, transparent),
+      color-mix(in srgb, var(--primary) 80%, transparent)
+    ),
+    /* right end tick */
+    linear-gradient(
+      color-mix(in srgb, var(--primary) 80%, transparent),
+      color-mix(in srgb, var(--primary) 80%, transparent)
+    ),
+    /* bright center node */
+    radial-gradient(2.5px 2.5px at 50% 50%,
+      color-mix(in srgb, var(--primary) 95%, #fff) 50%, transparent 55%);
+  background-position: center center, left center, right center, center center;
+  background-size: 100% 1px, 1px 8px, 1px 8px, 6px 6px;
+  /* taper the dashed bus toward the ends so it never reads as a hard rule */
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--primary) 45%, transparent));
+}
+
+/* ---- Avatar frame ring (data-avatar-frame) ---------------------------
+   Rings are box-shadows so the fixed avatar sizes (44/36/20px) never shift and
+   so the resting ring reads on BOTH <img> and <span> avatars. The ::after
+   enhancement layers (pulse, corner brackets, gleam) render on <span> avatars
+   and degrade gracefully on replaced <img> elements, which do not paint
+   pseudo-elements. */
+[data-campaign] .avatar-frame {
+  position: relative;
+}
+
+/* none: no rule. */
+
+/* manaHalo (STR/X): a clearly present glowing violet -> teal halo. The static
+   ring is a layered box-shadow (accent inner, accent + primary outer bloom);
+   the pulse animates a separate ::after layer with transform/opacity only. */
+[data-campaign][data-avatar-frame="manaHalo"] .avatar-frame {
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--accent) 85%, transparent),
+    0 0 14px 1px color-mix(in srgb, var(--accent) 60%, transparent),
+    0 0 22px 2px color-mix(in srgb, var(--primary) 35%, transparent);
+}
+[data-campaign][data-avatar-frame="manaHalo"] .avatar-frame::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    0 0 16px 3px color-mix(in srgb, var(--accent) 55%, transparent),
+    0 0 24px 4px color-mix(in srgb, var(--primary) 40%, transparent);
+  opacity: 0;
+}
+
+/* medallion (Scrollr): a true gold double-bezel coin rim over a dark rim. The
+   bright/dark gold pair + dark outer rim read as struck metal; the inset
+   top-left gleam (::after on span avatars) finishes the coin. */
+[data-campaign][data-avatar-frame="medallion"] .avatar-frame {
+  box-shadow:
+    0 0 0 2px #c8a33a,
+    0 0 0 4px #6e551f,
+    0 0 0 5px color-mix(in srgb, #2b2118 55%, transparent),
+    0 1px 3px color-mix(in srgb, #2b2118 35%, transparent);
+}
+[data-campaign][data-avatar-frame="medallion"] .avatar-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: inset 1px 1px 1.5px color-mix(in srgb, #fff3c4 70%, transparent);
+}
+
+/* hudBracket (HOLONET): a faint full cyan ring + four clearly visible cyan
+   corner brackets. The ring is the resting box-shadow (reads on img avatars);
+   the brackets are a clipped 2px border pseudo-element with a small glow. */
+[data-campaign][data-avatar-frame="hudBracket"] .avatar-frame {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--primary) 70%, transparent),
+    0 0 8px -1px color-mix(in srgb, var(--primary) 55%, transparent);
+}
+[data-campaign][data-avatar-frame="hudBracket"] .avatar-frame::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: 2px solid var(--primary);
+  border-radius: 4px;
+  pointer-events: none;
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--primary) 60%, transparent));
+  /* keep only the four corner brackets visible */
+  clip-path: polygon(
+    0 0, 32% 0, 32% 7%, 7% 7%, 7% 32%, 0 32%,
+    0 68%, 7% 68%, 7% 93%, 32% 93%, 32% 100%, 0 100%,
+    68% 100%, 68% 93%, 93% 93%, 93% 68%, 100% 68%, 100% 100%,
+    100% 32%, 93% 32%, 93% 7%, 68% 7%, 68% 0, 100% 0
+  );
+}
+
+/* ---- Depth: shadow + glow (data-depth) -------------------------------
+   These selector rules restate the depth language at stronger v2 values and
+   are kept in sync with the DEPTH_SHADOW / DEPTH_GLOW maps in themeToCssVars
+   (the inline vars win for rendering; these are the legacy fallback). Cards
+   visibly lift off the bg without any layout shift. */
+[data-campaign][data-depth="flat"] {
+  --shadow-card: none;
+  --glow: none;
+}
+/* Explicit colors so the option name matches the rendered hue on every theme
+   (kept in sync with the DEPTH_SHADOW / DEPTH_GLOW maps in themeToCssVars). */
+[data-campaign][data-depth="violetAmbient"] {
+  --shadow-card:
+    0 10px 30px -12px color-mix(in srgb, #8b5cf6 60%, transparent),
+    0 3px 10px color-mix(in srgb, #000 50%, transparent),
+    0 0 0 1px color-mix(in srgb, #8b5cf6 24%, transparent);
+  --glow: inset 0 0 30px color-mix(in srgb, #8b5cf6 22%, transparent);
+}
+[data-campaign][data-depth="paperMatte"] {
+  /* reads on both light (dark drop) and dark (white inset + rim) backgrounds */
+  --shadow-card:
+    0 2px 6px color-mix(in srgb, #000 22%, transparent),
+    0 12px 24px -10px color-mix(in srgb, #000 26%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff 9%, transparent),
+    0 0 0 1px color-mix(in srgb, #fff 8%, transparent);
+  --glow: none;
+}
+[data-campaign][data-depth="cyanBloom"] {
+  --shadow-card:
+    0 0 0 1px color-mix(in srgb, #22d3ee 42%, transparent),
+    0 4px 14px -4px color-mix(in srgb, #000 55%, transparent),
+    0 0 22px -2px color-mix(in srgb, #22d3ee 48%, transparent);
+  --glow: 0 0 30px -6px color-mix(in srgb, #22d3ee 55%, transparent);
+}
+
+/* .feed-pill is deliberately NOT in this group. It is a free-floating fixed
+   control, not a card surface. Setting box-shadow here would land on the same
+   property the pill uses for Tailwind `shadow-lg`, overriding (not adding to)
+   it — and for flat depth (--shadow-card: none, the default for every new
+   campaign) that nulls the pill's only elevation, leaving a fixed-position
+   control reading flat against the feed. Leaving shadow-lg authoritative keeps
+   the pill lifted in every depth. */
+/* Depth elevation is for STANDALONE surfaces (.ui-card: composer, panels, right
+   rail) only. Feed posts (.post-card) are a continuous stream separated by the
+   divider ornament; a per-post drop shadow looks heavy and competes with that
+   separator, so posts are intentionally NOT elevated. */
+[data-campaign] .ui-card {
+  box-shadow: var(--shadow-card, none);
+}
+
+/* ---- Card frame (data-card-frame) ------------------------------------
+   Themed frames for STANDALONE cards only: side panels (.ui-card) and the
+   quote-repost embed (.quote-card). Feed posts keep just the divider ornament
+   (no per-post box), per the depth note above. */
+
+/* gilded (STR/X): a double gold rule with small corner filigree brackets. */
+[data-campaign][data-card-frame="gilded"] .ui-card,
+[data-campaign][data-card-frame="gilded"] .quote-card {
+  position: relative;
+  border-color: color-mix(in srgb, #c8a33a 55%, var(--border));
+  box-shadow:
+    var(--shadow-card, none),
+    inset 0 0 0 1px color-mix(in srgb, #c8a33a 28%, transparent);
+}
+[data-campaign][data-card-frame="gilded"] .ui-card::before,
+[data-campaign][data-card-frame="gilded"] .quote-card::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  pointer-events: none;
+  --fg: color-mix(in srgb, #c8a33a 70%, transparent);
+  --h: linear-gradient(var(--fg), var(--fg));
+  background:
+    var(--h) left top / 13px 1px no-repeat,
+    var(--h) left top / 1px 13px no-repeat,
+    var(--h) right top / 13px 1px no-repeat,
+    var(--h) right top / 1px 13px no-repeat,
+    var(--h) left bottom / 13px 1px no-repeat,
+    var(--h) left bottom / 1px 13px no-repeat,
+    var(--h) right bottom / 13px 1px no-repeat,
+    var(--h) right bottom / 1px 13px no-repeat;
+}
+
+/* deckled (Scrollr): warm paper edge with a layered torn-sheet outline. */
+[data-campaign][data-card-frame="deckled"] .ui-card,
+[data-campaign][data-card-frame="deckled"] .quote-card {
+  position: relative;
+  border-color: color-mix(in srgb, #b79b6a 70%, var(--border));
+  box-shadow:
+    var(--shadow-card, none),
+    inset 0 1px 0 color-mix(in srgb, #fff 35%, transparent),
+    inset 0 0 16px color-mix(in srgb, #8a6d3b 12%, transparent);
+}
+[data-campaign][data-card-frame="deckled"] .ui-card::before,
+[data-campaign][data-card-frame="deckled"] .quote-card::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  pointer-events: none;
+  border: 1px dashed color-mix(in srgb, #b79b6a 50%, transparent);
+  border-radius: calc(var(--radius, 0.5rem) + 3px);
+}
+
+/* chamfer (HOLONET): notched corners with an inner cyan edge glow. */
+[data-campaign][data-card-frame="chamfer"] .ui-card,
+[data-campaign][data-card-frame="chamfer"] .quote-card {
+  border-color: color-mix(in srgb, var(--primary) 50%, var(--border));
+  border-radius: 0;
+  clip-path: polygon(
+    12px 0,
+    100% 0,
+    100% calc(100% - 12px),
+    calc(100% - 12px) 100%,
+    0 100%,
+    0 12px
+  );
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--primary) 50%, transparent),
+    inset 0 0 18px -3px color-mix(in srgb, var(--primary) 42%, transparent);
+}
+
+/* ---- Wordmark embellishment (data-wordmark) -------------------------- */
+
+/* sigil (STR/X): a small arcane 4-point star before the name (mask = inherits
+   the wordmark color). */
+[data-campaign][data-wordmark="sigil"] .wordmark::before {
+  content: "";
+  display: inline-block;
+  width: 0.62em;
+  height: 0.62em;
+  margin-right: 0.3em;
+  background: currentColor;
+  opacity: 0.85;
+  --sigil-star: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M12%200.5%20L14.6%209.4%20L23.5%2012%20L14.6%2014.6%20L12%2023.5%20L9.4%2014.6%20L0.5%2012%20L9.4%209.4%20Z'/%3E%3C/svg%3E");
+  -webkit-mask: var(--sigil-star) center / contain no-repeat;
+  mask: var(--sigil-star) center / contain no-repeat;
+}
+
+/* dropcap (Scrollr): an enlarged, accent-tinted illuminated initial. */
+[data-campaign][data-wordmark="dropcap"] .wordmark {
+  display: inline-block;
+}
+[data-campaign][data-wordmark="dropcap"] .wordmark::first-letter {
+  font-size: 1.5em;
+  font-weight: 700;
+  color: var(--accent);
+  text-shadow: 0 1px 0 color-mix(in srgb, #000 16%, transparent);
+}
+
+/* caret (HOLONET): a glowing terminal caret after the name (blink is added in
+   the motion @media). */
+[data-campaign][data-wordmark="caret"] .wordmark::after {
+  content: "_";
+  margin-left: 0.05em;
+  color: var(--primary);
+  text-shadow: 0 0 6px color-mix(in srgb, var(--primary) 70%, transparent);
+}
+
+/* ---- Top-bar chrome (data-chrome) ------------------------------------
+   The sticky header bars carry .chrome-bar (PageHeader on desktop, the mobile
+   wordmark bar). All variants anchor a ::after to the sticky bar, which is a
+   positioned element. */
+[data-campaign][data-chrome="stainedGlass"] .chrome-bar,
+[data-campaign][data-chrome="banner"] .chrome-bar,
+[data-campaign][data-chrome="hudStrip"] .chrome-bar {
+  position: sticky; /* already sticky; restated so ::after anchors reliably */
+}
+
+/* stainedGlass (STR/X): a faint multi-hue wash + a glowing gradient underline. */
+[data-campaign][data-chrome="stainedGlass"] .chrome-bar {
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--primary) 16%, transparent),
+    color-mix(in srgb, var(--accent) 12%, transparent) 50%,
+    color-mix(in srgb, var(--like) 14%, transparent)
+  );
+}
+[data-campaign][data-chrome="stainedGlass"] .chrome-bar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  pointer-events: none;
+  background: linear-gradient(90deg, var(--primary), var(--accent), var(--like));
+  opacity: 0.75;
+}
+
+/* banner (Scrollr): warm wash + a scalloped pennant bottom edge. */
+[data-campaign][data-chrome="banner"] .chrome-bar {
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--primary) 9%, transparent),
+    transparent 70%
+  );
+}
+[data-campaign][data-chrome="banner"] .chrome-bar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -8px;
+  height: 8px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    var(--primary),
+    color-mix(in srgb, var(--primary) 60%, var(--accent))
+  );
+  opacity: 0.8;
+  -webkit-mask: radial-gradient(7px at 50% 0, transparent 98%, #000) 50% 0 / 18px 16px
+    repeat-x;
+  mask: radial-gradient(7px at 50% 0, transparent 98%, #000) 50% 0 / 18px 16px repeat-x;
+}
+
+/* hudStrip (HOLONET): a thin top signal line + an animated meter (the sweep is
+   gated in the motion @media; the static strip + ticks show always). */
+[data-campaign][data-chrome="hudStrip"] .chrome-bar {
+  border-top: 1px solid color-mix(in srgb, var(--primary) 45%, transparent);
+  background-image:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--primary) 10%, transparent),
+      transparent 40%
+    ),
+    repeating-linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--primary) 35%, transparent) 0 1px,
+      transparent 1px 14px
+    );
+  background-position: 0 0, 0 0;
+  background-size: 100% 100%, 100% 3px;
+  background-repeat: no-repeat, repeat-x;
+}
+[data-campaign][data-chrome="hudStrip"] .chrome-bar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 30%;
+  height: 2px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--primary), transparent);
+}
+
+/* ---- Button FX (data-buttons) ----------------------------------------
+   flat: no rule — the existing transition-colors only.
+
+   CRITICAL: .action-btn must NEVER get a resting box. The resting box-shadow
+   rules below target ONLY .ui-button. .action-btn is a borderless flex row
+   (reply/repost/like/share with counts); a 1px-spread shadow on it draws a
+   hard rectangle around the whole row — that was the v1 square-box bug. Here
+   .action-btn carries no box-shadow at rest in any mode; the only treatment is
+   a hover-only soft glow on the inner round icon chip (.action-btn > span,
+   the rounded-full p-1.5 element). The component's own hover:text-* utilities
+   still drive the color shift. Because we never set box-shadow on .action-btn
+   itself, the focus-visible ring is untouched. */
+
+/* arcaneGlow (STR/X): soft static violet edge on the primary pill only.
+   Skip :focus-visible so the Tailwind ring (a box-shadow) is never clobbered. */
+[data-campaign][data-buttons="arcaneGlow"] .ui-button:not(:focus-visible) {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent),
+    0 0 16px -1px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+/* action-btn under arcaneGlow: no rest decoration whatsoever. */
+[data-campaign][data-buttons="arcaneGlow"] .action-btn {
+  box-shadow: none;
+}
+
+/* wax (Scrollr): embossed resting state on the primary pill; pressed on
+   :active. Skip :focus-visible so the keyboard focus ring survives. */
+[data-campaign][data-buttons="wax"] .ui-button:not(:focus-visible) {
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 45%, transparent),
+    inset 0 -1px 1px color-mix(in srgb, #000 18%, transparent),
+    0 1px 2px color-mix(in srgb, #000 28%, transparent);
+}
+[data-campaign][data-buttons="wax"] .ui-button {
+  text-shadow: 0 1px 0 color-mix(in srgb, #000 14%, transparent);
+}
+
+/* neon (HOLONET): uppercase + tracking always on the primary pill; restrained
+   glow on hover. .action-btn gets the uppercase casing (cheap, no box) for
+   consistency with the pill but stays small and unboxed. */
+[data-campaign][data-buttons="neon"] .ui-button,
+[data-campaign][data-buttons="neon"] .action-btn,
+[data-campaign][data-buttons="neon"] .fx-btn {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+/* Skip :focus-visible so a hovered+focused button keeps its focus ring. */
+[data-campaign][data-buttons="neon"] .ui-button:hover:not(:focus-visible) {
+  box-shadow:
+    0 0 10px var(--btn-glow),
+    0 0 2px var(--btn-glow);
+  border-color: var(--primary);
+}
+/* action-btn under neon: never a box. */
+[data-campaign][data-buttons="neon"] .action-btn {
+  box-shadow: none;
+}
+
+/* Shared .action-btn hover treatment (subtle, hover-only, NEVER boxed).
+   The hover bloom lands on the inner round icon chip (the only child <span> of
+   .action-btn, which the component already renders as rounded-full). This works
+   for arcaneGlow and neon without touching any TSX. The color shift is already
+   handled by the component's hover:text-* utilities; we add a soft glow + a
+   faint scale. Focus rings are untouched because box-shadow is never set on
+   .action-btn itself. */
+[data-campaign][data-buttons="arcaneGlow"] .action-btn:hover > span {
+  box-shadow: 0 0 10px -1px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+[data-campaign][data-buttons="neon"] .action-btn:hover > span {
+  box-shadow: 0 0 10px -1px color-mix(in srgb, var(--primary) 55%, transparent);
+}
+/* wax (parchment) action buttons: a faint warm ink glow on the chip on hover. */
+[data-campaign][data-buttons="wax"] .action-btn:hover > span {
+  box-shadow: 0 1px 2px color-mix(in srgb, #2b2118 30%, transparent);
+}
+
+/* Shared interactive buttons (.fx-btn): side-nav items (Home, Explore, …) and
+   composer toolbar icons (add image, schedule, …). Same hover-only treatment as
+   .action-btn, but applied to the element itself — these are already rounded so
+   no inner chip is needed. No resting box in any mode, so nav/toolbar stay calm;
+   neon casing is handled by the uppercase rule above. */
+[data-campaign][data-buttons="arcaneGlow"] .fx-btn:hover {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 80%, transparent),
+    0 0 20px -1px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+[data-campaign][data-buttons="neon"] .fx-btn:hover {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--primary) 80%, transparent),
+    0 0 20px -1px color-mix(in srgb, var(--primary) 60%, transparent);
+}
+[data-campaign][data-buttons="wax"] .fx-btn:hover {
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 45%, transparent),
+    inset 0 -1px 1px color-mix(in srgb, #000 16%, transparent),
+    0 2px 6px color-mix(in srgb, #000 32%, transparent);
+}
+
+/* ---- Reaction flourish (data-reactions) ------------------------------
+   A one-shot burst played inside the like/boost icon chip when a reaction
+   turns ON. PostActions bumps a key to remount .reaction-burst so the CSS
+   animation replays. The burst inherits currentColor, so it takes the like
+   (pink) or boost (green) hue automatically. The base here is inert and
+   invisible; the actual animations live in the reduced-motion-gated block
+   below, so reduced-motion users get no burst at all. */
+[data-campaign] .reaction-burst {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  border-radius: 999px;
+  pointer-events: none;
+  opacity: 0;
+}
+
+/* ===========================================================================
+   Flora decorations (medieval garden set). Two new options per dimension,
+   keyed off the same data-* hooks as the originals above. Static forms live
+   here; their motion (sway/sineUp scroll, petal/bloom reaction bursts,
+   petalfall/pollen particles, blossom pulse, petal/dew transitions) lives in
+   the reduced-motion-gated block below. Glyph SVGs bake sage/rose/gold so they
+   read on the light parchment field; rings/edges/washes use theme vars.
+   =========================================================================== */
+
+/* florets: scattered 5-petal blooms with a few leaves (120px tile). */
+[data-campaign][data-texture="florets"]::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='%23c98aa0'%3E%3Ccircle cx='34' cy='32' r='6'/%3E%3Ccircle cx='42' cy='38' r='6'/%3E%3Ccircle cx='39' cy='48' r='6'/%3E%3Ccircle cx='29' cy='48' r='6'/%3E%3Ccircle cx='26' cy='38' r='6'/%3E%3C/g%3E%3Ccircle cx='34' cy='40' r='4' fill='%23c79a2b'/%3E%3Cg fill='%23c98aa0'%3E%3Ccircle cx='86' cy='84' r='6'/%3E%3Ccircle cx='94' cy='90' r='6'/%3E%3Ccircle cx='91' cy='100' r='6'/%3E%3Ccircle cx='81' cy='100' r='6'/%3E%3Ccircle cx='78' cy='90' r='6'/%3E%3C/g%3E%3Ccircle cx='86' cy='92' r='4' fill='%23c79a2b'/%3E%3Cg fill='%237a9a5f'%3E%3Cellipse cx='62' cy='16' rx='6' ry='3' transform='rotate(40 62 16)'/%3E%3Cellipse cx='14' cy='80' rx='6' ry='3' transform='rotate(-35 14 80)'/%3E%3Cellipse cx='104' cy='52' rx='6' ry='3' transform='rotate(20 104 52)'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 120px 120px;
+}
+[data-campaign][data-texture="florets"] {
+  --bg-tile: 120px;
+}
+
+/* vinework: an interlacing leafy trellis (100px tile). */
+[data-campaign][data-texture="vinework"]::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cg fill='none' stroke='%235f7a4f' stroke-opacity='0.75' stroke-width='2'%3E%3Cpath d='M0 25 Q25 10 50 25 T100 25'/%3E%3Cpath d='M0 75 Q25 60 50 75 T100 75'/%3E%3Cpath d='M25 0 Q40 25 25 50 T25 100'/%3E%3Cpath d='M75 0 Q60 25 75 50 T75 100'/%3E%3C/g%3E%3Cg fill='%237a9a5f'%3E%3Cellipse cx='13' cy='18' rx='4' ry='2' transform='rotate(40 13 18)'/%3E%3Cellipse cx='38' cy='12' rx='4' ry='2' transform='rotate(-40 38 12)'/%3E%3Cellipse cx='63' cy='18' rx='4' ry='2' transform='rotate(40 63 18)'/%3E%3Cellipse cx='88' cy='12' rx='4' ry='2' transform='rotate(-40 88 12)'/%3E%3Cellipse cx='13' cy='68' rx='4' ry='2' transform='rotate(40 13 68)'/%3E%3Cellipse cx='38' cy='62' rx='4' ry='2' transform='rotate(-40 38 62)'/%3E%3Cellipse cx='63' cy='68' rx='4' ry='2' transform='rotate(40 63 68)'/%3E%3Cellipse cx='88' cy='62' rx='4' ry='2' transform='rotate(-40 88 62)'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 100px 100px;
+}
+[data-campaign][data-texture="vinework"] {
+  --bg-tile: 100px;
+}
+
+/* vine divider: a horizontal sprig (leaves + a central bloom) on fading rules. */
+[data-campaign][data-divider="vine"] .post-card::after {
+  bottom: -8px;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='54' height='16' viewBox='0 0 54 16'%3E%3Cpath d='M6 8 H48' stroke='%235f7a4f' stroke-width='1.5' fill='none'/%3E%3Cg fill='%237a9a5f'%3E%3Cellipse cx='16' cy='5' rx='4' ry='2.2' transform='rotate(-30 16 5)'/%3E%3Cellipse cx='16' cy='11' rx='4' ry='2.2' transform='rotate(30 16 11)'/%3E%3Cellipse cx='38' cy='5' rx='4' ry='2.2' transform='rotate(-30 38 5)'/%3E%3Cellipse cx='38' cy='11' rx='4' ry='2.2' transform='rotate(30 38 11)'/%3E%3C/g%3E%3Ccircle cx='27' cy='8' r='3.2' fill='%23b76b86'/%3E%3Ccircle cx='27' cy='8' r='1.4' fill='%23c79a2b'/%3E%3C/svg%3E"),
+    linear-gradient(90deg, transparent 0%,
+      color-mix(in srgb, var(--text) 26%, transparent) 94%, transparent 100%),
+    linear-gradient(270deg, transparent 0%,
+      color-mix(in srgb, var(--text) 26%, transparent) 94%, transparent 100%);
+  background-position: center bottom, left center, right center;
+  background-size: 54px 16px, calc(50% - 30px) 1px, calc(50% - 30px) 1px;
+}
+
+/* laurel divider: two facing leafy branches meeting at a central bloom. */
+[data-campaign][data-divider="laurel"] .post-card::after {
+  bottom: -8px;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='16' viewBox='0 0 64 16'%3E%3Cg fill='none' stroke='%235f7a4f' stroke-width='1.4'%3E%3Cpath d='M30 8 Q18 3 6 6'/%3E%3Cpath d='M34 8 Q46 3 58 6'/%3E%3C/g%3E%3Cg fill='%237a9a5f'%3E%3Cellipse cx='12' cy='5' rx='3.4' ry='1.8' transform='rotate(-25 12 5)'/%3E%3Cellipse cx='20' cy='5' rx='3.4' ry='1.8' transform='rotate(-25 20 5)'/%3E%3Cellipse cx='52' cy='5' rx='3.4' ry='1.8' transform='rotate(25 52 5)'/%3E%3Cellipse cx='44' cy='5' rx='3.4' ry='1.8' transform='rotate(25 44 5)'/%3E%3C/g%3E%3Ccircle cx='32' cy='8' r='3' fill='%23b76b86'/%3E%3Ccircle cx='32' cy='8' r='1.3' fill='%23c79a2b'/%3E%3C/svg%3E"),
+    linear-gradient(90deg, transparent 0%,
+      color-mix(in srgb, var(--text) 26%, transparent) 94%, transparent 100%),
+    linear-gradient(270deg, transparent 0%,
+      color-mix(in srgb, var(--text) 26%, transparent) 94%, transparent 100%);
+  background-position: center bottom, left center, right center;
+  background-size: 64px 16px, calc(50% - 36px) 1px, calc(50% - 36px) 1px;
+}
+
+/* wreath avatar: a green laurel rim over a dark gold band (struck like a coin),
+   with a faint accent inner line on span avatars. */
+[data-campaign][data-avatar-frame="wreath"] .avatar-frame {
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--repost) 80%, #2b3a1e),
+    0 0 0 4px #6e551f,
+    0 0 0 5px color-mix(in srgb, #2b2118 45%, transparent),
+    0 1px 3px color-mix(in srgb, #2b2118 30%, transparent);
+}
+[data-campaign][data-avatar-frame="wreath"] .avatar-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+/* blossom avatar: a soft petal halo (accent ring + accent/primary bloom). The
+   ::after carries the pulse, switched on in the motion block. */
+[data-campaign][data-avatar-frame="blossom"] .avatar-frame {
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--accent) 80%, transparent),
+    0 0 10px 1px color-mix(in srgb, var(--accent) 45%, transparent),
+    0 0 16px 2px color-mix(in srgb, var(--primary) 28%, transparent);
+}
+[data-campaign][data-avatar-frame="blossom"] .avatar-frame::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: 0 0 12px 2px color-mix(in srgb, var(--accent) 40%, transparent);
+  opacity: 0;
+}
+
+/* depth: verdant (green ambient) + rose (pink bloom). Explicit hexes so the
+   name matches the hue on every palette (kept in sync with the DEPTH_SHADOW /
+   DEPTH_GLOW maps in themeToCssVars; the inline vars win for rendering). */
+[data-campaign][data-depth="verdantAmbient"] {
+  --shadow-card:
+    0 10px 30px -12px color-mix(in srgb, #4e7c3a 60%, transparent),
+    0 3px 10px color-mix(in srgb, #000 50%, transparent),
+    0 0 0 1px color-mix(in srgb, #4e7c3a 24%, transparent);
+  --glow: inset 0 0 30px color-mix(in srgb, #4e7c3a 22%, transparent);
+}
+[data-campaign][data-depth="roseGlow"] {
+  --shadow-card:
+    0 0 0 1px color-mix(in srgb, #b23a6e 42%, transparent),
+    0 4px 14px -4px color-mix(in srgb, #000 45%, transparent),
+    0 0 22px -2px color-mix(in srgb, #b23a6e 44%, transparent);
+  --glow: 0 0 30px -6px color-mix(in srgb, #b23a6e 50%, transparent);
+}
+
+/* botanical card frame: a green dashed vine outline + a small rosette at two
+   opposite corners, over a faint green inner rule. */
+[data-campaign][data-card-frame="botanical"] .ui-card,
+[data-campaign][data-card-frame="botanical"] .quote-card {
+  position: relative;
+  border-color: color-mix(in srgb, var(--repost) 45%, var(--border));
+  box-shadow:
+    var(--shadow-card, none),
+    inset 0 0 0 1px color-mix(in srgb, var(--repost) 22%, transparent);
+}
+[data-campaign][data-card-frame="botanical"] .ui-card::before,
+[data-campaign][data-card-frame="botanical"] .quote-card::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  pointer-events: none;
+  border: 1px dashed color-mix(in srgb, var(--repost) 50%, transparent);
+  border-radius: calc(var(--radius, 0.5rem) + 3px);
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cg fill='%237a9a5f'%3E%3Ccircle cx='6' cy='2.6' r='2.1'/%3E%3Ccircle cx='9.4' cy='6' r='2.1'/%3E%3Ccircle cx='6' cy='9.4' r='2.1'/%3E%3Ccircle cx='2.6' cy='6' r='2.1'/%3E%3C/g%3E%3Ccircle cx='6' cy='6' r='1.6' fill='%23c79a2b'/%3E%3C/svg%3E")
+      left -1px top -1px / 12px 12px no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cg fill='%237a9a5f'%3E%3Ccircle cx='6' cy='2.6' r='2.1'/%3E%3Ccircle cx='9.4' cy='6' r='2.1'/%3E%3Ccircle cx='6' cy='9.4' r='2.1'/%3E%3Ccircle cx='2.6' cy='6' r='2.1'/%3E%3C/g%3E%3Ccircle cx='6' cy='6' r='1.6' fill='%23c79a2b'/%3E%3C/svg%3E")
+      right -1px bottom -1px / 12px 12px no-repeat;
+}
+
+/* pressed card frame: a soft cream inset with a single pressed bloom, top-right. */
+[data-campaign][data-card-frame="pressed"] .ui-card,
+[data-campaign][data-card-frame="pressed"] .quote-card {
+  position: relative;
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  box-shadow:
+    var(--shadow-card, none),
+    inset 0 1px 0 color-mix(in srgb, #fff 40%, transparent),
+    inset 0 0 18px color-mix(in srgb, var(--accent) 10%, transparent);
+}
+[data-campaign][data-card-frame="pressed"] .ui-card::before,
+[data-campaign][data-card-frame="pressed"] .quote-card::before {
+  content: "";
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+  opacity: 0.55;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 18 18'%3E%3Cg fill='%23c98aa0'%3E%3Cellipse cx='9' cy='4' rx='2.6' ry='4'/%3E%3Cellipse cx='14' cy='9' rx='4' ry='2.6'/%3E%3Cellipse cx='9' cy='14' rx='2.6' ry='4'/%3E%3Cellipse cx='4' cy='9' rx='4' ry='2.6'/%3E%3C/g%3E%3Ccircle cx='9' cy='9' r='2.4' fill='%23c79a2b'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+
+/* sprig wordmark: a small leaf glyph before the name (mask -> wordmark color). */
+[data-campaign][data-wordmark="sprig"] .wordmark::before {
+  content: "";
+  display: inline-block;
+  width: 0.7em;
+  height: 0.7em;
+  margin-right: 0.3em;
+  background: currentColor;
+  opacity: 0.8;
+  --sprig: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2 C5 7 5 17 12 22 C19 17 19 7 12 2 Z'/%3E%3C/svg%3E");
+  -webkit-mask: var(--sprig) center / contain no-repeat;
+  mask: var(--sprig) center / contain no-repeat;
+}
+
+/* rosette wordmark: a small 5-petal flower glyph after the name. */
+[data-campaign][data-wordmark="rosette"] .wordmark::after {
+  content: "";
+  display: inline-block;
+  width: 0.62em;
+  height: 0.62em;
+  margin-left: 0.3em;
+  background: currentColor;
+  opacity: 0.85;
+  --rosette: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='5' r='4'/%3E%3Ccircle cx='19' cy='10' r='4'/%3E%3Ccircle cx='16' cy='18' r='4'/%3E%3Ccircle cx='8' cy='18' r='4'/%3E%3Ccircle cx='5' cy='10' r='4'/%3E%3Ccircle cx='12' cy='12' r='3.4'/%3E%3C/svg%3E");
+  -webkit-mask: var(--rosette) center / contain no-repeat;
+  mask: var(--rosette) center / contain no-repeat;
+}
+
+/* chrome: trellis (lattice wash + leafy underline) + garland (floral swag). */
+[data-campaign][data-chrome="trellis"] .chrome-bar,
+[data-campaign][data-chrome="garland"] .chrome-bar {
+  position: sticky;
+}
+[data-campaign][data-chrome="trellis"] .chrome-bar {
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      color-mix(in srgb, var(--repost) 14%, transparent) 0 1px,
+      transparent 1px 12px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      color-mix(in srgb, var(--repost) 14%, transparent) 0 1px,
+      transparent 1px 12px
+    );
+}
+[data-campaign][data-chrome="trellis"] .chrome-bar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--repost) 70%, transparent),
+    color-mix(in srgb, var(--accent) 60%, transparent)
+  );
+  opacity: 0.7;
+}
+[data-campaign][data-chrome="garland"] .chrome-bar {
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 8%, transparent),
+    transparent 70%
+  );
+}
+[data-campaign][data-chrome="garland"] .chrome-bar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -10px;
+  height: 12px;
+  pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='12' viewBox='0 0 28 12'%3E%3Cpath d='M0 2 Q14 12 28 2' fill='none' stroke='%235f7a4f' stroke-width='1.4'/%3E%3Cg fill='%237a9a5f'%3E%3Cellipse cx='8' cy='6' rx='3' ry='1.6' transform='rotate(40 8 6)'/%3E%3Cellipse cx='20' cy='6' rx='3' ry='1.6' transform='rotate(-40 20 6)'/%3E%3C/g%3E%3Ccircle cx='14' cy='9' r='2.6' fill='%23b76b86'/%3E%3Ccircle cx='14' cy='9' r='1.1' fill='%23c79a2b'/%3E%3C/svg%3E")
+    repeat-x center / 28px 12px;
+  opacity: 0.9;
+}
+
+/* petal buttons: a soft warm emboss on the primary pill; accent hover bloom on
+   the round action/nav chips. .action-btn never gets a resting box. */
+[data-campaign][data-buttons="petal"] .ui-button:not(:focus-visible) {
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 40%, transparent),
+    0 1px 2px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+[data-campaign][data-buttons="petal"] .action-btn {
+  box-shadow: none;
+}
+[data-campaign][data-buttons="petal"] .action-btn:hover > span {
+  box-shadow: 0 0 10px -1px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+[data-campaign][data-buttons="petal"] .fx-btn:hover {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 60%, transparent),
+    0 0 14px -2px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+/* dew buttons: a glossy top gleam at rest; a soft primary bloom on hover. */
+[data-campaign][data-buttons="dew"] .ui-button:not(:focus-visible) {
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 55%, transparent),
+    0 2px 6px -2px color-mix(in srgb, var(--primary) 40%, transparent);
+}
+[data-campaign][data-buttons="dew"] .ui-button:hover:not(:focus-visible) {
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 60%, transparent),
+    0 0 14px var(--btn-glow);
+}
+[data-campaign][data-buttons="dew"] .action-btn {
+  box-shadow: none;
+}
+[data-campaign][data-buttons="dew"] .action-btn:hover > span {
+  box-shadow: 0 0 10px -1px color-mix(in srgb, var(--primary) 55%, transparent);
+}
+[data-campaign][data-buttons="dew"] .fx-btn:hover {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--primary) 55%, transparent),
+    0 0 14px -2px color-mix(in srgb, var(--primary) 45%, transparent);
+}
+
+/* ===========================================================================
+   Motion layer. Everything here is suppressed for prefers-reduced-motion;
+   the static decorations above remain regardless.
+   =========================================================================== */
+@media (prefers-reduced-motion: no-preference) {
+  /* Background scroll (data-bg-scroll): the texture tiles and scrolls in the
+     chosen direction. background-position loops at one tile (--bg-tile) so it is
+     seamless. Slow by default to keep the viewport-sized repaint cheap. */
+  [data-campaign][data-bg-scroll="down"]::before {
+    animation: bg-scroll-down var(--bg-speed, 34s) linear infinite;
+  }
+  [data-campaign][data-bg-scroll="up"]::before {
+    animation: bg-scroll-up var(--bg-speed, 34s) linear infinite;
+  }
+  [data-campaign][data-bg-scroll="left"]::before {
+    animation: bg-scroll-left var(--bg-speed, 34s) linear infinite;
+  }
+  [data-campaign][data-bg-scroll="right"]::before {
+    animation: bg-scroll-right var(--bg-speed, 34s) linear infinite;
+  }
+  [data-campaign][data-bg-scroll="diagonal"]::before {
+    animation: bg-scroll-diag var(--bg-speed, 44s) linear infinite;
+  }
+  /* sine wave: descends one tile (seamless) while X sways +amp -> -amp -> +amp,
+     one full cycle per tile, so the pattern snakes downward. */
+  [data-campaign][data-bg-scroll="sineDown"]::before {
+    animation: bg-sine-down var(--bg-speed, 26s) linear infinite;
+  }
+  @keyframes bg-scroll-down {
+    to { background-position: 0 var(--bg-tile, 200px); }
+  }
+  @keyframes bg-scroll-up {
+    to { background-position: 0 calc(-1 * var(--bg-tile, 200px)); }
+  }
+  @keyframes bg-scroll-left {
+    to { background-position: calc(-1 * var(--bg-tile, 200px)) 0; }
+  }
+  @keyframes bg-scroll-right {
+    to { background-position: var(--bg-tile, 200px) 0; }
+  }
+  @keyframes bg-scroll-diag {
+    to { background-position: var(--bg-tile, 200px) var(--bg-tile, 200px); }
+  }
+  /* 8-step sine approximation: X = amp*sin, Y linear down one tile. */
+  @keyframes bg-sine-down {
+    0%    { background-position: 0    0; }
+    12.5% { background-position: 20px calc(var(--bg-tile, 120px) * 0.125); }
+    25%   { background-position: 28px calc(var(--bg-tile, 120px) * 0.25); }
+    37.5% { background-position: 20px calc(var(--bg-tile, 120px) * 0.375); }
+    50%   { background-position: 0    calc(var(--bg-tile, 120px) * 0.5); }
+    62.5% { background-position: -20px calc(var(--bg-tile, 120px) * 0.625); }
+    75%   { background-position: -28px calc(var(--bg-tile, 120px) * 0.75); }
+    87.5% { background-position: -20px calc(var(--bg-tile, 120px) * 0.875); }
+    100%  { background-position: 0    var(--bg-tile, 120px); }
+  }
+
+
+  /* Card depth: add the --glow as a second layer on hover (.ui-card only). */
+  [data-campaign] .ui-card {
+    transition: box-shadow 0.25s ease;
+  }
+  [data-campaign] .ui-card:hover {
+    box-shadow: var(--shadow-card, none), var(--glow, none);
+  }
+
+  /* arcaneGlow primary pill: smooth hover bloom + press nudge. Action chip
+     gets a smooth glow + tiny scale; the row itself never gets a box. */
+  [data-campaign][data-buttons="arcaneGlow"] .ui-button {
+    transition: box-shadow 0.25s ease, transform 0.1s ease;
+  }
+  [data-campaign][data-buttons="arcaneGlow"] .ui-button:hover:not(:focus-visible) {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--accent) 38%, transparent),
+      0 0 18px var(--btn-glow);
+  }
+  [data-campaign][data-buttons="arcaneGlow"] .ui-button:active {
+    transform: scale(0.98);
+  }
+
+  /* action chips: smooth glow + faint scale on hover (transform only, no box
+     on the row). */
+  [data-campaign][data-buttons="arcaneGlow"] .action-btn > span,
+  [data-campaign][data-buttons="neon"] .action-btn > span,
+  [data-campaign][data-buttons="wax"] .action-btn > span {
+    transition: box-shadow 0.2s ease, transform 0.12s ease;
+  }
+  [data-campaign][data-buttons="arcaneGlow"] .action-btn:hover > span,
+  [data-campaign][data-buttons="neon"] .action-btn:hover > span,
+  [data-campaign][data-buttons="wax"] .action-btn:hover > span {
+    transform: scale(1.08);
+  }
+
+  /* shared interactive buttons: smooth glow on hover + a tiny press on :active.
+     scale stays small (0.96) so it reads on both round toolbar icons and the
+     wide nav rows without shoving layout. */
+  [data-campaign][data-buttons="arcaneGlow"] .fx-btn,
+  [data-campaign][data-buttons="neon"] .fx-btn,
+  [data-campaign][data-buttons="wax"] .fx-btn {
+    transition: box-shadow 0.2s ease, transform 0.12s ease;
+  }
+  [data-campaign][data-buttons="arcaneGlow"] .fx-btn:hover,
+  [data-campaign][data-buttons="neon"] .fx-btn:hover,
+  [data-campaign][data-buttons="wax"] .fx-btn:hover {
+    transform: scale(1.03);
+  }
+  [data-campaign][data-buttons="arcaneGlow"] .fx-btn:active,
+  [data-campaign][data-buttons="neon"] .fx-btn:active,
+  [data-campaign][data-buttons="wax"] .fx-btn:active {
+    transform: scale(0.97);
+  }
+
+  /* wax primary pill: pressed motion on :active. Skip :focus-visible so a
+     keyboard Space/Enter press never overwrites the focus ring with the inset
+     emboss, matching every other .ui-button box-shadow rule. */
+  [data-campaign][data-buttons="wax"] .ui-button {
+    transition: box-shadow 0.12s ease, transform 0.08s ease;
+  }
+  [data-campaign][data-buttons="wax"] .ui-button:active:not(:focus-visible) {
+    box-shadow: inset 0 2px 4px color-mix(in srgb, #000 32%, transparent);
+    transform: translateY(1px);
+  }
+
+  /* neon glitch flicker on hover — the signature HOLONET button SFX. Runs on
+     every interactive button: primary pills (.ui-button), side-nav + composer
+     buttons (.fx-btn), and feed action chips (.action-btn). A quick position
+     jitter + opacity flicker that plays a couple times then settles back into
+     the resting/hover state. transform + opacity only, so it composites cheaply
+     and never fights the box-shadow glow. */
+  [data-campaign][data-buttons="neon"] .ui-button:hover,
+  [data-campaign][data-buttons="neon"] .fx-btn:hover,
+  [data-campaign][data-buttons="neon"] .action-btn:hover {
+    animation: holonet-glitch 0.35s steps(2, end) 1;
+  }
+
+  /* manaHalo avatar: slow glow pulse on the ::after layer (compositor-driven
+     transform + opacity, no per-frame box-shadow repaint on every avatar).
+     No will-change here: this is an `infinite` animation on the ::after of
+     EVERY avatar, and a non-virtualized feed can hold dozens-to-hundreds of
+     them at once. A static will-change would pin a permanent compositor layer
+     per avatar for the page lifetime — net-negative at that count. Let the
+     browser auto-promote for the duration of each composited frame instead. */
+  [data-campaign][data-avatar-frame="manaHalo"] .avatar-frame::after {
+    animation: mana-pulse 3.2s ease-in-out infinite;
+  }
+
+  @keyframes strix-drift {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(64px, 42px, 0);
+    }
+  }
+
+  /* Gentle opacity breathe for the atmospheric wash (motion=on). */
+  @keyframes ambient-breathe {
+    0%,
+    100% {
+      opacity: 0.55;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes holonet-scan {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      /* one base-grid cell (40px) so the sweep loops seamlessly */
+      transform: translate3d(0, 40px, 0);
+    }
+  }
+
+  @keyframes holonet-glitch {
+    0%   { transform: translate(0, 0);       opacity: 1; }
+    14%  { transform: translate(-1px, 1px);  opacity: 0.88; }
+    28%  { transform: translate(1px, -1px);  opacity: 1; }
+    42%  { transform: translate(-2px, 0);    opacity: 0.82; }
+    56%  { transform: translate(1px, 1px);   opacity: 0.94; }
+    70%  { transform: translate(-1px, -1px); opacity: 1; }
+    84%  { transform: translate(1px, 0);     opacity: 0.9; }
+    100% { transform: translate(0, 0);       opacity: 1; }
+  }
+
+  /* wordmark caret: terminal-style blink (motion-gated; static caret shows
+     otherwise). */
+  [data-campaign][data-wordmark="caret"] .wordmark::after {
+    animation: caret-blink 1.1s steps(1, end) infinite;
+  }
+  @keyframes caret-blink {
+    0%,
+    50% {
+      opacity: 1;
+    }
+    50.01%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  /* hudStrip chrome: the signal meter sweeps across the top edge. */
+  [data-campaign][data-chrome="hudStrip"] .chrome-bar::after {
+    animation: hud-sweep 2.6s linear infinite;
+  }
+  @keyframes hud-sweep {
+    0% {
+      transform: translateX(-30%);
+    }
+    100% {
+      transform: translateX(360%);
+    }
+  }
+
+  @keyframes mana-pulse {
+    0%,
+    100% {
+      opacity: 0;
+      transform: scale(0.98);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.08);
+    }
+  }
+
+  /* Reaction flourishes. One-shot, currentColor (like = pink, boost = green).
+     Each uses transform/opacity only (compositor-friendly, no layout shift). */
+  /* sparkle (STR/X): eight dots radiate out and fade. */
+  [data-campaign][data-reactions="sparkle"] .reaction-burst {
+    box-shadow:
+      0 -11px 0 currentColor,
+      0 11px 0 currentColor,
+      -11px 0 0 currentColor,
+      11px 0 0 currentColor,
+      -8px -8px 0 color-mix(in srgb, currentColor 75%, transparent),
+      8px -8px 0 color-mix(in srgb, currentColor 75%, transparent),
+      -8px 8px 0 color-mix(in srgb, currentColor 75%, transparent),
+      8px 8px 0 color-mix(in srgb, currentColor 75%, transparent);
+    animation: reaction-sparkle 0.55s ease-out 1;
+  }
+  /* stamp (Scrollr): a seal slams down — large to small with a settle. */
+  [data-campaign][data-reactions="stamp"] .reaction-burst {
+    width: 24px;
+    height: 24px;
+    margin: -12px 0 0 -12px;
+    border: 3px solid currentColor;
+    background: color-mix(in srgb, currentColor 18%, transparent);
+    animation: reaction-stamp 0.42s ease-out 1;
+  }
+  /* pulse (HOLONET): an energy ring expands outward and fades. */
+  [data-campaign][data-reactions="pulse"] .reaction-burst {
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid currentColor;
+    animation: reaction-pulse 0.5s ease-out 1;
+  }
+
+  @keyframes reaction-sparkle {
+    0% {
+      opacity: 0;
+      transform: scale(0.2);
+    }
+    35% {
+      opacity: 1;
+      transform: scale(0.9);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1.5);
+    }
+  }
+  @keyframes reaction-stamp {
+    0% {
+      opacity: 0;
+      transform: scale(2.3);
+    }
+    45% {
+      opacity: 0.95;
+      transform: scale(0.82);
+    }
+    65% {
+      transform: scale(1.06);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1);
+    }
+  }
+  @keyframes reaction-pulse {
+    0% {
+      opacity: 0.85;
+      transform: scale(0.35);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(2.6);
+    }
+  }
+  @keyframes scrollr-drift {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(-46px, 30px, 0);
+    }
+  }
+
+  /* ---- Ambient effects (.fx layers, decorations.effects) ----------------
+     Each effect is an independent child of .campaign-motion, so any combination
+     works. Soft-edged dots (no shimmer) on a tile translated by exactly one
+     tile-height for a seamless loop. All effects live in this reduced-motion
+     block, so "reduce" drops every one. Particle colors use the theme's
+     accent/primary where it should adapt, warm hexes for embers/dust. */
+  /* embers: glowing sparks with a hot white core fading through amber to a warm
+     edge, plus a couple of tiny vertical streaks so they read as rising sparks
+     rather than soft dots. Tile = the motes-rise travel (320) so the loop is
+     seamless. */
+  .fx-embers {
+    background-repeat: repeat;
+    background-size: 320px 320px;
+    background-image:
+      radial-gradient(3px 3px at 18% 82%, #fff7e6 0%, #ffb259 40%, #ff7a1a 60%, transparent 72%),
+      radial-gradient(2px 2px at 62% 58%, #ffe3b0 0%, #ff9a3c 52%, transparent 72%),
+      radial-gradient(3.4px 3.4px at 84% 34%, #fff2d0 0%, #ffb866 42%, #ff7e22 62%, transparent 74%),
+      radial-gradient(1.6px 1.6px at 40% 26%, #ffcf94 0%, transparent 66%),
+      radial-gradient(2.4px 2.4px at 30% 50%, #fff0cf 0%, #ffa948 52%, transparent 72%),
+      radial-gradient(1px 6px at 50% 70%, #ffb05a 0%, transparent 78%),
+      radial-gradient(1px 5px at 73% 16%, #ffc06a 0%, transparent 78%);
+    will-change: transform, opacity;
+    animation:
+      motes-rise 22s linear infinite,
+      ember-flicker 4.5s ease-in-out infinite;
+  }
+  /* motes: crisp four-point sparkles (masked SVG, mixed sizes) tinted across the
+     width by a horizontal accent->primary gradient — a vertical rise never
+     shifts the colour at the loop seam. A slow twinkle breathes them in and out. */
+  .fx-motes {
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--accent) 88%, #fff),
+      color-mix(in srgb, var(--primary) 85%, #fff)
+    );
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320' viewBox='0 0 320 320'%3E%3Cg fill='%23000'%3E%3Cpath d='M44 56 Q44 64 52 64 Q44 64 44 72 Q44 64 36 64 Q44 64 44 56 Z'/%3E%3Cpath d='M210 35 Q210 40 215 40 Q210 40 210 45 Q210 40 205 40 Q210 40 210 35 Z'/%3E%3Cpath d='M120 140 Q120 150 130 150 Q120 150 120 160 Q120 150 110 150 Q120 150 120 140 Z'/%3E%3Cpath d='M272 176 Q272 182 278 182 Q272 182 272 188 Q272 182 266 182 Q272 182 272 176 Z'/%3E%3Cpath d='M60 238 Q60 244 66 244 Q60 244 60 250 Q60 244 54 244 Q60 244 60 238 Z'/%3E%3Cpath d='M182 272 Q182 280 190 280 Q182 280 182 288 Q182 280 174 280 Q182 280 182 272 Z'/%3E%3Cpath d='M240 103 Q240 108 245 108 Q240 108 240 113 Q240 108 235 108 Q240 108 240 103 Z'/%3E%3Cpath d='M300 296 Q300 300 304 300 Q300 300 300 304 Q300 300 296 300 Q300 300 300 296 Z'/%3E%3Ccircle cx='92' cy='200' r='1.4'/%3E%3Ccircle cx='160' cy='72' r='1.1'/%3E%3Ccircle cx='284' cy='250' r='1.3'/%3E%3Ccircle cx='22' cy='120' r='1'/%3E%3Ccircle cx='150' cy='230' r='1'/%3E%3Ccircle cx='110' cy='40' r='1.1'/%3E%3C/g%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320' viewBox='0 0 320 320'%3E%3Cg fill='%23000'%3E%3Cpath d='M44 56 Q44 64 52 64 Q44 64 44 72 Q44 64 36 64 Q44 64 44 56 Z'/%3E%3Cpath d='M210 35 Q210 40 215 40 Q210 40 210 45 Q210 40 205 40 Q210 40 210 35 Z'/%3E%3Cpath d='M120 140 Q120 150 130 150 Q120 150 120 160 Q120 150 110 150 Q120 150 120 140 Z'/%3E%3Cpath d='M272 176 Q272 182 278 182 Q272 182 272 188 Q272 182 266 182 Q272 182 272 176 Z'/%3E%3Cpath d='M60 238 Q60 244 66 244 Q60 244 60 250 Q60 244 54 244 Q60 244 60 238 Z'/%3E%3Cpath d='M182 272 Q182 280 190 280 Q182 280 182 288 Q182 280 174 280 Q182 280 182 272 Z'/%3E%3Cpath d='M240 103 Q240 108 245 108 Q240 108 240 113 Q240 108 235 108 Q240 108 240 103 Z'/%3E%3Cpath d='M300 296 Q300 300 304 300 Q300 300 300 304 Q300 300 296 300 Q300 300 300 296 Z'/%3E%3Ccircle cx='92' cy='200' r='1.4'/%3E%3Ccircle cx='160' cy='72' r='1.1'/%3E%3Ccircle cx='284' cy='250' r='1.3'/%3E%3Ccircle cx='22' cy='120' r='1'/%3E%3Ccircle cx='150' cy='230' r='1'/%3E%3Ccircle cx='110' cy='40' r='1.1'/%3E%3C/g%3E%3C/svg%3E");
+    -webkit-mask-size: 320px 320px;
+    mask-size: 320px 320px;
+    -webkit-mask-repeat: repeat;
+    mask-repeat: repeat;
+    opacity: 0.9;
+    will-change: transform, opacity;
+    animation:
+      motes-rise 30s linear infinite,
+      mote-twinkle 4.2s ease-in-out infinite;
+  }
+  @keyframes mote-twinkle {
+    0%,
+    100% {
+      opacity: 0.5;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+  /* dust: fine, crisp earthy flecks (hard falloff = specks, not blobs) at mixed
+     sizes and opacities, drifting up the light parchment. */
+  .fx-dust {
+    background-repeat: repeat;
+    background-size: 200px 200px;
+    background-image:
+      radial-gradient(2px 2px at 16% 70%, #8a7350 0%, #8a7350 42%, transparent 58%),
+      radial-gradient(1.4px 1.4px at 50% 38%, #6b5a42 0%, #6b5a42 44%, transparent 60%),
+      radial-gradient(2.4px 2.4px at 80% 82%, #9c815a 0%, #9c815a 40%, transparent 56%),
+      radial-gradient(1.6px 1.6px at 66% 14%, #7a5a2c 0%, transparent 56%),
+      radial-gradient(1.2px 1.2px at 32% 24%, #8a7350 0%, transparent 58%),
+      radial-gradient(1px 1px at 90% 48%, #6b5a42 0%, transparent 60%),
+      radial-gradient(1.1px 1.1px at 8% 36%, #9c815a 0%, transparent 58%);
+    opacity: 0.8;
+    will-change: transform;
+    animation: dust-float 24s linear infinite;
+  }
+  /* scanlines: theme-primary HUD lines + a sweeping band. */
+  .fx-scanlines {
+    background-image:
+      repeating-linear-gradient(0deg,
+        color-mix(in srgb, var(--primary) 8%, transparent) 0 1px,
+        transparent 1px 4px),
+      linear-gradient(180deg, transparent 0%,
+        color-mix(in srgb, var(--primary) 18%, transparent) 50%, transparent 100%);
+    background-size: 100% 4px, 100% 240px;
+    background-repeat: repeat, no-repeat;
+    will-change: transform;
+    animation: scanline-sweep 5s linear infinite;
+  }
+  /* fog: layered horizontal wisps (wide + short) at low opacity, so it drifts as
+     mist rather than reading as round clouds. */
+  .fx-fog {
+    inset: -15%;
+    background-repeat: no-repeat;
+    background-image:
+      radial-gradient(62% 20% at 22% 32%, color-mix(in srgb, var(--text) 13%, transparent), transparent 72%),
+      radial-gradient(54% 16% at 70% 54%, color-mix(in srgb, var(--text) 11%, transparent), transparent 74%),
+      radial-gradient(66% 22% at 44% 80%, color-mix(in srgb, var(--text) 10%, transparent), transparent 74%),
+      radial-gradient(48% 15% at 86% 22%, color-mix(in srgb, var(--text) 9%, transparent), transparent 74%);
+    will-change: transform;
+    animation: fog-drift 30s ease-in-out infinite alternate;
+  }
+
+  /* pagecurl: a gentle corner curl on a card on hover (wrapper class .fx-pagecurl).
+     Uses .post-card::before — the divider owns ::after. */
+  [data-campaign].fx-pagecurl .post-card {
+    position: relative;
+  }
+  [data-campaign].fx-pagecurl .post-card::before {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+    border-style: solid;
+    border-width: 0 0 0 0;
+    border-color: transparent transparent
+      color-mix(in srgb, var(--surface) 86%, #fff) transparent;
+    filter: drop-shadow(-2px -2px 3px color-mix(in srgb, #000 30%, transparent));
+    transition: border-width 0.3s ease;
+  }
+  [data-campaign].fx-pagecurl .post-card:hover::before {
+    border-width: 0 0 26px 26px;
+  }
+
+  @keyframes motes-rise {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(0, -320px, 0);
+    }
+  }
+  @keyframes dust-float {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(0, -200px, 0);
+    }
+  }
+  @keyframes ember-flicker {
+    0%,
+    100% {
+      opacity: 0.9;
+    }
+    50% {
+      opacity: 0.55;
+    }
+  }
+  @keyframes scanline-sweep {
+    from {
+      transform: translateY(-240px);
+    }
+    to {
+      transform: translateY(100vh);
+    }
+  }
+  @keyframes fog-drift {
+    from {
+      transform: translate3d(-40px, 18px, 0) scale(1.05);
+    }
+    to {
+      transform: translate3d(60px, -34px, 0) scale(1.12);
+    }
+  }
+
+  /* ---- Flora motion (medieval garden set) -------------------------------
+     Companions to the static flora rules above. All gated here, so reduced
+     motion drops every one. */
+
+  /* sway: the backdrop drifts side to side in place (a meadow in a breeze).
+     Periodic, so no tile-seam handling needed. sineUp: the sine drift, rising
+     one tile (mirror of sineDown) — pollen/petals lifting on the wind. */
+  [data-campaign][data-bg-scroll="sway"]::before {
+    animation: bg-sway var(--bg-speed, 18s) ease-in-out infinite;
+  }
+  [data-campaign][data-bg-scroll="sineUp"]::before {
+    animation: bg-sine-up var(--bg-speed, 26s) linear infinite;
+  }
+  @keyframes bg-sway {
+    0%,
+    100% {
+      background-position: -24px 0;
+    }
+    50% {
+      background-position: 24px 0;
+    }
+  }
+  @keyframes bg-sine-up {
+    0% {
+      background-position: 0 0;
+    }
+    12.5% {
+      background-position: 20px calc(var(--bg-tile, 120px) * -0.125);
+    }
+    25% {
+      background-position: 28px calc(var(--bg-tile, 120px) * -0.25);
+    }
+    37.5% {
+      background-position: 20px calc(var(--bg-tile, 120px) * -0.375);
+    }
+    50% {
+      background-position: 0 calc(var(--bg-tile, 120px) * -0.5);
+    }
+    62.5% {
+      background-position: -20px calc(var(--bg-tile, 120px) * -0.625);
+    }
+    75% {
+      background-position: -28px calc(var(--bg-tile, 120px) * -0.75);
+    }
+    87.5% {
+      background-position: -20px calc(var(--bg-tile, 120px) * -0.875);
+    }
+    100% {
+      background-position: 0 calc(-1 * var(--bg-tile, 120px));
+    }
+  }
+
+  /* blossom avatar: a slow petal-halo pulse on the ::after (reuses mana-pulse:
+     compositor transform + opacity only, no per-frame box-shadow repaint). */
+  [data-campaign][data-avatar-frame="blossom"] .avatar-frame::after {
+    animation: mana-pulse 3.6s ease-in-out infinite;
+  }
+
+  /* petal / dew buttons: smooth hover/press like the other FX. Action chips
+     scale; the row itself is never boxed. */
+  [data-campaign][data-buttons="petal"] .ui-button,
+  [data-campaign][data-buttons="dew"] .ui-button,
+  [data-campaign][data-buttons="petal"] .fx-btn,
+  [data-campaign][data-buttons="dew"] .fx-btn,
+  [data-campaign][data-buttons="petal"] .action-btn > span,
+  [data-campaign][data-buttons="dew"] .action-btn > span {
+    transition:
+      box-shadow 0.22s ease,
+      transform 0.12s ease;
+  }
+  [data-campaign][data-buttons="petal"] .ui-button:active:not(:focus-visible),
+  [data-campaign][data-buttons="dew"] .ui-button:active:not(:focus-visible) {
+    transform: translateY(1px);
+  }
+  [data-campaign][data-buttons="petal"] .action-btn:hover > span,
+  [data-campaign][data-buttons="dew"] .action-btn:hover > span {
+    transform: scale(1.08);
+  }
+  [data-campaign][data-buttons="petal"] .fx-btn:hover,
+  [data-campaign][data-buttons="dew"] .fx-btn:hover {
+    transform: scale(1.03);
+  }
+
+  /* petals reaction: soft petal dots scatter outward and fade with a slight
+     spin. bloom reaction: a flower opens — a ring scales up with three petals. */
+  [data-campaign][data-reactions="petals"] .reaction-burst {
+    box-shadow:
+      0 -12px 0 currentColor,
+      9px -7px 0 color-mix(in srgb, currentColor 80%, transparent),
+      11px 5px 0 color-mix(in srgb, currentColor 70%, transparent),
+      0 12px 0 color-mix(in srgb, currentColor 75%, transparent),
+      -11px 5px 0 color-mix(in srgb, currentColor 70%, transparent),
+      -9px -7px 0 color-mix(in srgb, currentColor 80%, transparent);
+    animation: reaction-petals 0.6s ease-out 1;
+  }
+  [data-campaign][data-reactions="bloom"] .reaction-burst {
+    width: 18px;
+    height: 18px;
+    margin: -9px 0 0 -9px;
+    border: 2px solid currentColor;
+    background: radial-gradient(
+      circle,
+      color-mix(in srgb, currentColor 28%, transparent) 0 40%,
+      transparent 42%
+    );
+    box-shadow:
+      0 -10px 0 -2px currentColor,
+      9px 6px 0 -2px currentColor,
+      -9px 6px 0 -2px currentColor;
+    animation: reaction-bloom 0.55s ease-out 1;
+  }
+  @keyframes reaction-petals {
+    0% {
+      opacity: 0;
+      transform: scale(0.2) rotate(0deg);
+    }
+    35% {
+      opacity: 1;
+      transform: scale(0.95) rotate(8deg);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1.7) rotate(22deg);
+    }
+  }
+  @keyframes reaction-bloom {
+    0% {
+      opacity: 0;
+      transform: scale(0.2);
+    }
+    45% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1.7);
+    }
+  }
+
+  /* petalfall: rose/accent petals drift down one tile (translate from -tile to
+     0, so the top is always covered and the loop is seamless). pollen: warm
+     golden specks rise slowly, like motes. */
+  /* petalfall: real petal silhouettes (masked SVG at mixed rotations) tinted by
+     a horizontal accent->primary->like gradient; the vertical fall keeps the
+     seam colour-stable (Y motion doesn't move a horizontal gradient). */
+  .fx-petalfall {
+    background: linear-gradient(
+      90deg,
+      var(--accent),
+      var(--primary) 52%,
+      var(--like)
+    );
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260' viewBox='0 0 260 260'%3E%3Cg fill='%23000'%3E%3Cpath d='M50 48 C57 51 57 66 50 72 C43 66 43 51 50 48 Z' transform='rotate(20 50 60)'/%3E%3Cpath d='M160 29 C166 32 166 45 160 51 C154 45 154 32 160 29 Z' transform='rotate(-35 160 40)'/%3E%3Cpath d='M100 127 C108 131 108 147 100 153 C92 147 92 131 100 127 Z' transform='rotate(60 100 140)'/%3E%3Cpath d='M210 159 C216 162 216 175 210 181 C204 175 204 162 210 159 Z' transform='rotate(-10 210 170)'/%3E%3Cpath d='M60 198 C67 201 67 216 60 222 C53 216 53 201 60 198 Z' transform='rotate(140 60 210)'/%3E%3Cpath d='M180 230 C186 233 186 245 180 250 C174 245 174 233 180 230 Z' transform='rotate(200 180 240)'/%3E%3C/g%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260' viewBox='0 0 260 260'%3E%3Cg fill='%23000'%3E%3Cpath d='M50 48 C57 51 57 66 50 72 C43 66 43 51 50 48 Z' transform='rotate(20 50 60)'/%3E%3Cpath d='M160 29 C166 32 166 45 160 51 C154 45 154 32 160 29 Z' transform='rotate(-35 160 40)'/%3E%3Cpath d='M100 127 C108 131 108 147 100 153 C92 147 92 131 100 127 Z' transform='rotate(60 100 140)'/%3E%3Cpath d='M210 159 C216 162 216 175 210 181 C204 175 204 162 210 159 Z' transform='rotate(-10 210 170)'/%3E%3Cpath d='M60 198 C67 201 67 216 60 222 C53 216 53 201 60 198 Z' transform='rotate(140 60 210)'/%3E%3Cpath d='M180 230 C186 233 186 245 180 250 C174 245 174 233 180 230 Z' transform='rotate(200 180 240)'/%3E%3C/g%3E%3C/svg%3E");
+    -webkit-mask-size: 260px 260px;
+    mask-size: 260px 260px;
+    -webkit-mask-repeat: repeat;
+    mask-repeat: repeat;
+    opacity: 0.82;
+    will-change: transform;
+    animation: petal-fall 18s linear infinite;
+  }
+  /* pollen: small golden grains with a bright core fading through gold to a soft
+     halo, drifting up. */
+  .fx-pollen {
+    background-repeat: repeat;
+    background-size: 300px 300px;
+    background-image:
+      radial-gradient(2.4px 2.4px at 16% 64%, #fff3c4 0%, #f2cf5e 46%, transparent 70%),
+      radial-gradient(1.8px 1.8px at 48% 40%, #ffe9a8 0%, #e8be4a 50%, transparent 72%),
+      radial-gradient(2.6px 2.6px at 78% 72%, #fff6d6 0%, color-mix(in srgb, var(--accent) 75%, #f3d98a) 48%, transparent 72%),
+      radial-gradient(1.5px 1.5px at 64% 16%, #ffe9a8 0%, transparent 66%),
+      radial-gradient(1.3px 1.3px at 34% 86%, #f2cf5e 0%, transparent 66%);
+    opacity: 0.9;
+    will-change: transform;
+    animation: pollen-drift 28s linear infinite;
+  }
+  @keyframes petal-fall {
+    from {
+      transform: translate3d(0, -260px, 0);
+    }
+    to {
+      transform: translate3d(0, 0, 0);
+    }
+  }
+  @keyframes pollen-drift {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(0, -300px, 0);
+    }
+  }
+
+  /* leaves: discrete leaf elements (rendered by the layout from LEAF_FALL, not
+     a tiled background layer) that drift down in a slow S-curve while rocking
+     back and forth in the wind. Two transforms can't compose on one element, so
+     the .leaf carries the descent (translate) and its ::before carries the rock
+     (rotate). Per-leaf position/timing/sway/colour come from the inline custom
+     properties; the leaf silhouette is a mask so --lc tints it. Compositor-only
+     (transform/opacity), and the whole effect lives in this reduced-motion
+     block, so "reduce" drops every leaf. */
+  .fx-leaves .leaf {
+    position: absolute;
+    top: 0;
+    left: var(--lx, 50%);
+    width: calc(16px * var(--lscale, 1));
+    height: calc(18px * var(--lscale, 1));
+    will-change: transform;
+    animation: leaf-fall var(--lt, 16s) linear var(--ld, 0s) infinite;
+  }
+  .fx-leaves .leaf::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--lc, #9aae2a);
+    opacity: 0.9;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    will-change: transform;
+    animation: leaf-rock calc(var(--lt, 16s) / 5) ease-in-out var(--ld, 0s)
+      infinite;
+  }
+  /* shape a: a simple ovate leaf with a short stem. */
+  .fx-leaves .leaf--a::before {
+    --leaf: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 1.5 C18.5 6 18.5 14 12 21 C5.5 14 5.5 6 12 1.5 Z'/%3E%3Crect x='11.3' y='19.5' width='1.4' height='3.5' rx='0.7'/%3E%3C/svg%3E");
+    -webkit-mask-image: var(--leaf);
+    mask-image: var(--leaf);
+  }
+  /* shape b: a rounder three-lobed leaf. */
+  .fx-leaves .leaf--b::before {
+    --leaf: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2 C14 7 19 7 20 11 C21 15 16 17 12 22 C8 17 3 15 4 11 C5 7 10 7 12 2 Z'/%3E%3C/svg%3E");
+    -webkit-mask-image: var(--leaf);
+    mask-image: var(--leaf);
+  }
+  /* descent: a gentle S-curve (sway left/right while falling one viewport). */
+  @keyframes leaf-fall {
+    0% {
+      transform: translate3d(0, -12vh, 0);
+    }
+    25% {
+      transform: translate3d(var(--lsway, 28px), 18vh, 0);
+    }
+    50% {
+      transform: translate3d(0, 48vh, 0);
+    }
+    75% {
+      transform: translate3d(calc(-1 * var(--lsway, 28px)), 78vh, 0);
+    }
+    100% {
+      transform: translate3d(0, 112vh, 0);
+    }
+  }
+  /* rock: spin back and forth, faster than the descent. */
+  @keyframes leaf-rock {
+    0%,
+    100% {
+      transform: rotate(calc(-1 * var(--lrot, 28deg)));
+    }
+    50% {
+      transform: rotate(var(--lrot, 28deg));
+    }
+  }
+}

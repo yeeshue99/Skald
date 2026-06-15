@@ -75,7 +75,7 @@ export function SideNav({
               key={it.href}
               href={it.href}
               className={cn(
-                "flex items-center gap-4 rounded-full px-3 py-2.5 text-lg transition-colors hover:bg-surface-hover",
+                "fx-btn flex items-center gap-4 rounded-full px-3 py-2.5 text-lg transition-colors hover:bg-surface-hover",
                 active ? "font-bold text-text" : "text-text/90",
               )}
             >
@@ -108,7 +108,7 @@ export function SideNav({
         <form action={logoutAction}>
           <button
             type="submit"
-            className="flex w-full items-center gap-3 rounded-full px-3 py-2 text-sm text-muted transition-colors hover:bg-surface-hover hover:text-text"
+            className="fx-btn flex w-full items-center gap-3 rounded-full px-3 py-2 text-sm text-muted transition-colors hover:bg-surface-hover hover:text-text"
           >
             <LogOut className="size-5 shrink-0" />
             <span className="hidden lg:inline">Log out</span>

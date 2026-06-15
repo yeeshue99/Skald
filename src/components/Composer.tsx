@@ -125,7 +125,7 @@ export function Composer({
             <button
               type="button"
               onClick={() => setPersonaOpen((v) => !v)}
-              className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs font-semibold text-primary hover:bg-surface-hover"
+              className="fx-btn inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs font-semibold text-primary hover:bg-surface-hover"
             >
               posting as {author.displayName}
               <ChevronDown className="size-3" />
@@ -183,7 +183,7 @@ export function Composer({
             <button
               type="button"
               onClick={() => setImageUrl("")}
-              className="absolute right-2 top-2 rounded-full bg-black/60 p-1 text-white hover:bg-black/80"
+              className="fx-btn absolute right-2 top-2 rounded-full bg-black/60 p-1 text-white hover:bg-black/80"
               aria-label="Remove image"
             >
               <X className="size-4" />
@@ -234,7 +234,7 @@ export function Composer({
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
-            className="rounded-full p-2 text-primary hover:bg-primary/10 disabled:opacity-50"
+            className="fx-btn rounded-full p-2 text-primary hover:bg-primary/10 disabled:opacity-50"
             aria-label="Add image"
             title="Add image"
           >
@@ -247,7 +247,7 @@ export function Composer({
           <button
             type="button"
             onClick={addImageUrl}
-            className="rounded-full p-2 text-primary hover:bg-primary/10"
+            className="fx-btn rounded-full p-2 text-primary hover:bg-primary/10"
             aria-label="Add image by URL"
             title="Add image by URL"
           >
@@ -257,7 +257,7 @@ export function Composer({
             type="button"
             onClick={() => setScheduleOpen((v) => !v)}
             className={cn(
-              "rounded-full p-2 hover:bg-primary/10",
+              "fx-btn rounded-full p-2 hover:bg-primary/10",
               scheduleOpen ? "text-accent" : "text-primary",
             )}
             aria-label="Schedule"
