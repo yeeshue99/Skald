@@ -70,6 +70,8 @@ export async function exportCampaign(campaignId: number) {
       description: campaign.description,
       theme: campaign.theme,
       inviteCode: campaign.inviteCode,
+      // lets an importer find the creator's persona to keep as a player character
+      createdByUserId: campaign.createdByUserId,
       createdAt: campaign.createdAt,
     },
     members,

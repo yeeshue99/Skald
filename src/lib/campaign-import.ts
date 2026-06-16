@@ -25,6 +25,7 @@ const rowId = z.number().int();
 
 const personaIn = z.object({
   id: rowId,
+  ownerUserId: z.number().int().nullish(),
   handle: z.string().min(1),
   handleLower: z.string().optional(),
   displayName: z.string().min(1),
@@ -75,16 +76,23 @@ const voteIn = z.object({
   createdAt: z.coerce.date().optional(),
 });
 
-// A Skald export. We validate the parts we re-create and ignore the rest (e.g.
-// `members`, which can't be restored without credentials). Counts are capped so
-// a hostile file can't ask for an unbounded number of inserts.
+// A Skald export. We validate the parts we re-create. Member rows can't be
+// restored as logins (no credentials in the export), but their role + the
+// creator id let us pick which persona to keep as the importer's character.
+// Counts are capped so a hostile file can't ask for an unbounded number of
+// inserts.
 export const campaignImportSchema = z.object({
   version: z.number().optional(),
   campaign: z.object({
     name: z.string().min(1),
     description: z.string().nullish(),
     theme: z.record(z.string(), z.unknown()).optional(),
+    createdByUserId: z.number().int().nullish(),
   }),
+  members: z
+    .array(z.object({ userId: z.number().int(), role: z.string().optional() }))
+    .max(10_000)
+    .optional(),
   personas: z.array(personaIn).max(10_000).default([]),
   posts: z.array(postIn).max(200_000).default([]),
   follows: z.array(followIn).max(200_000).default([]),
@@ -101,12 +109,36 @@ function chunk<T>(arr: T[], size: number): T[][] {
   return out;
 }
 
+// One owner can hold only a single player character, so the importer keeps just
+// one imported persona as their PC and the rest become their NPCs. Prefer the
+// original creator's PC, then any DM-role member's PC, then the first PC; null
+// if the export had no player characters at all.
+function pickPrimaryPersonaId(data: CampaignImport): number | null {
+  const isPc = (p: { isNpc?: boolean }) => p.isNpc === false;
+  const creator = data.campaign.createdByUserId;
+  if (creator != null) {
+    const p = data.personas.find((x) => x.ownerUserId === creator && isPc(x));
+    if (p) return p.id;
+  }
+  const dmUsers = new Set(
+    (data.members ?? []).filter((m) => m.role === "dm").map((m) => m.userId),
+  );
+  if (dmUsers.size) {
+    const p = data.personas.find(
+      (x) => isPc(x) && x.ownerUserId != null && dmUsers.has(x.ownerUserId),
+    );
+    if (p) return p.id;
+  }
+  const anyPc = data.personas.find(isPc);
+  return anyPc ? anyPc.id : null;
+}
+
 // Recreate a campaign from an export, owned by `userId` (who becomes its DM).
 // Original row ids are remapped onto fresh ones; the in-export relationships
 // (replies, reposts, pins, follows, likes, bookmarks, poll votes) are rebuilt
-// against the new ids. Every imported persona becomes one of the importer's NPCs
-// (one owner can hold only a single player character, so player characters can't
-// be restored faithfully). Returns the new campaign's slug.
+// against the new ids. The importer keeps the original creator's persona as a
+// player character (see pickPrimaryPersonaId); every other persona becomes one
+// of their NPCs. Returns the new campaign's slug.
 export async function importCampaign(
   userId: number,
   data: CampaignImport,
@@ -120,6 +152,9 @@ export async function importCampaign(
     t && t.colors && t.fonts && t.mode
       ? normalizeTheme({ ...DEFAULT_THEME, ...(t as Theme) })
       : { ...DEFAULT_THEME, appName: name };
+
+  // the one persona the importer keeps as a player character (the rest are NPCs)
+  const primaryId = pickPrimaryPersonaId(data);
 
   // pick an unused slug before opening the transaction
   const base = slugify(name);
@@ -155,7 +190,8 @@ export async function importCampaign(
           .insert(memberships)
           .values({ userId, campaignId, role: "dm" });
 
-        // personas (all as the importer's NPCs; pinnedPostId set after posts)
+        // personas: the primary one stays a player character, the rest are NPCs.
+        // pinnedPostId is filled in once posts exist.
         const personaIdMap = new Map<number, number>();
         for (const group of chunk(data.personas, 500)) {
           const rows = await tx
@@ -171,7 +207,7 @@ export async function importCampaign(
                 bannerUrl: p.bannerUrl ?? null,
                 bio: p.bio ?? null,
                 avatarFrame: p.avatarFrame,
-                isNpc: true,
+                isNpc: p.id !== primaryId,
                 ...(p.createdAt ? { createdAt: p.createdAt } : {}),
               })),
             )
@@ -297,10 +333,13 @@ export async function importCampaign(
         for (const g of chunk(voteRows, 1000))
           if (g.length) await tx.insert(pollVotes).values(g).onConflictDoNothing();
 
-        // the importer acts as the first imported persona, or a fresh default if
-        // the export had none
-        let actingId =
-          personaIdMap.size > 0 ? personaIdMap.values().next().value! : null;
+        // the importer acts as their player character, else the first imported
+        // persona, else a fresh default if the export had no personas at all
+        let actingId: number | null =
+          (primaryId != null ? personaIdMap.get(primaryId) ?? null : null) ??
+          (personaIdMap.size > 0
+            ? personaIdMap.values().next().value ?? null
+            : null);
         if (actingId == null) {
           const [p] = await tx
             .insert(personas)
