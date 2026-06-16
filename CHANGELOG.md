@@ -28,6 +28,12 @@ under Unreleased.
   state. Opening the root shows the whole thread because `getThread` follows the
   author's own chain into a `selfThread`; feeds list only the root since they
   already hide replies.
+- Polls: a post can carry a poll (2-4 options, open for 1 / 3 / 7 days). The
+  composer has a poll mode that's mutually exclusive with images, threads, and
+  scheduling. Each persona casts one vote (unique per poll); after voting or once
+  the poll closes the options become result bars (percent, your pick checked, the
+  total and time left). Stored as `polls` + `poll_votes` tables, hydrated onto
+  `PostView` and rendered by `PollDisplay`.
 - Scheduling and drafts: compose now, schedule for later, or save a draft.
   Visibility is purely time-based (a post is live once its `publishedAt` is in
   the past), so scheduled posts go live with no background worker.

@@ -4,10 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { likes, personas, posts } from "@/db/schema";
+import { likes, personas, polls, pollVotes, posts } from "@/db/schema";
 import { loadActionContext, ownsPersona, type CampaignContext } from "@/lib/campaign";
-import { composeSchema } from "@/lib/validation";
+import { composeSchema, pollInputSchema } from "@/lib/validation";
 import { type FormState } from "@/lib/form";
+import { getPoll, type PollView } from "@/lib/queries";
 import { notify, notifyMentions, removeLikeNotification } from "@/lib/notify";
 
 type Visible = {
@@ -131,6 +132,29 @@ export async function createPostAction(
   if (cleaned.length > MAX_THREAD_POSTS)
     return { error: `A thread can be at most ${MAX_THREAD_POSTS} posts.` };
 
+  // optional poll attached to a single post (mutually exclusive with image,
+  // thread, scheduling, and drafts — see the checks once status is known)
+  let poll: { options: string[]; days: number } | null = null;
+  const pollRaw = formData.get("pollOptions");
+  if (typeof pollRaw === "string" && pollRaw.trim()) {
+    let arr: unknown = null;
+    try {
+      arr = JSON.parse(pollRaw);
+    } catch {
+      arr = null;
+    }
+    const pp = pollInputSchema.safeParse({
+      options: Array.isArray(arr)
+        ? arr.map((o) => (typeof o === "string" ? o : ""))
+        : [],
+      days: formData.get("pollDays") ?? 1,
+    });
+    if (!pp.success) {
+      return { error: pp.error.issues[0]?.message ?? "Check your poll." };
+    }
+    poll = pp.data;
+  }
+
   // validate the reply target (and remember its author so we can notify them)
   let replyTarget: Visible | null = null;
   if (replyToPostId != null) {
@@ -167,6 +191,15 @@ export async function createPostAction(
     // an unparseable time falls through to publish-now (the default above)
   }
 
+  if (poll) {
+    if (cleaned.length !== 1)
+      return { error: "A poll can't be part of a thread." };
+    if (cleaned[0].imageUrl)
+      return { error: "A post can have a poll or an image, not both." };
+    if (asDraft || status === "scheduled")
+      return { error: "A poll can't be scheduled or saved as a draft." };
+  }
+
   // insert segments in order, chaining each as a reply to the previous so the
   // run reads as one self-thread. The first answers the external reply target
   // (if any); the rest answer their predecessor.
@@ -187,6 +220,16 @@ export async function createPostAction(
       .returning({ id: posts.id });
     created.push(row.id);
     parentId = row.id;
+  }
+
+  // attach the poll to the (single) created post
+  if (poll) {
+    await db.insert(polls).values({
+      campaignId: ctx.campaign.id,
+      postId: created[0],
+      options: poll.options,
+      closesAt: new Date(Date.now() + poll.days * 86_400_000),
+    });
   }
 
   // notify on reply + @mention, but only once posts are actually live — a
@@ -220,6 +263,47 @@ export async function createPostAction(
   if (replyToPostId != null) revalidatePath(`/c/${slug}/post/${replyToPostId}`);
   if (status !== "published") revalidatePath(`/c/${slug}/queue`);
   return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Poll voting: the acting persona casts one vote (unique per poll); returns the
+// fresh poll view so the client can show results immediately.
+// ---------------------------------------------------------------------------
+export async function votePollAction(
+  slug: string,
+  pollId: number,
+  optionIdx: number,
+): Promise<PollView | { error: string }> {
+  const ctx = await loadActionContext(slug);
+  const poll = (
+    await db.select().from(polls).where(eq(polls.id, pollId)).limit(1)
+  )[0];
+  if (!poll || poll.campaignId !== ctx.campaign.id)
+    return { error: "Poll not found." };
+  if (poll.closesAt.getTime() <= Date.now())
+    return { error: "This poll has closed." };
+  if (
+    !Number.isInteger(optionIdx) ||
+    optionIdx < 0 ||
+    optionIdx >= poll.options.length
+  )
+    return { error: "That option doesn't exist." };
+
+  // one vote per persona: a repeat vote is ignored (unique poll+persona index)
+  await db
+    .insert(pollVotes)
+    .values({
+      campaignId: ctx.campaign.id,
+      pollId,
+      personaId: ctx.actingPersona.id,
+      optionIdx,
+    })
+    .onConflictDoNothing();
+
+  const view = await getPoll(pollId, ctx.actingPersona.id);
+  if (!view) return { error: "Poll not found." };
+  revalidatePath(`/c/${slug}`);
+  return view;
 }
 
 // ---------------------------------------------------------------------------

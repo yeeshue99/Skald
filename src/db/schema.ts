@@ -304,6 +304,63 @@ export const bookmarks = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// polls — an optional poll attached to a post (one per post). `options` is a
+// small ordered text array; a vote stores the chosen index. closesAt ends
+// voting. Composite FK to posts keeps the poll in the post's campaign and
+// cascades when the post is hard-deleted.
+// ---------------------------------------------------------------------------
+export const polls = pgTable(
+  "polls",
+  {
+    id: serial("id").primaryKey(),
+    campaignId: integer("campaign_id")
+      .notNull()
+      .references(() => campaigns.id, { onDelete: "cascade" }),
+    postId: integer("post_id").notNull(),
+    options: jsonb("options").$type<string[]>().notNull(),
+    closesAt: tstz("closes_at").notNull(),
+    createdAt: tstz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    foreignKey({
+      columns: [t.postId, t.campaignId],
+      foreignColumns: [posts.id, posts.campaignId],
+      name: "polls_post_fk",
+    }).onDelete("cascade"),
+    uniqueIndex("polls_post_idx").on(t.postId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// pollVotes — one vote per persona per poll (unique), recording the chosen
+// option index. Composite FK to personas keeps voters in the poll's campaign.
+// ---------------------------------------------------------------------------
+export const pollVotes = pgTable(
+  "poll_votes",
+  {
+    id: serial("id").primaryKey(),
+    campaignId: integer("campaign_id")
+      .notNull()
+      .references(() => campaigns.id, { onDelete: "cascade" }),
+    pollId: integer("poll_id")
+      .notNull()
+      .references(() => polls.id, { onDelete: "cascade" }),
+    personaId: integer("persona_id").notNull(),
+    optionIdx: integer("option_idx").notNull(),
+    createdAt: tstz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    foreignKey({
+      columns: [t.personaId, t.campaignId],
+      foreignColumns: [personas.id, personas.campaignId],
+      name: "poll_votes_persona_fk",
+    }).onDelete("cascade"),
+    uniqueIndex("poll_votes_pair_idx").on(t.pollId, t.personaId),
+    index("poll_votes_poll_idx").on(t.pollId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // notifications — an event aimed at one of a user's personas: someone liked or
 // replied to their post, followed them, or @mentioned them. Recipient + actor
 // are personas (composite-FK to personas so they stay in one campaign). postId
@@ -384,6 +441,8 @@ export type Post = typeof posts.$inferSelect;
 export type Follow = typeof follows.$inferSelect;
 export type Like = typeof likes.$inferSelect;
 export type Bookmark = typeof bookmarks.$inferSelect;
+export type Poll = typeof polls.$inferSelect;
+export type PollVote = typeof pollVotes.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type NotificationType = Notification["type"];
 export type Session = typeof sessions.$inferSelect;

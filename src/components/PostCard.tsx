@@ -10,6 +10,7 @@ import { cn } from "@/lib/cn";
 import { Avatar } from "./Avatar";
 import { PostActions } from "./PostActions";
 import { PostMenu } from "./PostMenu";
+import { PollDisplay } from "./PollDisplay";
 import { FollowButton } from "./FollowButton";
 
 function renderRichText(text: string, slug: string): ReactNode[] {
@@ -195,6 +196,8 @@ export function PostCard({
               className="mt-2 max-h-112 w-full rounded-base border border-border object-cover"
             />
           ) : null}
+
+          {data.poll ? <PollDisplay slug={slug} poll={data.poll} /> : null}
 
           {/* quote-repost embed */}
           {!isBoost && data.repostOf ? (

@@ -93,3 +93,20 @@ export const composeSchema = z.object({
   asDraft: z.coerce.boolean().optional().default(false),
   replyToPostId: z.coerce.number().int().positive().optional(),
 });
+
+// Polls: 2-4 options, each a short label; voting runs for a whole number of days.
+export const POLL_MIN_OPTIONS = 2;
+export const POLL_MAX_OPTIONS = 4;
+export const POLL_OPTION_MAX = 40;
+export const POLL_DAY_CHOICES = [1, 3, 7] as const;
+
+export const pollInputSchema = z.object({
+  options: z
+    .array(z.string().trim().min(1, "Poll options can't be blank").max(POLL_OPTION_MAX))
+    .min(POLL_MIN_OPTIONS, `A poll needs at least ${POLL_MIN_OPTIONS} options`)
+    .max(POLL_MAX_OPTIONS, `A poll can have at most ${POLL_MAX_OPTIONS} options`),
+  days: z.coerce
+    .number()
+    .int()
+    .refine((d) => (POLL_DAY_CHOICES as readonly number[]).includes(d), "Pick a valid poll length"),
+});

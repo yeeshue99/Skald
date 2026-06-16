@@ -25,6 +25,8 @@ import {
   likes,
   notifications,
   personas,
+  polls,
+  pollVotes,
   posts,
   memberships,
   users,
@@ -44,6 +46,17 @@ export type PersonaSummary = {
   isNpc: boolean;
   /** the persona's chosen avatar frame ("default" = inherit campaign theme) */
   avatarFrame: PersonaAvatarFrame;
+};
+
+export type PollOptionView = { text: string; votes: number };
+export type PollView = {
+  id: number;
+  options: PollOptionView[];
+  totalVotes: number;
+  closesAt: Date;
+  closed: boolean;
+  /** the index the viewing (acting) persona voted for, or null if they haven't */
+  myVoteIdx: number | null;
 };
 
 export type PostView = {
@@ -66,6 +79,8 @@ export type PostView = {
   authorFollowedByMe: boolean;
   /** whether the viewing (acting) persona has bookmarked this post */
   bookmarkedByMe: boolean;
+  /** an attached poll with the viewer's vote state, or null */
+  poll: PollView | null;
   /** when this row is a plain boost, the original post it boosts (if still visible) */
   repostOf: PostView | null;
   isBoost: boolean;
@@ -231,6 +246,121 @@ async function loadViewerBookmarks(
   return set;
 }
 
+function buildPollView(
+  poll: { id: number; options: string[]; closesAt: Date },
+  counts: Map<number, number> | undefined,
+  myVoteIdx: number | null,
+  now: number,
+): PollView {
+  const options = poll.options.map((text, i) => ({
+    text,
+    votes: counts?.get(i) ?? 0,
+  }));
+  return {
+    id: poll.id,
+    options,
+    totalVotes: options.reduce((s, o) => s + o.votes, 0),
+    closesAt: poll.closesAt,
+    closed: poll.closesAt.getTime() <= now,
+    myVoteIdx,
+  };
+}
+
+// Polls for a set of posts, keyed by postId, with vote tallies and the viewer's
+// own vote folded in. Posts without a poll simply don't appear in the map.
+async function loadPolls(
+  viewerPersonaId: number,
+  postIds: number[],
+): Promise<Map<number, PollView>> {
+  const map = new Map<number, PollView>();
+  if (postIds.length === 0) return map;
+  const pollRows = await db
+    .select({
+      id: polls.id,
+      postId: polls.postId,
+      options: polls.options,
+      closesAt: polls.closesAt,
+    })
+    .from(polls)
+    .where(inArray(polls.postId, postIds));
+  if (pollRows.length === 0) return map;
+
+  const pollIds = pollRows.map((p) => p.id);
+  const [countRows, myVoteRows] = await Promise.all([
+    db
+      .select({
+        pollId: pollVotes.pollId,
+        optionIdx: pollVotes.optionIdx,
+        c: count(),
+      })
+      .from(pollVotes)
+      .where(inArray(pollVotes.pollId, pollIds))
+      .groupBy(pollVotes.pollId, pollVotes.optionIdx),
+    db
+      .select({ pollId: pollVotes.pollId, optionIdx: pollVotes.optionIdx })
+      .from(pollVotes)
+      .where(
+        and(
+          eq(pollVotes.personaId, viewerPersonaId),
+          inArray(pollVotes.pollId, pollIds),
+        ),
+      ),
+  ]);
+
+  const countsByPoll = new Map<number, Map<number, number>>();
+  for (const r of countRows) {
+    const m = countsByPoll.get(r.pollId) ?? new Map<number, number>();
+    m.set(r.optionIdx, Number(r.c));
+    countsByPoll.set(r.pollId, m);
+  }
+  const myVoteByPoll = new Map<number, number>();
+  for (const r of myVoteRows) myVoteByPoll.set(r.pollId, r.optionIdx);
+
+  const now = Date.now();
+  for (const p of pollRows) {
+    map.set(
+      p.postId,
+      buildPollView(p, countsByPoll.get(p.id), myVoteByPoll.get(p.id) ?? null, now),
+    );
+  }
+  return map;
+}
+
+// A single poll's current view (for the vote action's return value).
+export async function getPoll(
+  pollId: number,
+  viewerPersonaId: number,
+): Promise<PollView | null> {
+  const poll = (
+    await db
+      .select({ id: polls.id, options: polls.options, closesAt: polls.closesAt })
+      .from(polls)
+      .where(eq(polls.id, pollId))
+      .limit(1)
+  )[0];
+  if (!poll) return null;
+  const [countRows, mine] = await Promise.all([
+    db
+      .select({ optionIdx: pollVotes.optionIdx, c: count() })
+      .from(pollVotes)
+      .where(eq(pollVotes.pollId, pollId))
+      .groupBy(pollVotes.optionIdx),
+    db
+      .select({ optionIdx: pollVotes.optionIdx })
+      .from(pollVotes)
+      .where(
+        and(
+          eq(pollVotes.pollId, pollId),
+          eq(pollVotes.personaId, viewerPersonaId),
+        ),
+      )
+      .limit(1),
+  ]);
+  const counts = new Map<number, number>();
+  for (const r of countRows) counts.set(r.optionIdx, Number(r.c));
+  return buildPollView(poll, counts, mine[0]?.optionIdx ?? null, Date.now());
+}
+
 /**
  * Turn raw post rows into PostViews: resolves authors, counts, the viewer's
  * like/boost state, and (one level deep) the original post behind a boost,
@@ -265,13 +395,14 @@ async function hydrate(
   const authorIds = [...new Set(allRows.map((r) => r.personaId))];
   const countIds = [...new Set(allRows.map((r) => r.id))];
 
-  const [personaMap, countMap, viewer, followedAuthors, bookmarkedIds] =
+  const [personaMap, countMap, viewer, followedAuthors, bookmarkedIds, pollMap] =
     await Promise.all([
       loadPersonas(authorIds),
       loadCounts(countIds),
       loadViewerState(viewerPersonaId, countIds),
       loadViewerFollows(viewerPersonaId, authorIds),
       loadViewerBookmarks(viewerPersonaId, countIds),
+      loadPolls(viewerPersonaId, countIds),
     ]);
 
   const build = (r: RawPost): PostView => {
@@ -301,6 +432,7 @@ async function hydrate(
       repostedByMe: viewer.reposted.has(r.id),
       authorFollowedByMe: followedAuthors.has(r.personaId),
       bookmarkedByMe: bookmarkedIds.has(r.id),
+      poll: pollMap.get(r.id) ?? null,
       repostOf: null,
       isBoost: false,
     };

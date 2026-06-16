@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import {
+  BarChart3,
   CalendarClock,
   ChevronDown,
   ImagePlus,
@@ -12,7 +13,13 @@ import {
 } from "lucide-react";
 import { createPostAction } from "@/app/actions/posts";
 import { emptyFormState } from "@/lib/form";
-import { MAX_POST_LENGTH } from "@/lib/validation";
+import {
+  MAX_POST_LENGTH,
+  POLL_DAY_CHOICES,
+  POLL_MAX_OPTIONS,
+  POLL_MIN_OPTIONS,
+  POLL_OPTION_MAX,
+} from "@/lib/validation";
 import type { PersonaSummary } from "@/lib/queries";
 import { Avatar } from "./Avatar";
 import { Button } from "./ui";
@@ -52,6 +59,9 @@ export function Composer({
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [localWhen, setLocalWhen] = useState("");
   const [minDateTime, setMinDateTime] = useState("");
+  const [pollOpen, setPollOpen] = useState(false);
+  const [pollOptions, setPollOptions] = useState<string[]>(["", ""]);
+  const [pollDays, setPollDays] = useState<number>(POLL_DAY_CHOICES[0]);
 
   const draftRef = useRef<HTMLInputElement>(null);
   const fileRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -67,6 +77,15 @@ export function Composer({
   const scheduledIso =
     scheduleOpen && localWhen ? new Date(localWhen).toISOString() : "";
 
+  const trimmedPollOptions = pollOptions.map((o) => o.trim());
+  const pollFilled = trimmedPollOptions.filter(Boolean).length;
+  const pollValid = pollFilled >= POLL_MIN_OPTIONS;
+  // a poll post needs a question (the first segment's text) and enough options;
+  // a normal post just needs some content
+  const canSubmit = pollOpen
+    ? segments[0].content.trim().length > 0 && pollValid && !anyOver
+    : hasContent && !anyOver;
+
   // reset after a successful post, and nudge any visible feed to pull it in
   useEffect(() => {
     if (state.ok) {
@@ -74,6 +93,9 @@ export function Composer({
       setSegments([{ content: "", imageUrl: "" }]);
       setScheduleOpen(false);
       setLocalWhen("");
+      setPollOpen(false);
+      setPollOptions(["", ""]);
+      setPollDays(POLL_DAY_CHOICES[0]);
       /* eslint-enable react-hooks/set-state-in-effect */
       window.dispatchEvent(new Event("skald:posted"));
     }
@@ -128,6 +150,33 @@ export function Composer({
     if (url) patchSegment(i, { imageUrl: url });
   }
 
+  function togglePoll() {
+    const next = !pollOpen;
+    if (next) {
+      // a poll is a single post: collapse any thread, drop the image, and close
+      // the scheduler (polls publish immediately)
+      setSegments((s) => [{ content: s[0].content, imageUrl: "" }]);
+      setScheduleOpen(false);
+      setLocalWhen("");
+      setPollOptions(["", ""]);
+      setPollDays(POLL_DAY_CHOICES[0]);
+    }
+    setPollOpen(next);
+  }
+  function patchPollOption(i: number, val: string) {
+    setPollOptions((prev) => prev.map((o, idx) => (idx === i ? val : o)));
+  }
+  function addPollOption() {
+    setPollOptions((prev) =>
+      prev.length >= POLL_MAX_OPTIONS ? prev : [...prev, ""],
+    );
+  }
+  function removePollOption(i: number) {
+    setPollOptions((prev) =>
+      prev.length <= POLL_MIN_OPTIONS ? prev : prev.filter((_, idx) => idx !== i),
+    );
+  }
+
   function toggleSchedule() {
     const opening = !scheduleOpen;
     if (opening) {
@@ -160,6 +209,16 @@ export function Composer({
       <input type="hidden" name="authorPersonaId" value={authorId} />
       <input type="hidden" name="segments" value={JSON.stringify(segments)} />
       <input type="hidden" name="scheduledAt" value={scheduledIso} />
+      <input
+        type="hidden"
+        name="pollOptions"
+        value={pollOpen ? JSON.stringify(trimmedPollOptions.filter(Boolean)) : ""}
+      />
+      <input
+        type="hidden"
+        name="pollDays"
+        value={pollOpen ? String(pollDays) : ""}
+      />
       <input ref={draftRef} type="hidden" name="asDraft" value="" />
       {replyToPostId ? (
         <input type="hidden" name="replyToPostId" value={replyToPostId} />
@@ -275,10 +334,10 @@ export function Composer({
                 <button
                   type="button"
                   onClick={() => fileRefs.current[i]?.click()}
-                  disabled={uploadingIndex === i}
-                  className="fx-btn rounded-full p-1.5 text-primary hover:bg-primary/10 disabled:opacity-50"
+                  disabled={pollOpen || uploadingIndex === i}
+                  className="fx-btn rounded-full p-1.5 text-primary hover:bg-primary/10 disabled:opacity-40"
                   aria-label="Add image"
-                  title="Add image"
+                  title={pollOpen ? "A post can have a poll or an image" : "Add image"}
                 >
                   {uploadingIndex === i ? (
                     <Loader2 className="size-4.5 animate-spin" />
@@ -289,9 +348,10 @@ export function Composer({
                 <button
                   type="button"
                   onClick={() => addImageUrl(i)}
-                  className="fx-btn rounded-full p-1.5 text-primary hover:bg-primary/10"
+                  disabled={pollOpen}
+                  className="fx-btn rounded-full p-1.5 text-primary hover:bg-primary/10 disabled:opacity-40"
                   aria-label="Add image by URL"
-                  title="Add image by URL"
+                  title={pollOpen ? "A post can have a poll or an image" : "Add image by URL"}
                 >
                   <Link2 className="size-4.5" />
                 </button>
@@ -322,15 +382,83 @@ export function Composer({
         );
       })}
 
-      {/* add another post to the thread */}
-      <button
-        type="button"
-        onClick={addSegment}
-        disabled={lastEmpty || segments.length >= MAX_THREAD_POSTS}
-        className="fx-btn ml-14 mt-1 inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-sm font-semibold text-primary hover:bg-primary/10 disabled:opacity-40"
-      >
-        <Plus className="size-4" /> Add another post
-      </button>
+      {/* add another post to the thread (not while building a poll) */}
+      {!pollOpen ? (
+        <button
+          type="button"
+          onClick={addSegment}
+          disabled={lastEmpty || segments.length >= MAX_THREAD_POSTS}
+          className="fx-btn ml-14 mt-1 inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-sm font-semibold text-primary hover:bg-primary/10 disabled:opacity-40"
+        >
+          <Plus className="size-4" /> Add another post
+        </button>
+      ) : null}
+
+      {/* poll editor */}
+      {pollOpen ? (
+        <div className="ml-14 mt-2 space-y-2 rounded-base border border-border p-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-text">Poll</span>
+            <button
+              type="button"
+              onClick={togglePoll}
+              className="fx-btn rounded-full p-1 text-muted hover:bg-like/10 hover:text-like"
+              aria-label="Remove poll"
+              title="Remove poll"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+          {pollOptions.map((opt, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input
+                value={opt}
+                onChange={(e) => patchPollOption(i, e.target.value)}
+                maxLength={POLL_OPTION_MAX}
+                placeholder={`Option ${i + 1}`}
+                className="w-full rounded-base border border-border bg-bg/60 px-3 py-1.5 text-sm text-text placeholder:text-muted/70 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              {pollOptions.length > POLL_MIN_OPTIONS ? (
+                <button
+                  type="button"
+                  onClick={() => removePollOption(i)}
+                  className="fx-btn rounded-full p-1 text-muted hover:text-like"
+                  aria-label={`Remove option ${i + 1}`}
+                >
+                  <X className="size-4" />
+                </button>
+              ) : null}
+            </div>
+          ))}
+          <div className="flex items-center justify-between gap-2 pt-0.5">
+            {pollOptions.length < POLL_MAX_OPTIONS ? (
+              <button
+                type="button"
+                onClick={addPollOption}
+                className="fx-btn inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline"
+              >
+                <Plus className="size-4" /> Add option
+              </button>
+            ) : (
+              <span />
+            )}
+            <label className="flex items-center gap-1.5 text-xs text-muted">
+              Poll length
+              <select
+                value={pollDays}
+                onChange={(e) => setPollDays(Number(e.target.value))}
+                className="rounded border border-border bg-bg px-2 py-1 text-text"
+              >
+                {POLL_DAY_CHOICES.map((d) => (
+                  <option key={d} value={d}>
+                    {d} day{d > 1 ? "s" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </div>
+      ) : null}
 
       {scheduleOpen ? (
         <div className="mt-2 flex flex-wrap items-center gap-2 rounded-base border border-border bg-bg/40 p-2 text-sm">
@@ -365,14 +493,32 @@ export function Composer({
         <button
           type="button"
           onClick={toggleSchedule}
+          disabled={pollOpen}
           className={cn(
-            "fx-btn rounded-full p-2 hover:bg-primary/10",
+            "fx-btn rounded-full p-2 hover:bg-primary/10 disabled:opacity-40",
             scheduleOpen ? "text-accent" : "text-primary",
           )}
           aria-label="Schedule"
-          title="Schedule for later"
+          title={pollOpen ? "A poll can't be scheduled" : "Schedule for later"}
         >
           <CalendarClock className="size-5" />
+        </button>
+        <button
+          type="button"
+          onClick={togglePoll}
+          disabled={isThread || Boolean(segments[0].imageUrl)}
+          className={cn(
+            "fx-btn rounded-full p-2 hover:bg-primary/10 disabled:opacity-40",
+            pollOpen ? "text-accent" : "text-primary",
+          )}
+          aria-label="Add poll"
+          title={
+            isThread || segments[0].imageUrl
+              ? "A poll can't be combined with a thread or image"
+              : "Add a poll"
+          }
+        >
+          <BarChart3 className="size-5" />
         </button>
 
         {isThread ? (
@@ -387,7 +533,7 @@ export function Composer({
               type="submit"
               size="sm"
               variant="secondary"
-              disabled={pending || !hasContent || anyOver}
+              disabled={pending || !canSubmit}
               onClick={() => {
                 if (draftRef.current) draftRef.current.value = "1";
               }}
@@ -399,9 +545,7 @@ export function Composer({
           <Button
             type="submit"
             size="sm"
-            disabled={
-              pending || !hasContent || anyOver || (scheduleOpen && !localWhen)
-            }
+            disabled={pending || !canSubmit || (scheduleOpen && !localWhen)}
             onClick={() => {
               if (draftRef.current) draftRef.current.value = "";
             }}

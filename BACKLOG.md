@@ -22,7 +22,6 @@ how grounded each item is: concrete gaps first, then ideas.
 
 - [ ] Direct messages between personas (in-world, table-visible to the DM).
 - [ ] Emoji reactions beyond like / boost.
-- [ ] Polls in posts.
 - [ ] Mute / block a persona from your own feed.
 - [ ] In-world flavor: a per-campaign "lore" / rules page the DM pins, and
       optional in-character "language" tags on posts (Common, Elvish, ...).
