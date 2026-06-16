@@ -1,62 +1,103 @@
-# Skald — a social feed for your tabletop campaign
+# Skald
 
-A private, self-hostable Twitter-style app for your D&D group. Post as NPCs and
-players, follow each other, schedule reveals to go live mid-session, and reskin
-the whole thing per campaign (STR/X for Strixhaven, Scrollr for high fantasy,
-HOLONET// for sci-fi, or roll your own).
+A private, self-hostable Twitter-style feed for a tabletop campaign. Your table
+posts as its characters and NPCs, follows each other, schedules reveals to drop
+mid-session, and reskins the whole app per campaign. Built to deploy free on
+Vercel and Neon.
 
-Built with Next.js (App Router) + TypeScript, Drizzle ORM on Neon Postgres,
-Tailwind v4, and custom session auth. Designed to deploy free on Vercel + Neon.
+Skald is multi-tenant: one deployment hosts many campaigns, each with its own
+members, personas, theme, and invite code, all isolated from each other.
+
+## Features
+
+- Personas, not accounts. A login can act as several in-world characters. Players
+  get a character (the DM can hand them more); the DM owns the NPCs and posts as
+  any of them from one login. Switch personas in the composer or the side nav.
+- Posting: text, image, multi-post threads, quote posts, and polls (2-4 options,
+  timed). Edit with an "edited" marker, delete with undo (soft delete keeps reply
+  threads intact), and pin a post to a profile. The DM can moderate any post.
+- Scheduling and drafts. A post's publish time is just a timestamp, so a scheduled
+  post goes live on its own with no background worker. Manage scheduled posts and
+  drafts under Queue.
+- Feed: Following / Everyone tabs, replies and quote embeds, likes, boosts,
+  bookmarks, and a live "new posts" pill. @mentions and #hashtags are linkified,
+  with @mention autocomplete in the composer.
+- Notifications for likes, replies, follows, and @mentions, with an unread badge.
+  Paginated, and read ones are pruned over time so the table stays bounded.
+- Search people and posts, plus trending hashtags.
+- Themeable per campaign: ten styling dimensions (backdrop, card frames, dividers,
+  button FX, reaction flourishes, avatar frames, depth, wordmark, top-bar chrome,
+  ambient motion), applied at runtime via data attributes and CSS variables and
+  gated by `prefers-reduced-motion`. Presets for arcane academia, parchment
+  fantasy, sci-fi cyberpunk, and botanical, plus a neutral default.
+- Accounts: invite-code registration, DM member provisioning, self-service change
+  password, DM password reset, and first-sign-in onboarding.
+- Images upload to Vercel Blob (avatars, banners, post images), with a pasted-URL
+  fallback when Blob isn't configured.
+- A write-only HTTP API so an external app can post into a campaign with a
+  per-campaign bearer key.
+- Responsive: a desktop three-column layout and a mobile top bar + bottom tab bar.
+- Hardened: hashed session tokens, server-side persona ownership checks, and rate
+  limiting on the API, login, and register.
+
+## Tech stack
+
+- Next.js 16 (App Router, server actions, Turbopack) and React 19, TypeScript.
+- Drizzle ORM on Neon Postgres (serverless driver; WebSocket in dev, fetch in
+  prod).
+- Tailwind CSS v4.
+- Custom cookie-session auth (bcrypt password hashing, SHA-256 token hashes).
+- Zod for validation, Vercel Blob for image storage, Vitest for tests.
 
 ## How it works
 
-- **Personas are the accounts.** Each player owns one persona (their character);
-  the DM owns many (NPCs). Posts, follows, and likes all attach to a persona, so
-  the DM can post as any NPC from one login. Switch personas in the composer or
-  the left rail.
-- **Scheduling needs no background worker.** A post's "publish time" is just a
-  timestamp; the feed shows posts whose time has passed. Schedule a post for the
-  exact moment of a reveal and it appears on its own. Manage scheduled posts and
-  drafts under **Queue**.
-- **Themeable per campaign.** Each campaign stores its own theme (name, colors,
-  fonts, radius), applied at runtime via CSS variables. Edit it live under
-  **Settings → Theme**.
-- **Private.** Invite-code registration. Just your table, no strangers.
+- Campaigns are tenants. Everything (personas, posts, follows, theme, invites)
+  belongs to one campaign, reachable at `/c/<slug>`.
+- Personas are the actors. A membership ties a user to a campaign with a role (DM
+  or player) and an "acting persona" that lives server-side, not in a cookie.
+  Every post, like, and follow re-checks that you own the persona you're acting
+  as.
+- Scheduling needs no worker. Visibility is purely time-based: a post is live once
+  its publish time has passed, so a scheduled reveal appears on its own.
+- Themes are data. Each campaign stores its theme as JSON on its row, applied at
+  runtime, editable live under Settings -> Theme.
+- Private by design. Registration is invite-code only. It's your table, no
+  strangers.
 
 ## Local setup
 
-You need Node 20+ and a (free) Neon Postgres database. Neon works for both local
+You need Node 20+ and a free Neon Postgres database. Neon works for both local
 dev and production, so there's no local Postgres to install.
 
-1. **Create a database.** Sign up at [neon.tech](https://neon.tech), create a
-   project, and copy its connection string.
+1. Create a database. Sign up at [neon.tech](https://neon.tech), create a project,
+   and copy its connection string.
 
-2. **Configure env.** Copy the example and paste your connection string:
+2. Configure env:
 
    ```bash
    cp .env.example .env.local
    ```
 
-   Set `DATABASE_URL` in `.env.local`. (`BLOB_READ_WRITE_TOKEN` is optional — see
+   Set `DATABASE_URL` in `.env.local`. (`BLOB_READ_WRITE_TOKEN` is optional, see
    Images below.)
 
-3. **Install + create the tables:**
+3. Install and create the tables:
 
    ```bash
    pnpm install
    pnpm db:push
    ```
 
-4. **(Optional) Seed a demo campaign:**
+4. (Optional) seed a demo campaign:
 
    ```bash
    pnpm seed
    ```
 
-   This creates the **STR/X** demo campaign at `/c/strix` and prints logins
-   (default password `password123`: `dm`, `tasha`, `kael`) plus an invite code.
+   This creates the STR/X demo at `/c/strix` and prints logins (default password
+   `password123`: `dm`, `tasha`, `kael`) plus an invite code.
 
-5. **Run it:**
+5. Run it:
 
    ```bash
    pnpm dev
@@ -68,76 +109,64 @@ dev and production, so there's no local Postgres to install.
 ## Deploy to Vercel
 
 1. Push this repo to GitHub.
-2. In Vercel, **New Project → import the repo.** Framework auto-detects as
-   Next.js.
-3. Add an environment variable **`DATABASE_URL`** = your Neon connection string
-   (the same one you used locally). Tip: in the Vercel project's **Storage** tab
-   you can also create a Neon database and it wires `DATABASE_URL` for you.
-4. **Deploy.** After the first deploy, create the tables against your production
-   database once:
+2. In Vercel, New Project, import the repo. The framework auto-detects as Next.js.
+3. Add `DATABASE_URL` = your Neon connection string. (In the project's Storage
+   tab you can create a Neon database and Vercel wires `DATABASE_URL` for you.)
+4. Deploy. After the first deploy, create the tables against the production
+   database once (run locally with `.env.local` pointing at the production Neon
+   URL):
 
    ```bash
-   # locally, with .env.local pointing at the production Neon DB
    pnpm db:push
    ```
 
-   (Or run it against the prod URL however you prefer. You only do this when the
-   schema changes.)
-
-5. Visit your deployment, create a campaign, and share the invite code with your
-   players.
+   You only repeat this when the schema changes.
+5. Visit the deployment, create a campaign, and share the invite code.
 
 ### Images (optional)
 
-Tweet and avatar image **uploads** use [Vercel Blob](https://vercel.com/docs/storage/vercel-blob).
-To enable: in your Vercel project's **Storage** tab, create a Blob store, then
-add its **`BLOB_READ_WRITE_TOKEN`** to your environment variables (and to
-`.env.local` for local uploads). Without it, you can still attach images by
-pasting an image URL — the app falls back automatically.
+Avatar, banner, and post-image uploads use
+[Vercel Blob](https://vercel.com/docs/storage/vercel-blob). To enable: in the
+project's Storage tab, create a Blob store, then add its `BLOB_READ_WRITE_TOKEN`
+to your environment variables (and to `.env.local` for local uploads). Without
+it, you can still attach images by pasting an image URL; the app falls back
+automatically. `pnpm blob:sweep` deletes orphaned blobs no post or persona
+references.
 
 ## Seeding a campaign from a world
 
 You can generate a whole campaign (the world, NPCs, player characters, and a feed
-of posts/replies/quotes/boosts with likes and follows) from a prompt, then load
-it in one command.
+of posts with likes and follows) from a prompt, then load it in one command.
 
-1. **Generate the data.** Open [`docs/seed-prompt.md`](docs/seed-prompt.md), fill
-   in the bracketed inputs (premise, tone, your player characters, sizes), and
-   give the prompt to a capable LLM. Save its JSON output to a file, e.g.
+1. Generate the data. Open [`docs/seed-prompt.md`](docs/seed-prompt.md), fill in
+   the bracketed inputs (premise, tone, your player characters, sizes), and give
+   the prompt to a capable LLM. Save its JSON to a file, e.g.
    `scripts/seed.myworld.json`.
-2. **Seed it:**
+2. Seed it:
 
    ```bash
    pnpm tsx src/db/seed-petalfall.ts scripts/seed.myworld.json my-world
    ```
 
-   (`pnpm seed:petalfall` with no args loads the bundled **Petalfall** demo from
-   `scripts/seed.petalfall.json`.)
+   (`pnpm seed:petalfall` with no args loads the bundled Petalfall demo.)
 
 The seeder validates the JSON (handles, lengths, that every reference resolves,
 the reply/quote/boost rules), then creates the campaign, its NPC and PC personas,
 the posts, likes, and follows. It's idempotent: re-running wipes that campaign and
-its accounts, then rebuilds.
+its accounts, then rebuilds. You get a DM login plus one login per player
+character (all sharing a dev password the DM can reset), a generated avatar per
+persona, placeholder images for posts that carry an `imageHint`, and an invite
+code printed at the end.
 
-What you get:
-
-- A DM login (`<slug>_dm`) that owns all the NPCs, plus one login per player
-  character (their real name, from `account`). All share the dev password
-  `petalfall` — players can change theirs in the app, and the DM can reset any of
-  them from **Settings → Members**.
-- A generated avatar for every persona (DiceBear, deterministic by handle).
-- A placeholder image on any post that has an `imageHint` (a stand-in; matching
-  the hint exactly would need a text-to-image API).
-- An invite code, printed at the end along with every login.
+A whole campaign can also be exported and re-imported as JSON from Settings, for
+backup or moving between deployments.
 
 ## Posting from an external app (API keys)
 
 A DM can let another app (say, a session-notes tool) post into a campaign over
-HTTP. In Settings -> API access, generate a key. The raw key is shown once;
-only its hash is stored.
-
-The key is write-only and scoped to that one campaign. It can post as any NPC,
-or as the key creator's own character. Send it as a bearer token:
+HTTP. In Settings -> API access, generate a key. The raw key is shown once; only
+its hash is stored. The key is write-only and scoped to that one campaign, and it
+can post as any NPC or as the key creator's own character.
 
 ```bash
 curl -X POST https://your-app.example/api/c/<slug>/posts \
@@ -146,34 +175,54 @@ curl -X POST https://your-app.example/api/c/<slug>/posts \
   -d '{
     "persona": "@chronicler",
     "content": "Session 12 recap: the party finally reached Blackthorn…",
-    "imageUrl": "https://…",        // optional
-    "scheduledAt": "2026-07-01T18:00:00Z"  // optional ISO instant; posts later
+    "imageUrl": "https://…",                 // optional
+    "scheduledAt": "2026-07-01T18:00:00Z"    // optional ISO instant; posts later
   }'
 ```
 
-`persona` (a handle) plus `content` and/or `imageUrl` are required. On success
-it returns `201` with `{ id, status, persona, url }`. Bad or revoked keys get
-`401`; a persona the key can't post as gets `403`/`404`. Revoke a key any time
-from the same Settings panel.
+`persona` (a handle) plus `content` and/or `imageUrl` are required. Success
+returns `201` with `{ id, status, persona, url }`; bad or revoked keys get `401`,
+a persona the key can't post as gets `403`/`404`. Full contract:
+[docs/integrations/skald-posting.md](docs/integrations/skald-posting.md).
 
-Full contract (for the calling app): [docs/integrations/skald-posting.md](docs/integrations/skald-posting.md).
-
-## Useful scripts
+## Scripts
 
 | Command | What it does |
 | --- | --- |
 | `pnpm dev` | Run the dev server |
 | `pnpm build` / `pnpm start` | Production build / serve |
+| `pnpm test` | Run the Vitest suite (`pnpm test:watch` to watch) |
+| `pnpm typecheck` | Type-check the project |
+| `pnpm lint` | Lint with ESLint |
 | `pnpm db:push` | Sync the schema to the database |
-| `pnpm db:studio` | Open Drizzle Studio to browse data |
+| `pnpm db:generate` / `pnpm db:migrate` | Generate / apply Drizzle migrations |
+| `pnpm db:studio` | Browse data in Drizzle Studio |
 | `pnpm seed` | Load the STR/X demo campaign |
 | `pnpm seed:petalfall` | Load the Petalfall demo (or a custom world JSON) |
-| `pnpm typecheck` | Type-check the project |
+| `pnpm blob:sweep` | Delete orphaned Vercel Blob images |
+
+CI runs typecheck, lint, build, and the test suite on every push.
+
+## Project layout
+
+```text
+src/
+  app/                Next.js routes (App Router)
+    c/[slug]/         a campaign: feed, profile, post/thread, search, queue,
+                      notifications, bookmarks, settings
+    actions/          server actions (posts, auth, follows, campaigns, ...)
+    api/              the campaign posting API + image upload route
+  components/         feed, composer, post card, nav, theme-driven UI
+  db/                 Drizzle schema, client, seeders
+  lib/                queries, auth, validation, theme types, helpers
+docs/                 the worldbuilder seed prompt + integration contract
+```
 
 ## Notes
 
-- Sessions store only a SHA-256 hash of the cookie token, so a database leak
-  never exposes usable sessions.
-- The "acting persona" lives server-side on your membership, not in a cookie, and
-  every post/like/follow re-checks that you own the persona you're acting as.
+- Sessions store only a SHA-256 hash of the cookie token, so a database leak never
+  exposes usable sessions.
+- The acting persona lives server-side on your membership, not in a cookie, and
+  every post / like / follow re-checks that you own the persona you're acting as.
 - Scheduled times are picked in your local timezone and stored as UTC instants.
+- `CHANGELOG.md` records what's shipped; `BACKLOG.md` tracks what's next.
