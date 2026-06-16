@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { Bookmark, Heart, MessageCircle, Repeat2, Share } from "lucide-react";
+import { Bookmark, Heart, MessageCircle, Quote, Repeat2, Share } from "lucide-react";
 import { toggleBoostAction, toggleLikeAction } from "@/app/actions/posts";
 import { toggleBookmarkAction } from "@/app/actions/bookmarks";
 import { compactNumber } from "@/lib/format";
@@ -38,6 +38,17 @@ export function PostActions({
   const [likeBurst, setLikeBurst] = useState(0);
   const [boostBurst, setBoostBurst] = useState(0);
   const [, start] = useTransition();
+  const [boostMenu, setBoostMenu] = useState(false);
+  const boostRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (boostRef.current && !boostRef.current.contains(e.target as Node))
+        setBoostMenu(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
 
   function onLike() {
     if (!canInteract) return;
@@ -113,25 +124,55 @@ export function PostActions({
         {replyCount > 0 ? compactNumber(replyCount) : null}
       </Link>
 
-      <button
-        type="button"
-        onClick={onBoost}
-        disabled={!canInteract}
-        aria-pressed={boost.on}
-        className={cn(
-          "action-btn group flex items-center gap-1.5 text-sm transition-colors enabled:hover:text-repost disabled:cursor-default",
-          boost.on && "text-repost",
-        )}
-        aria-label="Boost"
-      >
-        <span className="relative rounded-full p-1.5 transition-colors group-enabled:group-hover:bg-repost/10">
-          {boostBurst > 0 ? (
-            <span key={boostBurst} className="reaction-burst" aria-hidden />
-          ) : null}
-          <Repeat2 className="size-4.5" />
-        </span>
-        {boost.count > 0 ? compactNumber(boost.count) : null}
-      </button>
+      <div ref={boostRef} className="relative">
+        <button
+          type="button"
+          onClick={() => canInteract && setBoostMenu((v) => !v)}
+          disabled={!canInteract}
+          aria-pressed={boost.on}
+          aria-haspopup="menu"
+          aria-expanded={boostMenu}
+          className={cn(
+            "action-btn group flex items-center gap-1.5 text-sm transition-colors enabled:hover:text-repost disabled:cursor-default",
+            boost.on && "text-repost",
+          )}
+          aria-label="Repost or quote"
+        >
+          <span className="relative rounded-full p-1.5 transition-colors group-enabled:group-hover:bg-repost/10">
+            {boostBurst > 0 ? (
+              <span key={boostBurst} className="reaction-burst" aria-hidden />
+            ) : null}
+            <Repeat2 className="size-4.5" />
+          </span>
+          {boost.count > 0 ? compactNumber(boost.count) : null}
+        </button>
+        {boostMenu ? (
+          <div
+            role="menu"
+            className="absolute left-0 z-20 mt-1 w-40 overflow-hidden rounded-base border border-border bg-surface text-text shadow-lg"
+          >
+            <button
+              role="menuitem"
+              type="button"
+              onClick={() => {
+                setBoostMenu(false);
+                onBoost();
+              }}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-surface-hover"
+            >
+              <Repeat2 className="size-4" /> {boost.on ? "Undo repost" : "Repost"}
+            </button>
+            <Link
+              role="menuitem"
+              href={`/c/${slug}/post/${postId}/quote`}
+              onClick={() => setBoostMenu(false)}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-surface-hover"
+            >
+              <Quote className="size-4" /> Quote
+            </Link>
+          </div>
+        ) : null}
+      </div>
 
       <button
         type="button"

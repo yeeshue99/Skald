@@ -46,5 +46,3 @@ how grounded each item is: concrete gaps first, then ideas.
 - [ ] DM session tooling: an auto-generated session-recap post. The scheduling
       queue and the campaign API both exist now to build it on.
 - [ ] Hashtag pages and following a hashtag (trending already computes them).
-- [ ] A quote-post affordance in the UI (`repostOfPostId` already supports quotes;
-      just surface a "quote" action and a compose box).

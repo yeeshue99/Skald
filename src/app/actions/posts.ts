@@ -113,6 +113,16 @@ export async function createPostAction(
   }
   const { scheduledAt, asDraft, replyToPostId } = shared.data;
 
+  // a quote-post is a new post (with its own content) that embeds another via
+  // repostOfPostId. Validated below once the segments and poll are known.
+  let repostOfPostId: number | null = null;
+  const repostRaw = formData.get("repostOfPostId");
+  if (typeof repostRaw === "string" && repostRaw.trim()) {
+    const n = Number(repostRaw);
+    if (!Number.isInteger(n) || n <= 0) return { error: "Bad quote target." };
+    repostOfPostId = n;
+  }
+
   // validate + clean each segment, dropping any that are entirely empty
   const cleaned: { content: string; imageUrl: string }[] = [];
   for (const seg of segments) {
@@ -162,6 +172,18 @@ export async function createPostAction(
     if (!replyTarget) {
       return { error: "That post is no longer available to reply to." };
     }
+  }
+
+  // validate the quote target. A quote is a single post and is never also a
+  // reply (the DB enforces reply-XOR-repost) or a poll.
+  if (repostOfPostId != null) {
+    if (replyToPostId != null)
+      return { error: "A post can't be both a reply and a quote." };
+    if (cleaned.length > 1) return { error: "A quote is a single post." };
+    if (poll) return { error: "A quote can't carry a poll." };
+    const quoteTarget = await loadVisibleTarget(ctx, repostOfPostId);
+    if (!quoteTarget)
+      return { error: "That post is no longer available to quote." };
   }
 
   // status + publish instant, shared by every segment of the thread. Truncate to
@@ -216,6 +238,8 @@ export async function createPostAction(
         status,
         publishedAt: publishedAt as Date | null,
         replyToPostId: parentId,
+        // only the first (and, for a quote, only) post carries the quote ref
+        repostOfPostId,
       })
       .returning({ id: posts.id });
     created.push(row.id);
@@ -261,6 +285,7 @@ export async function createPostAction(
   revalidatePath(`/c/${slug}`);
   revalidatePath(`/c/${slug}/explore`);
   if (replyToPostId != null) revalidatePath(`/c/${slug}/post/${replyToPostId}`);
+  if (repostOfPostId != null) revalidatePath(`/c/${slug}/post/${repostOfPostId}`);
   if (status !== "published") revalidatePath(`/c/${slug}/queue`);
   return { ok: true };
 }

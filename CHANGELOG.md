@@ -28,6 +28,13 @@ under Unreleased.
   state. Opening the root shows the whole thread because `getThread` follows the
   author's own chain into a `selfThread`; feeds list only the root since they
   already hide replies.
+- Quote posts: the repost control is now a Repost / Quote menu. "Quote" opens a
+  focused composer (`/c/<slug>/post/<id>/quote`) that embeds the original and
+  posts your commentary as a new root carrying `repostOfPostId`; the quoted post
+  then renders inline in the feed and on the profile. A plain repost (empty
+  content) still boosts; a quote adds text. The reply-XOR-repost check keeps a
+  post from being both a reply and a quote, so a quote can't carry a poll, a
+  thread, or a reply target.
 - Polls: a post can carry a poll (2-4 options, open for 1 / 3 / 7 days). The
   composer has a poll mode that's mutually exclusive with images, threads, and
   scheduling. Each persona casts one vote (unique per poll); after voting or once
