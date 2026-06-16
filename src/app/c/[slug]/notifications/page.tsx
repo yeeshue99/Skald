@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { requireCampaignContext } from "@/lib/campaign";
-import { getNotifications } from "@/lib/queries";
+import { getNotifications, pruneReadNotifications } from "@/lib/queries";
 import { PageHeader } from "@/components/PageHeader";
 import { NotificationList } from "@/components/NotificationList";
 import { MarkNotificationsRead } from "@/components/MarkNotificationsRead";
@@ -15,7 +15,12 @@ export default async function NotificationsPage({
   const { slug } = await params;
   const ctx = await requireCampaignContext(slug);
   const personaIds = ctx.myPersonas.map((p) => p.id);
-  const items = await getNotifications(ctx.campaign.id, personaIds, 50);
+  // lazy retention: clear out long-read notifications on each visit
+  await pruneReadNotifications(ctx.campaign.id, personaIds);
+  const { items, nextCursor } = await getNotifications(
+    ctx.campaign.id,
+    personaIds,
+  );
   const hasUnread = items.some((n) => n.readAt == null);
 
   return (
@@ -27,7 +32,8 @@ export default async function NotificationsPage({
       <MarkNotificationsRead slug={slug} hasUnread={hasUnread} />
       <NotificationList
         slug={slug}
-        items={items}
+        initialItems={items}
+        initialCursor={nextCursor}
         multiPersona={ctx.myPersonas.length > 1}
       />
     </>

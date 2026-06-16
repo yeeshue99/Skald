@@ -13,10 +13,6 @@ how grounded each item is: concrete gaps first, then ideas.
       feed `visibleCondition` + keyset `encodeCursor`/`decodeCursor`, `getThread`
       self-thread chaining, `notify` self/dedup skips, and the compose / persona
       Zod schemas.
-- [ ] Notifications have no pagination and no retention. `getNotifications` takes
-      a fixed `limit = 50` with no cursor, so older notifications are
-      unreachable, and the table is never pruned, so it grows without bound. Add
-      keyset pagination like the feed, plus a retention cap (or prune-read).
 - [ ] `getThread` issues a query per hop. The ancestor walk and the self-thread
       continuation each run one `SELECT` per level with sequential awaits, so a
       long thread is many round-trips. Replace with a recursive CTE or a single

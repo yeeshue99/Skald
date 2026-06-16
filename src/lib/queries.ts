@@ -1242,12 +1242,33 @@ export type NotificationView = {
   post: { id: number; content: string } | null;
 };
 
+export type NotifCursor = { createdAt: Date; id: number };
+export function encodeNotifCursor(c: NotifCursor): string {
+  return `${c.createdAt.toISOString()}_${c.id}`;
+}
+export function decodeNotifCursor(
+  raw: string | undefined | null,
+): NotifCursor | null {
+  if (!raw) return null;
+  const idx = raw.lastIndexOf("_");
+  if (idx < 0) return null;
+  const createdAt = new Date(raw.slice(0, idx));
+  const id = Number(raw.slice(idx + 1));
+  if (Number.isNaN(createdAt.getTime())) return null;
+  if (!Number.isInteger(id) || id <= 0 || id > Number.MAX_SAFE_INTEGER)
+    return null;
+  return { createdAt, id };
+}
+
+export type NotifPage = { items: NotificationView[]; nextCursor: string | null };
+
 export async function getNotifications(
   campaignId: number,
   recipientPersonaIds: number[],
-  limit = 50,
-): Promise<NotificationView[]> {
-  if (recipientPersonaIds.length === 0) return [];
+  cursor: NotifCursor | null = null,
+  limit = PAGE_SIZE,
+): Promise<NotifPage> {
+  if (recipientPersonaIds.length === 0) return { items: [], nextCursor: null };
   const rows = await db
     .select({
       id: notifications.id,
@@ -1263,17 +1284,32 @@ export async function getNotifications(
       and(
         eq(notifications.campaignId, campaignId),
         inArray(notifications.recipientPersonaId, recipientPersonaIds),
+        // keyset: rows strictly older than the cursor (createdAt desc, id desc)
+        cursor
+          ? or(
+              lt(notifications.createdAt, cursor.createdAt),
+              and(
+                eq(notifications.createdAt, cursor.createdAt),
+                lt(notifications.id, cursor.id),
+              ),
+            )
+          : undefined,
       ),
     )
     .orderBy(desc(notifications.createdAt), desc(notifications.id))
-    .limit(limit);
+    .limit(limit + 1);
+
+  const hasMore = rows.length > limit;
+  const pageRows = hasMore ? rows.slice(0, limit) : rows;
 
   const personaMap = await loadPersonas([
-    ...new Set(rows.flatMap((r) => [r.actorPersonaId, r.recipientPersonaId])),
+    ...new Set(pageRows.flatMap((r) => [r.actorPersonaId, r.recipientPersonaId])),
   ]);
 
   const postIds = [
-    ...new Set(rows.map((r) => r.postId).filter((x): x is number => x != null)),
+    ...new Set(
+      pageRows.map((r) => r.postId).filter((x): x is number => x != null),
+    ),
   ];
   const postMap = new Map<number, { id: number; content: string }>();
   if (postIds.length) {
@@ -1298,7 +1334,7 @@ export async function getNotifications(
     isNpc: false,
     avatarFrame: "default",
   };
-  return rows.map((r) => ({
+  const items = pageRows.map((r) => ({
     id: r.id,
     type: r.type,
     createdAt: r.createdAt,
@@ -1307,6 +1343,37 @@ export async function getNotifications(
     recipientHandle: personaMap.get(r.recipientPersonaId)?.handle ?? "you",
     post: r.postId != null ? (postMap.get(r.postId) ?? null) : null,
   }));
+  const last = pageRows[pageRows.length - 1];
+  return {
+    items,
+    nextCursor:
+      hasMore && last
+        ? encodeNotifCursor({ createdAt: last.createdAt, id: last.id })
+        : null,
+  };
+}
+
+// Retention: drop READ notifications older than `days` for these recipients so
+// the table doesn't grow without bound. Lazy (called when the page is opened);
+// never touches unread or recent rows. Pairs with keyset pagination, which keeps
+// what's kept reachable.
+export async function pruneReadNotifications(
+  campaignId: number,
+  recipientPersonaIds: number[],
+  days = 30,
+): Promise<void> {
+  if (recipientPersonaIds.length === 0) return;
+  const cutoff = new Date(Date.now() - days * 86_400_000);
+  await db
+    .delete(notifications)
+    .where(
+      and(
+        eq(notifications.campaignId, campaignId),
+        inArray(notifications.recipientPersonaId, recipientPersonaIds),
+        isNotNull(notifications.readAt),
+        lt(notifications.createdAt, cutoff),
+      ),
+    );
 }
 
 export async function getUnreadNotificationCount(

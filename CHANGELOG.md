@@ -58,6 +58,10 @@ under Unreleased.
   removes the matching notification; self-notifications and duplicates are
   skipped (DB partial unique indexes back the dedup). Scheduled posts fire their
   reply and mention notifications when they go live, not when they're queued.
+- Notifications paginate and don't grow without bound: the page keyset-paginates
+  (created_at, id) with a "Load more" button like the feed, and each visit lazily
+  prunes the persona's read notifications older than 30 days (unread and recent
+  are always kept).
 
 ### Search and discovery
 
