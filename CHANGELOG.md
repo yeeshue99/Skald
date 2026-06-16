@@ -182,5 +182,11 @@ neutral default. Migrated from the old TODO; all ten dimensions shipped.
 
 ### Platform
 
+- Schema migrations regenerated. Everything that had been applied to dev by hand
+  (post `editedAt`; persona `avatarFrame`, `bannerUrl`, `pinnedPostId`; and the
+  `bookmarks`, `polls`, and `poll_votes` tables) now has a Drizzle migration
+  (`0002`, `0003`), so a fresh `db:migrate` reproduces the whole schema.
+  `drizzle-kit generate` runs offline (schema vs snapshots, no DB), so it
+  sidesteps the Neon connection hang that blocks `migrate` / `push` here.
 - Rebranded internal `twttr` identifiers to `skald`.
 - Deployed to Vercel.

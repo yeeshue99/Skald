@@ -5,12 +5,13 @@ how grounded each item is: concrete gaps first, then ideas.
 
 ## Concrete gaps
 
-- [ ] Regenerate Drizzle migrations. `avatar_frame`, `banner_url`, `edited_at`,
-      `pinned_post_id`, the `bookmarks` table, and the `polls` / `poll_votes`
-      tables are in `schema.ts` but were applied to dev by hand (direct `ALTER` /
-      `CREATE`, since drizzle-kit hangs on the Neon connection here). Run
-      `db:generate` in a clean env so a fresh `db:migrate` reproduces the schema
-      before deploying from scratch.
+- [ ] Mark migrations applied on the existing dev DB. The schema is now fully
+      captured by migrations (`0000`-`0003`), so a from-scratch `db:migrate`
+      reproduces it. But the current dev DB got those columns/tables by hand and
+      its `__drizzle_migrations` table doesn't record `0002` / `0003`, so running
+      `db:migrate` against dev would error on "already exists". Insert their
+      hashes (or rebuild dev) before migrating there. Low priority: dev is
+      disposable.
 
 ## Optional / nice-to-have
 
