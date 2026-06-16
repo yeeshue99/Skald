@@ -31,8 +31,6 @@ how grounded each item is: concrete gaps first, then ideas.
 - [ ] Posts-and-replies on a profile. The feeds hide replies (`isNull(reply_to)`)
       so a persona's replies only show inside a thread. Add a "Replies" tab on
       the profile.
-- [ ] @mention autocomplete in the composer. Handles already resolve server-side
-      for notifications; surface a client-side picker as you type `@`.
 - [ ] Modal a11y polish. The Edit profile / Change password / Compose dialogs are
       hand-rolled divs; add a focus trap and Esc-to-close, and move focus to the
       dialog on open and back to the trigger on close.

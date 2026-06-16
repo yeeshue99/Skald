@@ -50,6 +50,10 @@ under Unreleased.
   slot's menu flips to "Unpin from profile".
 - DM moderation: the DM can edit, delete, or pin any persona's post in their
   campaign, not just their own.
+- @mention autocomplete: typing `@` in the composer opens a picker of campaign
+  personas (server-resolved, ranked exact > prefix), with arrow-key / Enter / Tab
+  / click selection that inserts `@handle`. Works on every composer segment and
+  feeds the existing mention notifications.
 
 ### Notifications
 

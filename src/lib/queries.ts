@@ -768,6 +768,42 @@ export async function searchPersonas(
   return rows.map((r) => ({ ...r, followedByMe: followed.has(r.id) }));
 }
 
+// Lightweight persona lookup for @mention autocomplete in the composer: matches
+// handle / display name (no bio, no follow state), ranked exact > prefix > loose.
+export async function searchMentionTargets(
+  campaignId: number,
+  query: string,
+  limit = 6,
+): Promise<PersonaSummary[]> {
+  const bare = query.trim().replace(/^@/, "");
+  if (!bare) {
+    return db
+      .select(personaCols)
+      .from(personas)
+      .where(eq(personas.campaignId, campaignId))
+      .orderBy(asc(personas.isNpc), asc(personas.id))
+      .limit(limit);
+  }
+  const exact = bare.toLowerCase();
+  const prefix = `${escapeLike(bare)}%`;
+  const sub = `%${escapeLike(bare)}%`;
+  return db
+    .select(personaCols)
+    .from(personas)
+    .where(
+      and(
+        eq(personas.campaignId, campaignId),
+        or(ilike(personas.handle, sub), ilike(personas.displayName, sub)),
+      ),
+    )
+    .orderBy(
+      sql`(case when ${personas.handleLower} = ${exact} then 3 when ${personas.handle} ilike ${prefix} or ${personas.displayName} ilike ${prefix} then 2 else 1 end) desc`,
+      asc(personas.isNpc),
+      asc(personas.id),
+    )
+    .limit(limit);
+}
+
 // ---------------------------------------------------------------------------
 // Trending topics — the most-used hashtags across the campaign's recent visible
 // posts. Counts each tag once per post (so one spammy post can't run up a

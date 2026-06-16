@@ -1,7 +1,21 @@
 "use server";
 
 import { loadActionContext } from "@/lib/campaign";
-import { searchPosts, type Feed } from "@/lib/queries";
+import {
+  searchMentionTargets,
+  searchPosts,
+  type Feed,
+  type PersonaSummary,
+} from "@/lib/queries";
+
+// @mention autocomplete: personas matching the partial handle the user typed.
+export async function searchMentionsAction(
+  slug: string,
+  query: string,
+): Promise<PersonaSummary[]> {
+  const ctx = await loadActionContext(slug);
+  return searchMentionTargets(ctx.campaign.id, query.slice(0, 24), 6);
+}
 
 // Load-more for post search results. People results aren't paginated (the page
 // shows a top-N). The "cursor" is just the next offset as a string (post search

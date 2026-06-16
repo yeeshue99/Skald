@@ -22,6 +22,7 @@ import {
 } from "@/lib/validation";
 import type { PersonaSummary } from "@/lib/queries";
 import { Avatar } from "./Avatar";
+import { MentionTextarea } from "./MentionTextarea";
 import { Button } from "./ui";
 import { cn } from "@/lib/cn";
 
@@ -292,9 +293,10 @@ export function Composer({
                 </div>
               ) : null}
 
-              <textarea
+              <MentionTextarea
+                slug={slug}
                 value={seg.content}
-                onChange={(e) => patchSegment(i, { content: e.target.value })}
+                onChange={(next) => patchSegment(i, { content: next })}
                 placeholder={i === 0 ? placeholder : "Add another post…"}
                 autoFocus={autoFocus && i === 0}
                 rows={i === 0 ? (replyToPostId ? 2 : 3) : 2}
