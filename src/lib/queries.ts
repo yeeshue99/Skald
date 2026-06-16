@@ -1058,24 +1058,44 @@ export async function getThread(
   const rootRaw = rootRows[0];
   if (!rootRaw) return null;
 
-  // walk up the reply chain (bounded), staying within the campaign
-  const ancestorsRaw: RawPost[] = [];
-  let parentId = rootRaw.replyToPostId;
-  for (let i = 0; i < 20 && parentId != null; i++) {
-    const pr = await db
-      .select()
-      .from(posts)
-      .where(
-        and(
-          eq(posts.id, parentId),
-          eq(posts.campaignId, campaignId),
-          visibleCondition(),
-        ),
+  // ancestors: walk up the reply chain with a single recursive CTE (bounded to
+  // 20, staying within the campaign and visible) instead of one query per hop.
+  // The CTE returns ids topmost-first; the rows are then fetched through Drizzle
+  // so they keep the normal RawPost shape. The walk stops at the first invisible
+  // or missing parent, matching the old loop.
+  let ancestorsRaw: RawPost[] = [];
+  if (rootRaw.replyToPostId != null) {
+    const res = await db.execute(sql`
+      WITH RECURSIVE anc(id, reply_to_post_id, depth) AS (
+        SELECT id, reply_to_post_id, 0 AS depth
+          FROM posts
+          WHERE id = ${rootRaw.replyToPostId} AND campaign_id = ${campaignId}
+            AND deleted_at IS NULL AND published_at IS NOT NULL
+            AND published_at <= now()
+        UNION ALL
+        SELECT p.id, p.reply_to_post_id, anc.depth + 1
+          FROM posts p
+          JOIN anc ON p.id = anc.reply_to_post_id
+          WHERE p.campaign_id = ${campaignId} AND p.deleted_at IS NULL
+            AND p.published_at IS NOT NULL AND p.published_at <= now()
+            AND anc.depth < 19
       )
-      .limit(1);
-    if (!pr[0]) break;
-    ancestorsRaw.unshift(pr[0]);
-    parentId = pr[0].replyToPostId;
+      SELECT id FROM anc ORDER BY depth DESC
+    `);
+    const rows =
+      (res as unknown as { rows?: { id: number | string }[] }).rows ??
+      (res as unknown as { id: number | string }[]);
+    const ancIds = (Array.isArray(rows) ? rows : []).map((r) => Number(r.id));
+    if (ancIds.length) {
+      const fetched = await db
+        .select()
+        .from(posts)
+        .where(and(inArray(posts.id, ancIds), eq(posts.campaignId, campaignId)));
+      const byId = new Map(fetched.map((r) => [r.id, r]));
+      ancestorsRaw = ancIds
+        .map((id) => byId.get(id))
+        .filter((r): r is RawPost => r != null);
+    }
   }
 
   const replyRaw = await db
@@ -1092,27 +1112,38 @@ export async function getThread(
 
   // follow the author's own continuation: consecutive visible posts by the
   // root's author, each replying to the previous, presented as one self-thread.
+  // Fetch the author's visible replies once, then assemble the linear chain in
+  // memory (the lowest-id child at each hop, bounded) instead of one query per
+  // hop.
+  const authorReplies = await db
+    .select()
+    .from(posts)
+    .where(
+      and(
+        eq(posts.personaId, rootRaw.personaId),
+        eq(posts.campaignId, campaignId),
+        isNotNull(posts.replyToPostId),
+        visibleCondition(),
+      ),
+    );
+  const childrenByParent = new Map<number, RawPost[]>();
+  for (const r of authorReplies) {
+    const k = r.replyToPostId as number;
+    const arr = childrenByParent.get(k);
+    if (arr) arr.push(r);
+    else childrenByParent.set(k, [r]);
+  }
+  for (const arr of childrenByParent.values()) arr.sort((a, b) => a.id - b.id);
+
   const selfRaw: RawPost[] = [];
   const seenSelf = new Set<number>([rootRaw.id]);
   let chainId = rootRaw.id;
   for (let i = 0; i < 50; i++) {
-    const nx = await db
-      .select()
-      .from(posts)
-      .where(
-        and(
-          eq(posts.replyToPostId, chainId),
-          eq(posts.personaId, rootRaw.personaId),
-          eq(posts.campaignId, campaignId),
-          visibleCondition(),
-        ),
-      )
-      .orderBy(asc(posts.id))
-      .limit(1);
-    if (!nx[0] || seenSelf.has(nx[0].id)) break;
-    selfRaw.push(nx[0]);
-    seenSelf.add(nx[0].id);
-    chainId = nx[0].id;
+    const nx = childrenByParent.get(chainId)?.[0];
+    if (!nx || seenSelf.has(nx.id)) break;
+    selfRaw.push(nx);
+    seenSelf.add(nx.id);
+    chainId = nx.id;
   }
   // the first self-thread segment is also a direct reply to the root; keep it
   // out of the generic replies list so it isn't rendered twice.

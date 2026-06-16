@@ -88,6 +88,14 @@ under Unreleased.
   Per-process (fine for a single instance); swap in Upstash/Redis to make it
   global if it ever scales out.
 
+### Performance
+
+- `getThread` no longer issues a query per hop. The ancestor walk is now one
+  bounded recursive CTE (ids) plus a single fetch, and the author's self-thread
+  is assembled in memory from one query of their replies — so opening a deep
+  thread is a handful of round-trips instead of one per level. Output is
+  unchanged (verified against a golden baseline + ancestor/self-thread edges).
+
 ### Responsive layout
 
 - Mobile navigation: below `md`, a top app bar (wordmark, notifications, search,
@@ -192,6 +200,20 @@ neutral default. Migrated from the old TODO; all ten dimensions shipped.
 10. Ambient motion (opt-in, combinable): embers, motes, dust, scanlines, fog,
     page-curl on hover, petal fall, pollen, with selectable background scroll
     direction (including a sine-wave drift).
+
+### Tests and CI
+
+- Test runner: Vitest, with `pnpm test` and `pnpm test:watch`. A starter unit
+  suite (32 tests) over the highest-risk pure logic: the keyset cursor codec
+  (`encodeCursor` / `decodeCursor`), the compose / persona / poll / auth /
+  campaign Zod schemas and slug/handle normalizers, the blob-cleanup helpers
+  (`blobPathname`, `pickOrphans`), and `notify`'s self-skip + dedup (db mocked).
+  DB-bound paths (`getThread`, feed `visibleCondition`) are left for integration
+  tests against a throwaway database.
+- CI: a GitHub Actions workflow (`.github/workflows/ci.yml`) runs `typecheck`,
+  `lint`, `test`, and `build` on every push and pull request. The app is fully
+  dynamic (cookie-based), so build needs no database (a dummy `DATABASE_URL`
+  satisfies the lazy pool constructor).
 
 ### Fixes
 

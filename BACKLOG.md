@@ -5,18 +5,11 @@ how grounded each item is: concrete gaps first, then ideas.
 
 ## Concrete gaps
 
-- [ ] No tests and no CI. `package.json` has `lint` and `typecheck` but no
-      `test` script, there's no vitest or playwright config, no `*.test.ts` under
-      `src`, and no `.github/workflows`. Everything ships verified by hand. Add a
-      test runner plus a CI workflow that runs `typecheck`, `lint`, and `build`
-      on every push, and a starter suite over the highest-risk pure logic: the
-      feed `visibleCondition` + keyset `encodeCursor`/`decodeCursor`, `getThread`
-      self-thread chaining, `notify` self/dedup skips, and the compose / persona
-      Zod schemas.
-- [ ] `getThread` issues a query per hop. The ancestor walk and the self-thread
-      continuation each run one `SELECT` per level with sequential awaits, so a
-      long thread is many round-trips. Replace with a recursive CTE or a single
-      bounded fetch assembled in memory.
+- [ ] Integration tests against a throwaway Postgres. The new unit suite covers
+      pure logic; the DB-bound paths still ship verified by hand. Add a few
+      integration tests (feed `visibleCondition` + keyset pagination, `getThread`
+      self-thread chaining, `notify` dedup via the partial unique indexes) that
+      run against an ephemeral DB, and wire that DB into CI.
 - [ ] Post images have no alt text. Every `<img>` renders `alt=""`, fine for
       decorative avatars but not for post images, which carry content a screen
       reader then can't describe. Let the author add alt text in the composer
