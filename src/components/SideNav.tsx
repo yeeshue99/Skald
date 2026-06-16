@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Bell,
   CalendarClock,
   Compass,
   Home,
@@ -20,7 +21,13 @@ import { PersonaSwitcher } from "./PersonaSwitcher";
 import { buttonClasses } from "./ui";
 import { cn } from "@/lib/cn";
 
-type Item = { href: string; label: string; icon: ComponentType<{ className?: string }>; exact?: boolean };
+type Item = {
+  href: string;
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+  exact?: boolean;
+  badge?: number;
+};
 
 export function SideNav({
   slug,
@@ -30,6 +37,7 @@ export function SideNav({
   myHandle,
   personas,
   actingPersonaId,
+  unreadNotifications = 0,
 }: {
   slug: string;
   appName: string;
@@ -38,6 +46,7 @@ export function SideNav({
   myHandle: string;
   personas: PersonaSummary[];
   actingPersonaId: number;
+  unreadNotifications?: number;
 }) {
   const pathname = usePathname();
   const base = `/c/${slug}`;
@@ -46,6 +55,12 @@ export function SideNav({
     { href: base, label: "Home", icon: Home, exact: true },
     { href: `${base}/explore`, label: "Explore", icon: Compass },
     { href: `${base}/search`, label: "Search", icon: Search },
+    {
+      href: `${base}/notifications`,
+      label: "Notifications",
+      icon: Bell,
+      badge: unreadNotifications,
+    },
     { href: `${base}/queue`, label: "Queue", icon: CalendarClock },
     { href: `${base}/u/${myHandle.toLowerCase()}`, label: "Profile", icon: User },
     ...(isDm
@@ -81,8 +96,18 @@ export function SideNav({
                 active ? "font-bold text-text" : "text-text/90",
               )}
             >
-              <Icon className="size-6 shrink-0" />
+              <span className="relative shrink-0">
+                <Icon className="size-6 shrink-0" />
+                {it.badge ? (
+                  <span className="absolute -right-1 -top-1 size-2.5 rounded-full bg-primary ring-2 ring-bg" />
+                ) : null}
+              </span>
               <span className="hidden lg:inline">{it.label}</span>
+              {it.badge ? (
+                <span className="ml-auto hidden min-w-5 rounded-full bg-primary px-1.5 text-center text-xs font-bold text-on-primary lg:inline">
+                  {it.badge > 99 ? "99+" : it.badge}
+                </span>
+              ) : null}
             </Link>
           );
         })}

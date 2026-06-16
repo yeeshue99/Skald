@@ -259,6 +259,89 @@ export const likes = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// bookmarks — a persona privately saves a post; composite FKs keep them in one
+// campaign. Mirrors likes, but it has no public count and never notifies.
+// ---------------------------------------------------------------------------
+export const bookmarks = pgTable(
+  "bookmarks",
+  {
+    id: serial("id").primaryKey(),
+    campaignId: integer("campaign_id")
+      .notNull()
+      .references(() => campaigns.id, { onDelete: "cascade" }),
+    personaId: integer("persona_id").notNull(),
+    postId: integer("post_id").notNull(),
+    createdAt: tstz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    foreignKey({
+      columns: [t.personaId, t.campaignId],
+      foreignColumns: [personas.id, personas.campaignId],
+      name: "bookmarks_persona_fk",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [t.postId, t.campaignId],
+      foreignColumns: [posts.id, posts.campaignId],
+      name: "bookmarks_post_fk",
+    }).onDelete("cascade"),
+    uniqueIndex("bookmarks_pair_idx").on(t.personaId, t.postId),
+    index("bookmarks_post_idx").on(t.postId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// notifications — an event aimed at one of a user's personas: someone liked or
+// replied to their post, followed them, or @mentioned them. Recipient + actor
+// are personas (composite-FK to personas so they stay in one campaign). postId
+// points at the relevant post (null for a follow) and is a plain column — posts
+// are soft-deleted, so visibility is re-checked at render rather than via FK.
+// ---------------------------------------------------------------------------
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: serial("id").primaryKey(),
+    campaignId: integer("campaign_id")
+      .notNull()
+      .references(() => campaigns.id, { onDelete: "cascade" }),
+    recipientPersonaId: integer("recipient_persona_id").notNull(),
+    actorPersonaId: integer("actor_persona_id").notNull(),
+    type: text("type", {
+      enum: ["like", "reply", "follow", "mention"],
+    }).notNull(),
+    postId: integer("post_id"),
+    readAt: tstz("read_at"),
+    createdAt: tstz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    foreignKey({
+      columns: [t.recipientPersonaId, t.campaignId],
+      foreignColumns: [personas.id, personas.campaignId],
+      name: "notifications_recipient_fk",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [t.actorPersonaId, t.campaignId],
+      foreignColumns: [personas.id, personas.campaignId],
+      name: "notifications_actor_fk",
+    }).onDelete("cascade"),
+    // a notification is always for someone else's action
+    check(
+      "notifications_not_self_chk",
+      sql`recipient_persona_id <> actor_persona_id`,
+    ),
+    // newest-first per recipient
+    index("notifications_recipient_idx").on(t.recipientPersonaId, t.createdAt),
+    // dedupe: at most one like per (actor, post) and one follow per (actor,
+    // recipient), so toggling like/follow can't pile up notifications
+    uniqueIndex("notifications_like_unique")
+      .on(t.actorPersonaId, t.postId)
+      .where(sql`type = 'like'`),
+    uniqueIndex("notifications_follow_unique")
+      .on(t.actorPersonaId, t.recipientPersonaId)
+      .where(sql`type = 'follow'`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // sessions — only a SHA-256 hash of the cookie token is stored, so a DB dump
 // never yields usable session tokens. Looked up by hash, filtered by expiry.
 // ---------------------------------------------------------------------------
@@ -286,6 +369,9 @@ export type Persona = typeof personas.$inferSelect;
 export type Post = typeof posts.$inferSelect;
 export type Follow = typeof follows.$inferSelect;
 export type Like = typeof likes.$inferSelect;
+export type Bookmark = typeof bookmarks.$inferSelect;
+export type Notification = typeof notifications.$inferSelect;
+export type NotificationType = Notification["type"];
 export type Session = typeof sessions.$inferSelect;
 
 export type Role = Membership["role"];

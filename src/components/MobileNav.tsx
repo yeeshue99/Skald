@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Bell,
   CalendarClock,
   Compass,
   Home,
@@ -22,12 +23,14 @@ export function MobileNav({
   myHandle,
   personas,
   actingPersonaId,
+  unreadNotifications = 0,
 }: {
   slug: string;
   appName: string;
   myHandle: string;
   personas: PersonaSummary[];
   actingPersonaId: number;
+  unreadNotifications?: number;
 }) {
   const pathname = usePathname();
   const base = `/c/${slug}`;
@@ -51,6 +54,16 @@ export function MobileNav({
           <Wordmark name={appName} className="text-xl text-primary" />
         </Link>
         <div className="flex items-center gap-1">
+          <Link
+            href={`${base}/notifications`}
+            aria-label="Notifications"
+            className="fx-btn relative rounded-full p-2 text-text hover:bg-surface-hover"
+          >
+            <Bell className="size-5" />
+            {unreadNotifications > 0 ? (
+              <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-primary ring-2 ring-bg" />
+            ) : null}
+          </Link>
           <Link
             href={`${base}/search`}
             aria-label="Search"

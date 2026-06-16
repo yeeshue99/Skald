@@ -5,6 +5,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { follows, personas } from "@/db/schema";
 import { loadActionContext } from "@/lib/campaign";
+import { notify, removeFollowNotification } from "@/lib/notify";
 
 export async function toggleFollowAction(
   slug: string,
@@ -53,6 +54,17 @@ export async function toggleFollowAction(
       })
       .onConflictDoNothing();
     following = true;
+  }
+
+  if (following) {
+    await notify({
+      campaignId: ctx.campaign.id,
+      recipientPersonaId: targetPersonaId,
+      actorPersonaId: follower,
+      type: "follow",
+    });
+  } else {
+    await removeFollowNotification(follower, targetPersonaId);
   }
 
   const [{ c }] = await db

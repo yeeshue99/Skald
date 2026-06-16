@@ -8,6 +8,13 @@
       "when": 1781486716505,
       "tag": "0000_first_falcon",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1781577129917,
+      "tag": "0001_bitter_firebrand",
+      "breakpoints": true
     }
   ]
 }

@@ -4,6 +4,7 @@ import { requireCampaignContext } from "@/lib/campaign";
 import { themeToCssVars, themeDataAttrs, normalizeTheme } from "@/lib/themes";
 import { cn } from "@/lib/cn";
 import type { PersonaSummary } from "@/lib/queries";
+import { getUnreadNotificationCount } from "@/lib/queries";
 
 // Particle effects render as their own animated layer inside .campaign-motion;
 // card effects (pagecurl) are wrapper classes the CSS keys off.
@@ -91,6 +92,11 @@ export default async function CampaignLayout({
     isNpc: p.isNpc,
   }));
 
+  const unread = await getUnreadNotificationCount(
+    ctx.campaign.id,
+    ctx.myPersonas.map((p) => p.id),
+  );
+
   return (
     <div
       {...themeDataAttrs(ctx.campaign.theme)}
@@ -133,6 +139,7 @@ export default async function CampaignLayout({
         myHandle={ctx.actingPersona.handle}
         personas={personas}
         actingPersonaId={ctx.actingPersona.id}
+        unreadNotifications={unread}
       />
       <div className="mx-auto flex w-full max-w-7xl">
         <SideNav
@@ -143,6 +150,7 @@ export default async function CampaignLayout({
           myHandle={ctx.actingPersona.handle}
           personas={personas}
           actingPersonaId={ctx.actingPersona.id}
+          unreadNotifications={unread}
         />
         <main className="min-h-dvh w-full max-w-[640px] flex-1 border-x border-border pb-24 md:pb-0">
           {children}

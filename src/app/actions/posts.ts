@@ -7,10 +7,12 @@ import { likes, posts } from "@/db/schema";
 import { loadActionContext, ownsPersona, type CampaignContext } from "@/lib/campaign";
 import { composeSchema } from "@/lib/validation";
 import { type FormState } from "@/lib/form";
+import { notify, notifyMentions, removeLikeNotification } from "@/lib/notify";
 
 type Visible = {
   id: number;
   campaignId: number;
+  personaId: number;
   publishedAt: Date | null;
   deletedAt: Date | null;
 };
@@ -24,6 +26,7 @@ async function loadVisibleTarget(
       .select({
         id: posts.id,
         campaignId: posts.campaignId,
+        personaId: posts.personaId,
         publishedAt: posts.publishedAt,
         deletedAt: posts.deletedAt,
       })
@@ -74,10 +77,13 @@ export async function createPostAction(
   const text = content.trim();
   if (!text && !imageUrl) return { error: "Write something or add an image." };
 
-  // validate reply target
+  // validate reply target (and remember its author so we can notify them)
+  let replyTarget: Visible | null = null;
   if (replyToPostId != null) {
-    const target = await loadVisibleTarget(ctx, replyToPostId);
-    if (!target) return { error: "That post is no longer available to reply to." };
+    replyTarget = await loadVisibleTarget(ctx, replyToPostId);
+    if (!replyTarget) {
+      return { error: "That post is no longer available to reply to." };
+    }
   }
 
   // status + publish instant. Truncate to milliseconds so the value matches the
@@ -107,15 +113,40 @@ export async function createPostAction(
     // an unparseable time falls through to publish-now (the default above)
   }
 
-  await db.insert(posts).values({
-    campaignId: ctx.campaign.id,
-    personaId: authorId,
-    content: text,
-    imageUrl: imageUrl || null,
-    status,
-    publishedAt: publishedAt as Date | null,
-    replyToPostId: replyToPostId ?? null,
-  });
+  const [created] = await db
+    .insert(posts)
+    .values({
+      campaignId: ctx.campaign.id,
+      personaId: authorId,
+      content: text,
+      imageUrl: imageUrl || null,
+      status,
+      publishedAt: publishedAt as Date | null,
+      replyToPostId: replyToPostId ?? null,
+    })
+    .returning({ id: posts.id });
+
+  // notify on reply + @mention, but only once the post is actually live — a
+  // scheduled or draft post shouldn't ping anyone before it's visible
+  if (status === "published") {
+    const replyRecipient = replyTarget?.personaId ?? null;
+    if (replyToPostId != null && replyRecipient != null) {
+      await notify({
+        campaignId: ctx.campaign.id,
+        recipientPersonaId: replyRecipient,
+        actorPersonaId: authorId,
+        type: "reply",
+        postId: created.id,
+      });
+    }
+    await notifyMentions({
+      campaignId: ctx.campaign.id,
+      actorPersonaId: authorId,
+      postId: created.id,
+      content: text,
+      exclude: replyRecipient != null ? [replyRecipient] : [],
+    });
+  }
 
   revalidatePath(`/c/${slug}`);
   revalidatePath(`/c/${slug}/explore`);
@@ -221,6 +252,18 @@ export async function toggleLikeAction(
       .values({ campaignId: ctx.campaign.id, personaId, postId })
       .onConflictDoNothing();
     liked = true;
+  }
+
+  if (liked) {
+    await notify({
+      campaignId: ctx.campaign.id,
+      recipientPersonaId: target.personaId,
+      actorPersonaId: personaId,
+      type: "like",
+      postId,
+    });
+  } else {
+    await removeLikeNotification(personaId, postId);
   }
 
   const [{ c }] = await db

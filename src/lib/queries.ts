@@ -20,12 +20,15 @@ import {
 } from "drizzle-orm";
 import { db } from "@/db";
 import {
+  bookmarks,
   follows,
   likes,
+  notifications,
   personas,
   posts,
   memberships,
   users,
+  type NotificationType,
   type PostStatus,
 } from "@/db/schema";
 
@@ -55,6 +58,8 @@ export type PostView = {
   repostedByMe: boolean;
   /** whether the viewing (acting) persona already follows this post's author */
   authorFollowedByMe: boolean;
+  /** whether the viewing (acting) persona has bookmarked this post */
+  bookmarkedByMe: boolean;
   /** when this row is a plain boost, the original post it boosts (if still visible) */
   repostOf: PostView | null;
   isBoost: boolean;
@@ -199,6 +204,26 @@ async function loadViewerFollows(
   return set;
 }
 
+// Which of these posts the viewer has bookmarked (drives the bookmark toggle).
+async function loadViewerBookmarks(
+  viewerPersonaId: number,
+  postIds: number[],
+): Promise<Set<number>> {
+  const set = new Set<number>();
+  if (postIds.length === 0) return set;
+  const rows = await db
+    .select({ id: bookmarks.postId })
+    .from(bookmarks)
+    .where(
+      and(
+        eq(bookmarks.personaId, viewerPersonaId),
+        inArray(bookmarks.postId, postIds),
+      ),
+    );
+  for (const r of rows) set.add(r.id);
+  return set;
+}
+
 /**
  * Turn raw post rows into PostViews: resolves authors, counts, the viewer's
  * like/boost state, and (one level deep) the original post behind a boost,
@@ -233,12 +258,14 @@ async function hydrate(
   const authorIds = [...new Set(allRows.map((r) => r.personaId))];
   const countIds = [...new Set(allRows.map((r) => r.id))];
 
-  const [personaMap, countMap, viewer, followedAuthors] = await Promise.all([
-    loadPersonas(authorIds),
-    loadCounts(countIds),
-    loadViewerState(viewerPersonaId, countIds),
-    loadViewerFollows(viewerPersonaId, authorIds),
-  ]);
+  const [personaMap, countMap, viewer, followedAuthors, bookmarkedIds] =
+    await Promise.all([
+      loadPersonas(authorIds),
+      loadCounts(countIds),
+      loadViewerState(viewerPersonaId, countIds),
+      loadViewerFollows(viewerPersonaId, authorIds),
+      loadViewerBookmarks(viewerPersonaId, countIds),
+    ]);
 
   const build = (r: RawPost): PostView => {
     const c = countMap.get(r.id) ?? { like: 0, reply: 0, repost: 0 };
@@ -264,6 +291,7 @@ async function hydrate(
       likedByMe: viewer.liked.has(r.id),
       repostedByMe: viewer.reposted.has(r.id),
       authorFollowedByMe: followedAuthors.has(r.personaId),
+      bookmarkedByMe: bookmarkedIds.has(r.id),
       repostOf: null,
       isBoost: false,
     };
@@ -377,6 +405,44 @@ export async function getExploreFeed(
   cursor: Cursor | null,
 ): Promise<Feed> {
   return pageFeed(campaignId, undefined, viewerPersonaId, cursor);
+}
+
+// Posts the acting persona has bookmarked. Unlike the timelines this keeps
+// replies (you can save any post) and orders by the post's own time.
+export async function getBookmarksFeed(
+  campaignId: number,
+  viewerPersonaId: number,
+  cursor: Cursor | null,
+): Promise<Feed> {
+  const bookmarkedIds = db
+    .select({ id: bookmarks.postId })
+    .from(bookmarks)
+    .where(eq(bookmarks.personaId, viewerPersonaId));
+  const rows = await db
+    .select()
+    .from(posts)
+    .where(
+      and(
+        eq(posts.campaignId, campaignId),
+        visibleCondition(),
+        inArray(posts.id, bookmarkedIds),
+        keysetBefore(cursor),
+      ),
+    )
+    .orderBy(desc(posts.publishedAt), desc(posts.id))
+    .limit(PAGE_SIZE + 1);
+
+  const hasMore = rows.length > PAGE_SIZE;
+  const pageRows = hasMore ? rows.slice(0, PAGE_SIZE) : rows;
+  const views = await hydrate(pageRows, viewerPersonaId, campaignId);
+  const last = pageRows[pageRows.length - 1];
+  return {
+    posts: views,
+    nextCursor:
+      hasMore && last?.publishedAt
+        ? encodeCursor({ publishedAt: last.publishedAt, id: last.id })
+        : null,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -866,4 +932,121 @@ export async function getCampaignMembers(campaignId: number): Promise<MemberRow[
     role: m.role,
     personas: byOwner.get(m.userId) ?? [],
   }));
+}
+
+// ---------------------------------------------------------------------------
+// Notifications — events aimed at any persona the user owns. The post snippet
+// is loaded separately and only if the post is still visible (posts are
+// soft-deleted), so a notification for a removed post still shows who/what but
+// without a dead link.
+// ---------------------------------------------------------------------------
+export type NotificationView = {
+  id: number;
+  type: NotificationType;
+  createdAt: Date;
+  readAt: Date | null;
+  actor: PersonaSummary;
+  recipientHandle: string;
+  post: { id: number; content: string } | null;
+};
+
+export async function getNotifications(
+  campaignId: number,
+  recipientPersonaIds: number[],
+  limit = 50,
+): Promise<NotificationView[]> {
+  if (recipientPersonaIds.length === 0) return [];
+  const rows = await db
+    .select({
+      id: notifications.id,
+      type: notifications.type,
+      createdAt: notifications.createdAt,
+      readAt: notifications.readAt,
+      postId: notifications.postId,
+      actorPersonaId: notifications.actorPersonaId,
+      recipientPersonaId: notifications.recipientPersonaId,
+    })
+    .from(notifications)
+    .where(
+      and(
+        eq(notifications.campaignId, campaignId),
+        inArray(notifications.recipientPersonaId, recipientPersonaIds),
+      ),
+    )
+    .orderBy(desc(notifications.createdAt), desc(notifications.id))
+    .limit(limit);
+
+  const personaMap = await loadPersonas([
+    ...new Set(rows.flatMap((r) => [r.actorPersonaId, r.recipientPersonaId])),
+  ]);
+
+  const postIds = [
+    ...new Set(rows.map((r) => r.postId).filter((x): x is number => x != null)),
+  ];
+  const postMap = new Map<number, { id: number; content: string }>();
+  if (postIds.length) {
+    const prows = await db
+      .select({ id: posts.id, content: posts.content })
+      .from(posts)
+      .where(
+        and(
+          inArray(posts.id, postIds),
+          eq(posts.campaignId, campaignId),
+          visibleCondition(),
+        ),
+      );
+    for (const p of prows) postMap.set(p.id, p);
+  }
+
+  const unknownActor: PersonaSummary = {
+    id: 0,
+    handle: "unknown",
+    displayName: "Someone",
+    avatarUrl: null,
+    isNpc: false,
+  };
+  return rows.map((r) => ({
+    id: r.id,
+    type: r.type,
+    createdAt: r.createdAt,
+    readAt: r.readAt,
+    actor: personaMap.get(r.actorPersonaId) ?? unknownActor,
+    recipientHandle: personaMap.get(r.recipientPersonaId)?.handle ?? "you",
+    post: r.postId != null ? (postMap.get(r.postId) ?? null) : null,
+  }));
+}
+
+export async function getUnreadNotificationCount(
+  campaignId: number,
+  recipientPersonaIds: number[],
+): Promise<number> {
+  if (recipientPersonaIds.length === 0) return 0;
+  const [{ c }] = await db
+    .select({ c: sql<number>`count(*)::int` })
+    .from(notifications)
+    .where(
+      and(
+        eq(notifications.campaignId, campaignId),
+        inArray(notifications.recipientPersonaId, recipientPersonaIds),
+        isNull(notifications.readAt),
+      ),
+    );
+  return Number(c);
+}
+
+export async function markNotificationsRead(
+  campaignId: number,
+  recipientPersonaIds: number[],
+): Promise<void> {
+  if (recipientPersonaIds.length === 0) return;
+  await db
+    .update(notifications)
+    .set({ readAt: sql`now()` })
+    .where(
+      and(
+        eq(notifications.campaignId, campaignId),
+        inArray(notifications.recipientPersonaId, recipientPersonaIds),
+        isNull(notifications.readAt),
+      ),
+    );
 }
