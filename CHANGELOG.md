@@ -11,7 +11,9 @@ under Unreleased.
 - Image uploads: attach an image in the composer and it uploads to Vercel Blob
   via `/api/upload` (signed-in only, image types only, 5MB cap). When
   `BLOB_READ_WRITE_TOKEN` isn't set the route returns 501 and the composer falls
-  back to pasting an image URL.
+  back to pasting an image URL. The same uploader (a reusable `AvatarField`) now
+  backs persona avatars in Edit profile and in onboarding: upload a file, paste a
+  URL, or leave it blank for generated initials, with a live preview.
 - Scheduling and drafts: compose now, schedule for later, or save a draft.
   Visibility is purely time-based (a post is live once its `publishedAt` is in
   the past), so scheduled posts go live with no background worker.

@@ -6,6 +6,7 @@ import { updatePersonaAction } from "@/app/actions/personas";
 import { emptyFormState } from "@/lib/form";
 import { Button, ErrorText, Field, TextInput, Textarea } from "./ui";
 import { SubmitButton } from "./SubmitButton";
+import { AvatarField } from "./forms/AvatarField";
 
 type EditablePersona = {
   id: number;
@@ -87,13 +88,10 @@ export function EditPersonaButton({
               <Field label="Bio">
                 <Textarea name="bio" rows={3} defaultValue={persona.bio ?? ""} />
               </Field>
-              <Field label="Avatar URL" hint="Optional. Leave blank for initials.">
-                <TextInput
-                  name="avatarUrl"
-                  defaultValue={persona.avatarUrl ?? ""}
-                  placeholder="https://…"
-                />
-              </Field>
+              <AvatarField
+                name={persona.displayName}
+                defaultUrl={persona.avatarUrl}
+              />
               <ErrorText>{state.error}</ErrorText>
               <div className="flex justify-end gap-2 pt-1">
                 <Button

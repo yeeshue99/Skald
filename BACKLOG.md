@@ -5,11 +5,6 @@ how grounded each item is: concrete gaps first, then ideas.
 
 ## Concrete gaps
 
-- [ ] Avatar uploads. Post images already upload to Vercel Blob (the
-      `/api/upload` route + the composer file picker, with a pasted-URL
-      fallback), but persona avatars are still a pasted URL only (Edit profile)
-      or auto-generated (onboarding). Reuse `/api/upload` to add a file picker to
-      the persona and onboarding forms.
 - [ ] Profile banner. The profile header is a gradient placeholder; let a persona
       set a banner image (pairs with avatar uploads).
 - [ ] Compose multi-post threads. Reading a conversation works (`getThread`

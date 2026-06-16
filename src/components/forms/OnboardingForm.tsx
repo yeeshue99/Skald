@@ -1,13 +1,16 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { completeOnboardingAction } from "@/app/actions/onboarding";
 import { emptyFormState } from "@/lib/form";
 import { ErrorText, Field, TextInput, Textarea } from "@/components/ui";
 import { SubmitButton } from "@/components/SubmitButton";
+import { AvatarField } from "@/components/forms/AvatarField";
 
 export function OnboardingForm({ slug }: { slug: string }) {
   const [state, action] = useActionState(completeOnboardingAction, emptyFormState);
+  // preview-only: drives the avatar initials without making the input controlled
+  const [previewName, setPreviewName] = useState("");
   return (
     <form action={action} className="space-y-4">
       <input type="hidden" name="slug" value={slug} />
@@ -17,8 +20,10 @@ export function OnboardingForm({ slug }: { slug: string }) {
           placeholder="Tasha Brightwater"
           required
           autoFocus
+          onChange={(e) => setPreviewName(e.target.value)}
         />
       </Field>
+      <AvatarField name={previewName} hint="Optional. You can change it later." />
       <Field label="Handle" hint="Your @ in this campaign">
         <TextInput
           name="handle"

@@ -26,6 +26,13 @@ const onboardingSchema = z.object({
     .transform(normalizeHandle)
     .pipe(z.string().regex(HANDLE_RE, "2-24 letters, numbers, or underscore")),
   bio: z.string().trim().max(MAX_BIO_LENGTH).optional().default(""),
+  avatarUrl: z
+    .string()
+    .trim()
+    .max(2000)
+    .refine((v) => v === "" || /^https?:\/\//.test(v), "Must be a valid http(s) URL")
+    .optional()
+    .default(""),
 });
 
 // A brand-new player picks their own character on first sign-in. Creates the
@@ -73,11 +80,12 @@ export async function completeOnboardingAction(
     displayName: formData.get("displayName"),
     handle: formData.get("handle"),
     bio: formData.get("bio"),
+    avatarUrl: formData.get("avatarUrl"),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Check your details." };
   }
-  const { displayName, handle, bio } = parsed.data;
+  const { displayName, handle, bio, avatarUrl } = parsed.data;
 
   const taken = (
     await db
@@ -104,6 +112,7 @@ export async function completeOnboardingAction(
           handleLower: handle.toLowerCase(),
           displayName,
           bio: bio || null,
+          avatarUrl: avatarUrl || null,
           isNpc: false,
         })
         .returning({ id: personas.id });
