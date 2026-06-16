@@ -17,6 +17,17 @@ under Unreleased.
 - Profile banner: a persona can set a wide header image (`personas.bannerUrl`)
   from Edit profile via the same uploader (a `BannerField`); the profile header
   shows it, falling back to the theme gradient when unset.
+- Per-persona avatar frame: each persona picks its own avatar frame
+  (`personas.avatarFrame`) in Edit profile, independent of the campaign theme.
+  "default" inherits the campaign frame; any other value (none, mana halo,
+  medallion, HUD bracket, wreath, blossom) overrides it for that persona's avatar
+  wherever it appears, via a `data-frame` attribute the per-avatar CSS keys off.
+- Multi-post threads: the composer can author a self-thread. "Add another post"
+  chains a run of segments (each with its own text, image, and counter), posted
+  in order as replies to one another and sharing one publish / schedule / draft
+  state. Opening the root shows the whole thread because `getThread` follows the
+  author's own chain into a `selfThread`; feeds list only the root since they
+  already hide replies.
 - Scheduling and drafts: compose now, schedule for later, or save a draft.
   Visibility is purely time-based (a post is live once its `publishedAt` is in
   the past), so scheduled posts go live with no background worker.
@@ -55,6 +66,20 @@ under Unreleased.
   Profile, with a center compose button and a safe-area inset). The desktop side
   nav takes over at `md` and up. The top bar's wordmark truncates and the icon
   group holds its size, so it never overflows on narrow phones.
+
+### Accessibility
+
+- Icon-only controls are labeled. Below `lg` the side-nav text labels are
+  `display:none`, so the nav links, Post, and Log out (plus the icon-only NPC
+  delete button) carry an `aria-label`, with `aria-current` on the active nav
+  item. Verified at a 900px viewport: zero unlabeled sidebar controls.
+- Consistent keyboard focus rings. A low-specificity `:focus-visible` outline
+  covers links, the side-nav and composer icon buttons, `.action-btn`, and
+  native controls; `.ui-button` keeps its own Tailwind ring.
+- Theme-preset contrast. Deepened the Scrollr and Bloomr accent (the NPC badge)
+  and the Bloomr boost green so text on the light fields clears WCAG AA (4.5:1).
+  The default theme's primary as 12px text is a known 4.25:1 (it can't be
+  lightened without dropping the white-on-primary button label below AA).
 
 ### Accounts and membership
 

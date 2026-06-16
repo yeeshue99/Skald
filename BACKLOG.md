@@ -5,12 +5,12 @@ how grounded each item is: concrete gaps first, then ideas.
 
 ## Concrete gaps
 
-- [ ] Compose multi-post threads. Reading a conversation works (`getThread`
-      renders ancestors, root, and replies), but you can't author a self-thread
-      (a chain of your own posts) as one unit.
-- [ ] Accessibility pass. The side-nav labels are `display:none` below `lg`, so
-      audit icon-only controls for aria-labels, focus-visible styling, and color
-      contrast across the theme presets.
+- [ ] Regenerate Drizzle migrations. `avatar_frame`, `banner_url`, `edited_at`,
+      `pinned_post_id`, and the `bookmarks` table are in `schema.ts` but were
+      applied to dev by hand (direct `ALTER` / `CREATE`, since drizzle-kit hangs
+      on the Neon connection here); only `0000` / `0001` exist. Run `db:generate`
+      in a clean env so a fresh `db:migrate` reproduces the schema before
+      deploying from scratch.
 
 ## Optional / nice-to-have
 
