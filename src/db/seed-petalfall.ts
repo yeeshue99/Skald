@@ -45,6 +45,8 @@ interface PersonaJ {
   bio?: string;
   player?: string;
   avatarHint?: string;
+  /** explicit avatar URL; if absent, a deterministic avatar is generated */
+  avatarUrl?: string;
   voice?: string;
   /** optional login username for a PC; defaults to the handle if absent. Lets a
    *  character sign in under their real name while posting under a Blackthorn
@@ -60,6 +62,8 @@ interface PostJ {
   quoteOf?: string | null;
   boostOf?: string | null;
   imageHint?: string;
+  /** explicit image URL; if absent and imageHint is set, a placeholder is used */
+  imageUrl?: string;
   postedAt: string;
   likedBy?: string[];
 }
@@ -104,6 +108,19 @@ function parseWhen(s: string, now: number): Date {
   const mins = +(m[3] ?? 0);
   const ms = ((days * 24 + hours) * 60 + mins) * 60_000;
   return new Date(now - ms);
+}
+
+// Keyless, deterministic avatar per persona (DiceBear, seeded by handle), so a
+// seeded campaign reads as populated instead of a wall of initials.
+function genAvatar(handle: string): string {
+  return `https://api.dicebear.com/9.x/adventurer/svg?seed=${encodeURIComponent(handle)}`;
+}
+
+// Placeholder image for a post that carries an imageHint. It does NOT match the
+// hint (that needs a text-to-image API); it just fills the image slot so layouts
+// with media are exercised. Seeded by the post ref so it's stable across reseeds.
+function postImage(ref: string): string {
+  return `https://picsum.photos/seed/${encodeURIComponent("skald-" + ref)}/900/506`;
 }
 
 function validate(seed: Seed): void {
@@ -294,7 +311,7 @@ async function main() {
           handleLower: h.toLowerCase(),
           displayName: p.displayName,
           bio: p.bio ?? null,
-          avatarUrl: null,
+          avatarUrl: p.avatarUrl ?? genAvatar(h),
           isNpc: p.kind === "npc",
         };
       }),
@@ -360,7 +377,8 @@ async function main() {
           campaignId: cid,
           personaId: personaId(t.author),
           content: t.content ?? "",
-          imageUrl: null, // imageHint is guidance for later image gen, not a URL
+          imageUrl:
+            t.imageUrl ?? (t.imageHint?.trim() ? postImage(t.ref) : null),
           status: "published" as const,
           publishedAt: parseWhen(t.postedAt, now),
           replyToPostId,

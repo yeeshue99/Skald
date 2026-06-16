@@ -95,6 +95,41 @@ add its **`BLOB_READ_WRITE_TOKEN`** to your environment variables (and to
 `.env.local` for local uploads). Without it, you can still attach images by
 pasting an image URL — the app falls back automatically.
 
+## Seeding a campaign from a world
+
+You can generate a whole campaign (the world, NPCs, player characters, and a feed
+of posts/replies/quotes/boosts with likes and follows) from a prompt, then load
+it in one command.
+
+1. **Generate the data.** Open [`docs/seed-prompt.md`](docs/seed-prompt.md), fill
+   in the bracketed inputs (premise, tone, your player characters, sizes), and
+   give the prompt to a capable LLM. Save its JSON output to a file, e.g.
+   `scripts/seed.myworld.json`.
+2. **Seed it:**
+
+   ```bash
+   pnpm tsx src/db/seed-petalfall.ts scripts/seed.myworld.json my-world
+   ```
+
+   (`pnpm seed:petalfall` with no args loads the bundled **Petalfall** demo from
+   `scripts/seed.petalfall.json`.)
+
+The seeder validates the JSON (handles, lengths, that every reference resolves,
+the reply/quote/boost rules), then creates the campaign, its NPC and PC personas,
+the posts, likes, and follows. It's idempotent: re-running wipes that campaign and
+its accounts, then rebuilds.
+
+What you get:
+
+- A DM login (`<slug>_dm`) that owns all the NPCs, plus one login per player
+  character (their real name, from `account`). All share the dev password
+  `petalfall` — players can change theirs in the app, and the DM can reset any of
+  them from **Settings → Members**.
+- A generated avatar for every persona (DiceBear, deterministic by handle).
+- A placeholder image on any post that has an `imageHint` (a stand-in; matching
+  the hint exactly would need a text-to-image API).
+- An invite code, printed at the end along with every login.
+
 ## Useful scripts
 
 | Command | What it does |
@@ -104,6 +139,7 @@ pasting an image URL — the app falls back automatically.
 | `pnpm db:push` | Sync the schema to the database |
 | `pnpm db:studio` | Open Drizzle Studio to browse data |
 | `pnpm seed` | Load the STR/X demo campaign |
+| `pnpm seed:petalfall` | Load the Petalfall demo (or a custom world JSON) |
 | `pnpm typecheck` | Type-check the project |
 
 ## Notes

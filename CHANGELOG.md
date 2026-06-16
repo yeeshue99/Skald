@@ -7,14 +7,22 @@ under Unreleased.
 ## Unreleased
 
 ### Accounts and membership
+
 - DM member provisioning: a "Add a member" form in Settings creates a login, a
   player membership, and a starting character persona in one step, so a player
   can sign in and post immediately. Complements the existing invite-code flow.
 - Self-service change password: a "Change password" modal on your own profile.
   Verifies the current password, requires the new one to match its confirmation
-  and differ from the old, then re-hashes with bcrypt.
+  and differ from the old, then re-hashes with bcrypt. Signs out the user's other
+  sessions and re-establishes the current one (change here, log out everywhere).
+- DM reset member password: a "Reset password" button in the members list sets a
+  new temporary password for a member and revokes their sessions, so they sign in
+  again with the new one.
+- Forgot-password path: since there's no email, the login page tells players to
+  ask their DM to reset it (handled by the reset button above).
 
 ### Feed and follow
+
 - Following / Everyone tabs on the home feed. Following shows people you follow
   plus your own posts; Everyone is the whole campaign (`?tab=everyone`), folding
   the old Explore page into the main feed (Explore still works as a direct route).
@@ -24,15 +32,21 @@ under Unreleased.
   "Who to follow" rail, and inline in the feed.
 
 ### Campaign seeding
+
 - Reusable JSON seeder (`src/db/seed-petalfall.ts`, `pnpm seed:petalfall`):
   validates a world payload, then creates the campaign, NPC and PC personas,
   posts (replies / quotes / boosts), likes, and follows. Idempotent re-runs.
   Supports an optional per-persona `account` login (real name to sign in, alias
   as the display name, a fun @handle).
-- A worldbuilder prompt that emits seed-ready JSON, plus the "Petalfall" demo
-  campaign built from it.
+- A worldbuilder prompt that emits seed-ready JSON (`docs/seed-prompt.md`), plus
+  the "Petalfall" demo campaign built from it. The prompt -> JSON -> seed pipeline
+  is documented in the README.
+- Seeded personas get a deterministic generated avatar (DiceBear, by handle), and
+  posts with an `imageHint` get a seeded placeholder image, so a fresh seed reads
+  as a populated feed instead of initials and blank cards.
 
 ### Theme decorations (per-campaign styling)
+
 Each dimension is a named style the DM picks from a dropdown, stored as `jsonb`
 on the campaign row (no migration needed), applied at runtime via data
 attributes and CSS variables, and gated by `prefers-reduced-motion` where
@@ -63,6 +77,7 @@ neutral default. Migrated from the old TODO; all ten dimensions shipped.
     direction (including a sine-wave drift).
 
 ### Fixes
+
 - arcaneGlow hover bloom was a no-op: `--btn-glow` held a full shadow fragment
   but was consumed as a color, so the hover box-shadow was invalid and dropped.
 - React 19 `<form action>` auto-reset was reverting theme-editor edits on
@@ -75,5 +90,6 @@ neutral default. Migrated from the old TODO; all ten dimensions shipped.
   values coerce to "none".
 
 ### Platform
+
 - Rebranded internal `twttr` identifiers to `skald`.
 - Deployed to Vercel.
