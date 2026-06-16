@@ -72,6 +72,17 @@ export function FeedList({
       if (auto || postsRef.current.length === 0) {
         prepend(fresh);
         setPendingNew([]);
+      } else if (fresh.some((p) => p.status === "scheduled")) {
+        // a scheduled post just went live (it's still status 'scheduled' until a
+        // page load sweeps it). Its publishedAt is ~now, so surface the batch at
+        // the top immediately instead of hiding it behind the pill, and render
+        // the scheduled one as a normal published post.
+        prepend(
+          fresh.map((p) =>
+            p.status === "scheduled" ? { ...p, status: "published" } : p,
+          ),
+        );
+        setPendingNew([]);
       } else {
         setPendingNew(fresh);
       }
@@ -85,10 +96,17 @@ export function FeedList({
       if (document.visibilityState === "visible") checkNewer(false);
     }, POLL_MS);
     const onPosted = () => checkNewer(true);
+    // when the tab returns to the foreground, check immediately so a post that
+    // went live while it was hidden surfaces without waiting for the next tick
+    const onVisible = () => {
+      if (document.visibilityState === "visible") checkNewer(false);
+    };
     window.addEventListener(FEED_POSTED_EVENT, onPosted);
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       clearInterval(interval);
       window.removeEventListener(FEED_POSTED_EVENT, onPosted);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [checkNewer]);
 

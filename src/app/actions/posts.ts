@@ -91,10 +91,20 @@ export async function createPostAction(
     publishedAt = null;
   } else if (scheduledAt) {
     const when = new Date(scheduledAt);
-    if (!Number.isNaN(when.getTime()) && when.getTime() > Date.now() + 30_000) {
-      status = "scheduled";
-      publishedAt = when;
+    if (!Number.isNaN(when.getTime())) {
+      if (when.getTime() > Date.now()) {
+        // genuinely in the future — hold it until then
+        status = "scheduled";
+        publishedAt = when;
+      } else {
+        // the chosen time is already past (active time > schedule): post it now
+        // but stamped at the chosen instant, so it lands in the timeline in the
+        // right order rather than jumping to the top
+        status = "published";
+        publishedAt = when;
+      }
     }
+    // an unparseable time falls through to publish-now (the default above)
   }
 
   await db.insert(posts).values({

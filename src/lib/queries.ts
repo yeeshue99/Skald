@@ -301,12 +301,33 @@ export async function getFollowingIds(personaId: number): Promise<number[]> {
 
 export type Feed = { posts: PostView[]; nextCursor: string | null };
 
+// Graduate scheduled posts whose time has arrived to 'published', keeping their
+// publishedAt (the scheduled instant) so they land in timelines in the right
+// chronological order and drop out of the queue. There is no background worker
+// (visibility was already time-based), so this runs lazily from the read paths.
+// Idempotent and usually a 0-row UPDATE (indexed by campaign + status).
+export async function publishDueScheduledPosts(campaignId: number): Promise<void> {
+  await db
+    .update(posts)
+    .set({ status: "published" })
+    .where(
+      and(
+        eq(posts.campaignId, campaignId),
+        eq(posts.status, "scheduled"),
+        isNotNull(posts.publishedAt),
+        lte(posts.publishedAt, sql`now()`),
+        isNull(posts.deletedAt),
+      ),
+    );
+}
+
 async function pageFeed(
   campaignId: number,
   whereExtra: ReturnType<typeof and>,
   viewerPersonaId: number,
   cursor: Cursor | null,
 ): Promise<Feed> {
+  await publishDueScheduledPosts(campaignId);
   const rows = await db
     .select()
     .from(posts)
@@ -763,6 +784,9 @@ export async function getQueue(
   ownedPersonaIds: number[],
 ): Promise<{ scheduled: PostView[]; drafts: PostView[] }> {
   if (ownedPersonaIds.length === 0) return { scheduled: [], drafts: [] };
+
+  // graduate any now-due scheduled posts first so they leave the queue
+  await publishDueScheduledPosts(campaignId);
 
   const rows = await db
     .select()
