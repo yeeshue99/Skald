@@ -182,6 +182,13 @@ neutral default. Migrated from the old TODO; all ten dimensions shipped.
 
 ### Platform
 
+- Campaign export: from Settings, the DM can download the whole campaign as a
+  JSON file (`/c/<slug>/settings/export`; DM-only, a non-DM member gets 403). It
+  dumps the theme, members (username and role, no credentials), personas, every
+  post (drafts and soft-deleted included), the follow / like / bookmark graph,
+  and polls, with row ids preserved so the in-export relationships stay
+  consistent for a future import. Password hashes, sessions, and notifications
+  are excluded.
 - Schema migrations regenerated. Everything that had been applied to dev by hand
   (post `editedAt`; persona `avatarFrame`, `bannerUrl`, `pinnedPostId`; and the
   `bookmarks`, `polls`, and `poll_votes` tables) now has a Drizzle migration

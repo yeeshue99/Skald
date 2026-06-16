@@ -8,6 +8,7 @@ import { AddMemberForm } from "@/components/AddMemberForm";
 import { InviteManager } from "@/components/InviteManager";
 import { MembersAdmin } from "@/components/MembersAdmin";
 import { NpcManager } from "@/components/NpcManager";
+import { ExportButton } from "@/components/ExportButton";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui";
 
@@ -66,6 +67,13 @@ export default async function SettingsPage({
             creatorUserId={ctx.campaign.createdByUserId}
             meUserId={ctx.user.id}
           />
+        </Section>
+
+        <Section
+          title="Backup"
+          description="Download this campaign as a JSON file (personas, posts, the social graph, and polls) for safekeeping or moving between deployments."
+        >
+          <ExportButton slug={slug} />
         </Section>
       </div>
     </>

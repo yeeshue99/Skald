@@ -28,4 +28,3 @@ how grounded each item is: concrete gaps first, then ideas.
       optional in-character "language" tags on posts (Common, Elvish, ...).
 - [ ] DM session tooling: an auto-generated session-recap post (scheduled posts
       and a publish queue already exist to build on).
-- [ ] Export a campaign's feed (JSON) for backup or moving between deployments.
