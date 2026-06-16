@@ -68,7 +68,8 @@ under Unreleased.
   unread badge in the nav and a notifications page. Un-liking or unfollowing
   removes the matching notification; self-notifications and duplicates are
   skipped (DB partial unique indexes back the dedup). Scheduled posts fire their
-  reply and mention notifications when they go live, not when they're queued.
+  reply, quote, and mention notifications when they go live, not when they're
+  queued.
 - Quote notifications: quoting someone's post notifies the quoted author (a new
   `quote` type), linking to the quote so they see who quoted them and what they
   added. Self-quotes notify no one, and a quote that also @mentions the quoted

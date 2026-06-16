@@ -116,7 +116,6 @@ const personaCols = {
 // clock, and not soft-deleted.
 function visibleCondition() {
   return and(
-    isNull(posts.deletedAt),
     isNotNull(posts.publishedAt),
     lte(posts.publishedAt, sql`now()`),
   );
@@ -495,13 +494,15 @@ export async function publishDueScheduledPosts(campaignId: number): Promise<void
       personaId: posts.personaId,
       content: posts.content,
       replyToPostId: posts.replyToPostId,
+      repostOfPostId: posts.repostOfPostId,
     });
 
   if (flipped.length === 0) return;
 
-  // Reply + @mention notifications are deferred at compose time (a scheduled
-  // post shouldn't ping anyone before it's visible). Fire them now that it has
-  // gone live — once per post, since the flip above only returns it to us.
+  // Reply, quote, and @mention notifications are deferred at compose time (a
+  // scheduled post shouldn't ping anyone before it's visible). Fire them now
+  // that it has gone live — once per post, since the flip above only returns it
+  // to us. Mirrors the immediate path in createPostAction.
   for (const p of flipped) {
     let replyRecipient: number | null = null;
     if (p.replyToPostId != null) {
@@ -529,12 +530,44 @@ export async function publishDueScheduledPosts(campaignId: number): Promise<void
         });
       }
     }
+
+    // a quote pings the quoted author, exactly as an immediate quote does
+    let quoteRecipient: number | null = null;
+    if (p.repostOfPostId != null) {
+      const quoted = (
+        await db
+          .select({ personaId: posts.personaId })
+          .from(posts)
+          .where(
+            and(
+              eq(posts.id, p.repostOfPostId),
+              eq(posts.campaignId, campaignId),
+              visibleCondition(),
+            ),
+          )
+          .limit(1)
+      )[0];
+      if (quoted) {
+        quoteRecipient = quoted.personaId;
+        await notify({
+          campaignId,
+          recipientPersonaId: quoted.personaId,
+          actorPersonaId: p.personaId,
+          type: "quote",
+          postId: p.id,
+        });
+      }
+    }
+
     await notifyMentions({
       campaignId,
       actorPersonaId: p.personaId,
       postId: p.id,
       content: p.content,
-      exclude: replyRecipient != null ? [replyRecipient] : [],
+      // don't double-notify anyone we already pinged for this post
+      exclude: [replyRecipient, quoteRecipient].filter(
+        (x): x is number => x != null,
+      ),
     });
   }
 }
