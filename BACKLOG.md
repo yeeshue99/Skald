@@ -6,11 +6,11 @@ how grounded each item is: concrete gaps first, then ideas.
 ## Concrete gaps
 
 - [ ] Regenerate Drizzle migrations. `avatar_frame`, `banner_url`, `edited_at`,
-      `pinned_post_id`, and the `bookmarks` table are in `schema.ts` but were
-      applied to dev by hand (direct `ALTER` / `CREATE`, since drizzle-kit hangs
-      on the Neon connection here); only `0000` / `0001` exist. Run `db:generate`
-      in a clean env so a fresh `db:migrate` reproduces the schema before
-      deploying from scratch.
+      `pinned_post_id`, the `bookmarks` table, and the `polls` / `poll_votes`
+      tables are in `schema.ts` but were applied to dev by hand (direct `ALTER` /
+      `CREATE`, since drizzle-kit hangs on the Neon connection here). Run
+      `db:generate` in a clean env so a fresh `db:migrate` reproduces the schema
+      before deploying from scratch.
 
 ## Optional / nice-to-have
 
