@@ -124,6 +124,12 @@ under Unreleased.
   is now optional). A player without a character is routed on first sign-in to an
   onboarding screen to pick their own (name, @handle, bio), which becomes their
   acting persona — instead of the DM presetting it.
+- Multiple characters per player: a player isn't limited to one character. From
+  Settings -> Player characters the DM can create extra characters and assign
+  them to a player, and reassign any persona's owner (to another player, or to
+  the DM, which turns it into an NPC). A player fully controls every character
+  they own and switches between them in the composer's persona switcher. (Dropped
+  the one-PC-per-user unique index; ownership + `isNpc` now follow the assignment.)
 
 ### Feed and follow
 
@@ -185,6 +191,10 @@ neutral default. Migrated from the old TODO; all ten dimensions shipped.
 
 ### Fixes
 
+- NPC creation was rejected by `personaSchema`. After `bannerUrl` / `avatarFrame`
+  were added to the schema, the NPC form omitted them, so they arrived as `null`
+  from FormData and failed the optional-string/enum parse. Persona actions now
+  coerce absent fields to `undefined` so the schema defaults apply.
 - arcaneGlow hover bloom was a no-op: `--btn-glow` held a full shadow fragment
   but was consumed as a color, so the hover box-shadow was invalid and dropped.
 - React 19 `<form action>` auto-reset was reverting theme-editor edits on

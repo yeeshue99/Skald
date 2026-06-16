@@ -17,13 +17,15 @@ export async function createPersonaAction(
   const ctx = await loadActionContext(slug);
   if (ctx.role !== "dm") return { error: "Only the DM can create NPCs." };
 
+  // absent optional fields arrive as null from FormData; coerce to undefined so
+  // the schema defaults apply (the NPC form omits bannerUrl / avatarFrame)
   const parsed = personaSchema.safeParse({
     handle: formData.get("handle"),
     displayName: formData.get("displayName"),
-    bio: formData.get("bio"),
-    avatarUrl: formData.get("avatarUrl"),
-    bannerUrl: formData.get("bannerUrl"),
-    avatarFrame: formData.get("avatarFrame"),
+    bio: formData.get("bio") ?? undefined,
+    avatarUrl: formData.get("avatarUrl") ?? undefined,
+    bannerUrl: formData.get("bannerUrl") ?? undefined,
+    avatarFrame: formData.get("avatarFrame") ?? undefined,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Check the details." };
@@ -55,6 +57,130 @@ export async function createPersonaAction(
   return { ok: true };
 }
 
+// DM creates a character and assigns it to a campaign member. isNpc follows the
+// target's role: a player gets a real character they control; the DM gets an NPC.
+export async function createPlayerPersonaAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const slug = String(formData.get("slug") ?? "");
+  const ctx = await loadActionContext(slug);
+  if (ctx.role !== "dm") return { error: "Only the DM can assign characters." };
+
+  const memberUserId = Number(formData.get("memberUserId"));
+  if (!Number.isInteger(memberUserId)) return { error: "Pick a player." };
+  const target = (
+    await db
+      .select({ role: memberships.role })
+      .from(memberships)
+      .where(
+        and(
+          eq(memberships.userId, memberUserId),
+          eq(memberships.campaignId, ctx.campaign.id),
+        ),
+      )
+      .limit(1)
+  )[0];
+  if (!target) return { error: "That player isn't in this campaign." };
+
+  // this form only sends handle + displayName; absent optional fields arrive as
+  // null from FormData, so coerce to undefined to let the schema defaults apply
+  const parsed = personaSchema.safeParse({
+    handle: formData.get("handle"),
+    displayName: formData.get("displayName"),
+    bio: formData.get("bio") ?? undefined,
+    avatarUrl: formData.get("avatarUrl") ?? undefined,
+    bannerUrl: formData.get("bannerUrl") ?? undefined,
+    avatarFrame: formData.get("avatarFrame") ?? undefined,
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Check the details." };
+  }
+  const { handle, displayName, bio, avatarUrl, bannerUrl, avatarFrame } =
+    parsed.data;
+
+  try {
+    await db.insert(personas).values({
+      campaignId: ctx.campaign.id,
+      ownerUserId: memberUserId,
+      handle,
+      handleLower: handle.toLowerCase(),
+      displayName,
+      bio: bio || null,
+      avatarUrl: avatarUrl || null,
+      bannerUrl: bannerUrl || null,
+      avatarFrame,
+      isNpc: target.role === "dm",
+    });
+  } catch (e) {
+    if (isUniqueViolation(e))
+      return { error: "That handle is already used in this campaign." };
+    throw e;
+  }
+
+  revalidatePath(`/c/${slug}`, "layout");
+  revalidatePath(`/c/${slug}/settings`);
+  return { ok: true };
+}
+
+// DM reassigns a persona to a different member. isNpc follows the new owner's
+// role (player -> their character, DM -> an NPC). Clears any acting-persona
+// pointer the previous owner held to it.
+export async function reassignPersonaAction(
+  slug: string,
+  personaId: number,
+  newOwnerUserId: number,
+): Promise<void> {
+  const ctx = await loadActionContext(slug);
+  if (ctx.role !== "dm") throw new Error("Only the DM can reassign characters.");
+  if (!Number.isInteger(personaId) || !Number.isInteger(newOwnerUserId))
+    throw new Error("Bad request.");
+
+  const persona = (
+    await db
+      .select({ id: personas.id })
+      .from(personas)
+      .where(
+        and(eq(personas.id, personaId), eq(personas.campaignId, ctx.campaign.id)),
+      )
+      .limit(1)
+  )[0];
+  if (!persona) throw new Error("Persona not found.");
+
+  const target = (
+    await db
+      .select({ role: memberships.role })
+      .from(memberships)
+      .where(
+        and(
+          eq(memberships.userId, newOwnerUserId),
+          eq(memberships.campaignId, ctx.campaign.id),
+        ),
+      )
+      .limit(1)
+  )[0];
+  if (!target) throw new Error("That member isn't in this campaign.");
+
+  await db
+    .update(personas)
+    .set({ ownerUserId: newOwnerUserId, isNpc: target.role === "dm" })
+    .where(eq(personas.id, personaId));
+
+  // whoever was acting as it no longer owns it; fall back to their default
+  await db
+    .update(memberships)
+    .set({ actingPersonaId: null })
+    .where(
+      and(
+        eq(memberships.campaignId, ctx.campaign.id),
+        eq(memberships.actingPersonaId, personaId),
+      ),
+    );
+
+  revalidatePath(`/c/${slug}`, "layout");
+  revalidatePath(`/c/${slug}/settings`);
+}
+
 // Edit a persona you own (your character, or an NPC). DM may edit any persona.
 export async function updatePersonaAction(
   _prev: FormState,
@@ -70,10 +196,10 @@ export async function updatePersonaAction(
   const parsed = personaSchema.safeParse({
     handle: formData.get("handle"),
     displayName: formData.get("displayName"),
-    bio: formData.get("bio"),
-    avatarUrl: formData.get("avatarUrl"),
-    bannerUrl: formData.get("bannerUrl"),
-    avatarFrame: formData.get("avatarFrame"),
+    bio: formData.get("bio") ?? undefined,
+    avatarUrl: formData.get("avatarUrl") ?? undefined,
+    bannerUrl: formData.get("bannerUrl") ?? undefined,
+    avatarFrame: formData.get("avatarFrame") ?? undefined,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Check the details." };

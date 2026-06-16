@@ -9,6 +9,7 @@ import { ApiKeysManager } from "@/components/ApiKeysManager";
 import { InviteManager } from "@/components/InviteManager";
 import { MembersAdmin } from "@/components/MembersAdmin";
 import { NpcManager } from "@/components/NpcManager";
+import { PlayerCharactersManager } from "@/components/PlayerCharactersManager";
 import { ExportButton } from "@/components/ExportButton";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui";
@@ -81,6 +82,13 @@ export default async function SettingsPage({
             creatorUserId={ctx.campaign.createdByUserId}
             meUserId={ctx.user.id}
           />
+        </Section>
+
+        <Section
+          title="Player characters"
+          description="Give a player extra characters, or reassign who owns a persona. A player controls (and switches between) every character they own."
+        >
+          <PlayerCharactersManager slug={slug} members={members} />
         </Section>
 
         <Section

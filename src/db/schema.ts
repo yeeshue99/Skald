@@ -125,10 +125,8 @@ export const personas = pgTable(
   (t) => [
     // handles are unique within a campaign, case-insensitively
     uniqueIndex("personas_campaign_handle_idx").on(t.campaignId, t.handleLower),
-    // exactly one player character (non-NPC persona) per user per campaign
-    uniqueIndex("personas_one_pc_per_user_idx")
-      .on(t.campaignId, t.ownerUserId)
-      .where(sql`is_npc = false`),
+    // a player normally has one character, but the DM can create and assign
+    // extra characters to them, so multiple non-NPC personas per user are allowed
     // lets follows/likes composite-FK back to enforce same-campaign integrity
     unique("personas_id_campaign_unique").on(t.id, t.campaignId),
     index("personas_owner_idx").on(t.ownerUserId, t.campaignId),
