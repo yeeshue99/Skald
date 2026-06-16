@@ -13,10 +13,6 @@ how grounded each item is: concrete gaps first, then ideas.
       feed `visibleCondition` + keyset `encodeCursor`/`decodeCursor`, `getThread`
       self-thread chaining, `notify` self/dedup skips, and the compose / persona
       Zod schemas.
-- [ ] Orphaned blobs are never cleaned up. `api/upload` only `put`s to Vercel
-      Blob; nothing `del`s the old blob when an avatar, banner, or post image is
-      replaced, or when its post or persona is deleted, so storage leaks over
-      time. Track the blob URLs and delete on replace / delete, or run a sweep.
 - [ ] Notifications have no pagination and no retention. `getNotifications` takes
       a fixed `limit = 50` with no cursor, so older notifications are
       unreachable, and the table is never pruned, so it grows without bound. Add

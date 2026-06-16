@@ -211,6 +211,12 @@ neutral default. Migrated from the old TODO; all ten dimensions shipped.
 
 ### Platform
 
+- Orphaned blob cleanup: a sweep deletes Vercel Blob images that no row
+  references (avatars, banners, and post images replaced by a newer upload, or
+  belonging to a hard-deleted persona or post). External / pasted image URLs are
+  never touched. Run it with `pnpm blob:sweep` (dry-run by default, `--apply` to
+  delete) or the guarded `/api/cron/blob-sweep` route, which Vercel Cron hits
+  daily (`vercel.json`) once `CRON_SECRET` is set.
 - Campaign export: from Settings, the DM can download the whole campaign as a
   JSON file (`/c/<slug>/settings/export`; DM-only, a non-DM member gets 403). It
   dumps the theme, members (username and role, no credentials), personas, every
