@@ -21,7 +21,7 @@ export function FeedList({
   emptyMessage = "Nothing here yet.",
 }: {
   slug: string;
-  type: "home" | "explore" | "profile";
+  type: "home" | "explore" | "profile" | "bookmarks";
   handleLower?: string;
   initialPosts: PostView[];
   initialCursor: string | null;

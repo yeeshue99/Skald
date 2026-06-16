@@ -209,6 +209,7 @@ export function PostCard({
             repostCount={data.repostCount}
             reposted={data.repostedByMe}
             replyCount={data.replyCount}
+            bookmarked={data.bookmarkedByMe}
             canInteract
           />
         </div>

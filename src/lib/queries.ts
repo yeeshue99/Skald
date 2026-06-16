@@ -49,6 +49,8 @@ export type PostView = {
   imageUrl: string | null;
   createdAt: Date;
   publishedAt: Date | null;
+  /** set when the author has edited the post (drives the "edited" marker) */
+  editedAt: Date | null;
   status: PostStatus;
   author: PersonaSummary;
   replyToPostId: number | null;
@@ -276,6 +278,7 @@ async function hydrate(
       imageUrl: r.imageUrl,
       createdAt: r.createdAt,
       publishedAt: r.publishedAt,
+      editedAt: r.editedAt,
       status: r.status,
       author:
         personaMap.get(r.personaId) ?? {

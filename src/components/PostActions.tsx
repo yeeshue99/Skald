@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Heart, MessageCircle, Repeat2, Share } from "lucide-react";
+import { Bookmark, Heart, MessageCircle, Repeat2, Share } from "lucide-react";
 import { toggleBoostAction, toggleLikeAction } from "@/app/actions/posts";
+import { toggleBookmarkAction } from "@/app/actions/bookmarks";
 import { compactNumber } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
@@ -15,6 +16,7 @@ export function PostActions({
   repostCount,
   reposted,
   replyCount,
+  bookmarked,
   canInteract,
 }: {
   slug: string;
@@ -24,10 +26,12 @@ export function PostActions({
   repostCount: number;
   reposted: boolean;
   replyCount: number;
+  bookmarked: boolean;
   canInteract: boolean;
 }) {
   const [like, setLike] = useState({ on: liked, count: likeCount });
   const [boost, setBoost] = useState({ on: reposted, count: repostCount });
+  const [marked, setMarked] = useState(bookmarked);
   const [copied, setCopied] = useState(false);
   // bumped each time a reaction turns ON; the key change remounts the burst
   // span so its themed CSS animation replays. CSS gates it on reduced-motion.
@@ -71,6 +75,20 @@ export function PostActions({
     });
   }
 
+  function onBookmark() {
+    if (!canInteract) return;
+    const next = !marked;
+    setMarked(next);
+    start(async () => {
+      try {
+        const res = await toggleBookmarkAction(slug, postId);
+        setMarked(res.bookmarked);
+      } catch {
+        setMarked(!next);
+      }
+    });
+  }
+
   async function onShare() {
     const url = `${window.location.origin}/c/${slug}/post/${postId}`;
     try {
@@ -90,7 +108,7 @@ export function PostActions({
         aria-label="Replies"
       >
         <span className="rounded-full p-1.5 transition-colors group-hover:bg-link/10">
-          <MessageCircle className="size-[18px]" />
+          <MessageCircle className="size-4.5" />
         </span>
         {replyCount > 0 ? compactNumber(replyCount) : null}
       </Link>
@@ -110,7 +128,7 @@ export function PostActions({
           {boostBurst > 0 ? (
             <span key={boostBurst} className="reaction-burst" aria-hidden />
           ) : null}
-          <Repeat2 className="size-[18px]" />
+          <Repeat2 className="size-4.5" />
         </span>
         {boost.count > 0 ? compactNumber(boost.count) : null}
       </button>
@@ -130,9 +148,25 @@ export function PostActions({
           {likeBurst > 0 ? (
             <span key={likeBurst} className="reaction-burst" aria-hidden />
           ) : null}
-          <Heart className={cn("size-[18px]", like.on && "fill-current")} />
+          <Heart className={cn("size-4.5", like.on && "fill-current")} />
         </span>
         {like.count > 0 ? compactNumber(like.count) : null}
+      </button>
+
+      <button
+        type="button"
+        onClick={onBookmark}
+        disabled={!canInteract}
+        aria-pressed={marked}
+        className={cn(
+          "action-btn group flex items-center gap-1.5 text-sm transition-colors enabled:hover:text-primary disabled:cursor-default",
+          marked && "text-primary",
+        )}
+        aria-label={marked ? "Remove bookmark" : "Bookmark"}
+      >
+        <span className="rounded-full p-1.5 transition-colors group-enabled:group-hover:bg-primary/10">
+          <Bookmark className={cn("size-4.5", marked && "fill-current")} />
+        </span>
       </button>
 
       <button
@@ -142,7 +176,7 @@ export function PostActions({
         aria-label="Copy link"
       >
         <span className="rounded-full p-1.5 transition-colors group-hover:bg-link/10">
-          <Share className="size-[18px]" />
+          <Share className="size-4.5" />
         </span>
         {copied ? <span className="text-xs">copied</span> : null}
       </button>

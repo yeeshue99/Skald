@@ -30,6 +30,9 @@ under Unreleased.
   and who aren't your own personas. `PostView` carries `authorFollowedByMe`.
 - Optimistic FollowButton (Follow / Following / Unfollow) on profiles, the
   "Who to follow" rail, and inline in the feed.
+- Bookmarks: a private "save post" toggle on every post (optimistic), plus a
+  Bookmarks page (`/c/<slug>/bookmarks`) and nav link listing what the acting
+  persona saved. No public count or notification.
 
 ### Campaign seeding
 

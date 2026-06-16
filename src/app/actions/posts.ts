@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { redirect } from "next/navigation";
+import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { likes, posts } from "@/db/schema";
 import { loadActionContext, ownsPersona, type CampaignContext } from "@/lib/campaign";
@@ -217,11 +218,74 @@ export async function rescheduleAction(
 export async function deletePostAction(slug: string, postId: number): Promise<void> {
   const ctx = await loadActionContext(slug);
   await assertOwnsPost(ctx, postId);
-  // soft delete keeps reply threads intact
+  // soft delete keeps reply threads intact (and lets the action be undone)
   await db.update(posts).set({ deletedAt: sql`now()` }).where(eq(posts.id, postId));
   revalidatePath(`/c/${slug}`);
   revalidatePath(`/c/${slug}/explore`);
   revalidatePath(`/c/${slug}/queue`);
+  revalidatePath(`/c/${slug}/post/${postId}`);
+}
+
+// Undo of a soft delete — restore the post if it's still flagged deleted.
+export async function restorePostAction(
+  slug: string,
+  postId: number,
+): Promise<void> {
+  const ctx = await loadActionContext(slug);
+  await assertOwnsPost(ctx, postId);
+  await db
+    .update(posts)
+    .set({ deletedAt: null })
+    .where(and(eq(posts.id, postId), isNotNull(posts.deletedAt)));
+  revalidatePath(`/c/${slug}`);
+  revalidatePath(`/c/${slug}/explore`);
+  revalidatePath(`/c/${slug}/queue`);
+  revalidatePath(`/c/${slug}/post/${postId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Edit a post's content/image (author or DM). Status, author and publish time
+// are untouched; editedAt stamps the change so the UI can show "edited".
+// ---------------------------------------------------------------------------
+export async function editPostAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const slug = String(formData.get("slug") ?? "");
+  const postId = Number(formData.get("postId"));
+  if (!Number.isInteger(postId)) return { error: "Unknown post." };
+
+  const ctx = await loadActionContext(slug);
+  try {
+    await assertOwnsPost(ctx, postId);
+  } catch {
+    return { error: "You can't edit that post." };
+  }
+
+  const parsed = composeSchema.safeParse({
+    content: formData.get("content"),
+    imageUrl: formData.get("imageUrl"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Check your post." };
+  }
+  const text = parsed.data.content.trim();
+  const imageUrl = parsed.data.imageUrl;
+  if (!text && !imageUrl) return { error: "Write something or add an image." };
+
+  await db
+    .update(posts)
+    .set({
+      content: text,
+      imageUrl: imageUrl || null,
+      editedAt: sql`date_trunc('milliseconds', now())`,
+    })
+    .where(and(eq(posts.id, postId), isNull(posts.deletedAt)));
+
+  revalidatePath(`/c/${slug}`);
+  revalidatePath(`/c/${slug}/explore`);
+  revalidatePath(`/c/${slug}/post/${postId}`);
+  redirect(`/c/${slug}/post/${postId}`);
 }
 
 // ---------------------------------------------------------------------------

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Bell,
+  Bookmark,
   CalendarClock,
   Compass,
   Home,
@@ -62,6 +63,7 @@ export function SideNav({
       badge: unreadNotifications,
     },
     { href: `${base}/queue`, label: "Queue", icon: CalendarClock },
+    { href: `${base}/bookmarks`, label: "Bookmarks", icon: Bookmark },
     { href: `${base}/u/${myHandle.toLowerCase()}`, label: "Profile", icon: User },
     ...(isDm
       ? [{ href: `${base}/settings`, label: "Settings", icon: Settings } as Item]

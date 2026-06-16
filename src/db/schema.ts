@@ -152,6 +152,8 @@ export const posts = pgTable(
     publishedAt: tstz("published_at"),
     createdAt: tstz("created_at").notNull().defaultNow(),
     deletedAt: tstz("deleted_at"),
+    // set when the author edits the post, to show an "edited" marker
+    editedAt: tstz("edited_at"),
   },
   (t) => [
     foreignKey({

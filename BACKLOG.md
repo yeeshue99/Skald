@@ -12,7 +12,6 @@ how grounded each item is: in-progress first, then concrete gaps, then ideas.
 ## Ideas (unscoped)
 
 - [ ] Notifications: likes, replies, follows, and @mentions for your personas.
-- [ ] Bookmarks / saved posts.
 - [ ] Post editing and a proper delete-with-undo.
 - [ ] Pinned post on a profile.
 - [ ] Per-campaign onboarding for a brand-new player (pick/confirm their
