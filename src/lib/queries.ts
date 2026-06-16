@@ -865,6 +865,38 @@ export async function getPersonaPosts(
   );
 }
 
+// The post a persona has pinned to its profile, hydrated, or null if there
+// isn't one (or it's no longer visible — posts are soft-deleted).
+export async function getPinnedPost(
+  campaignId: number,
+  personaId: number,
+  viewerPersonaId: number,
+): Promise<PostView | null> {
+  const persona = (
+    await db
+      .select({ pinnedPostId: personas.pinnedPostId })
+      .from(personas)
+      .where(and(eq(personas.id, personaId), eq(personas.campaignId, campaignId)))
+      .limit(1)
+  )[0];
+  if (!persona?.pinnedPostId) return null;
+
+  const rows = await db
+    .select()
+    .from(posts)
+    .where(
+      and(
+        eq(posts.id, persona.pinnedPostId),
+        eq(posts.campaignId, campaignId),
+        visibleCondition(),
+      ),
+    )
+    .limit(1);
+  if (rows.length === 0) return null;
+  const views = await hydrate(rows, viewerPersonaId, campaignId);
+  return views[0] ?? null;
+}
+
 // ---------------------------------------------------------------------------
 // Thread (a post plus its visible replies)
 // ---------------------------------------------------------------------------

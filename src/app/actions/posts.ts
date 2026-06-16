@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { likes, posts } from "@/db/schema";
+import { likes, personas, posts } from "@/db/schema";
 import { loadActionContext, ownsPersona, type CampaignContext } from "@/lib/campaign";
 import { composeSchema } from "@/lib/validation";
 import { type FormState } from "@/lib/form";
@@ -286,6 +286,57 @@ export async function editPostAction(
   revalidatePath(`/c/${slug}/explore`);
   revalidatePath(`/c/${slug}/post/${postId}`);
   redirect(`/c/${slug}/post/${postId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Pin / unpin a post to the author persona's profile. The post must be a
+// published, visible post; the user must own its author persona (or be DM).
+// ---------------------------------------------------------------------------
+async function loadPinnable(ctx: CampaignContext, postId: number) {
+  const row = (
+    await db
+      .select({
+        personaId: posts.personaId,
+        campaignId: posts.campaignId,
+        publishedAt: posts.publishedAt,
+        deletedAt: posts.deletedAt,
+        handle: personas.handleLower,
+      })
+      .from(posts)
+      .innerJoin(personas, eq(personas.id, posts.personaId))
+      .where(eq(posts.id, postId))
+      .limit(1)
+  )[0];
+  if (!row || row.campaignId !== ctx.campaign.id) throw new Error("Post not found.");
+  if (!ownsPersona(ctx, row.personaId) && ctx.role !== "dm") {
+    throw new Error("Not your post.");
+  }
+  return row;
+}
+
+export async function pinPostAction(slug: string, postId: number): Promise<void> {
+  const ctx = await loadActionContext(slug);
+  const post = await loadPinnable(ctx, postId);
+  if (post.deletedAt || !post.publishedAt || post.publishedAt.getTime() > Date.now()) {
+    throw new Error("You can only pin a published post.");
+  }
+  await db
+    .update(personas)
+    .set({ pinnedPostId: postId })
+    .where(eq(personas.id, post.personaId));
+  revalidatePath(`/c/${slug}/u/${post.handle}`);
+}
+
+export async function unpinPostAction(slug: string, postId: number): Promise<void> {
+  const ctx = await loadActionContext(slug);
+  const post = await loadPinnable(ctx, postId);
+  await db
+    .update(personas)
+    .set({ pinnedPostId: null })
+    .where(
+      and(eq(personas.id, post.personaId), eq(personas.pinnedPostId, postId)),
+    );
+  revalidatePath(`/c/${slug}/u/${post.handle}`);
 }
 
 // ---------------------------------------------------------------------------

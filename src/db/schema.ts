@@ -108,6 +108,9 @@ export const personas = pgTable(
     avatarUrl: text("avatar_url"),
     bio: text("bio"),
     isNpc: boolean("is_npc").notNull().default(false),
+    // a published post this persona pins to the top of its profile (nullable;
+    // plain column, visibility re-checked on read since posts are soft-deleted)
+    pinnedPostId: integer("pinned_post_id"),
     createdAt: tstz("created_at").notNull().defaultNow(),
   },
   (t) => [
