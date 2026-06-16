@@ -50,6 +50,38 @@ function resolveAuthor(ctx: CampaignContext, formData: FormData): number | null 
   return id;
 }
 
+// A single submit can author a self-thread; cap how many posts it may chain.
+// Keep in sync with MAX_THREAD_POSTS in components/Composer.tsx.
+const MAX_THREAD_POSTS = 25;
+
+// Pull the thread segments out of the form. The composer submits a JSON array of
+// { content, imageUrl }; an older client (or a degraded one) may post a single
+// content/imageUrl pair, which we treat as a one-segment thread.
+function parseThreadSegments(
+  formData: FormData,
+): { content: string; imageUrl: string }[] {
+  const raw = formData.get("segments");
+  if (typeof raw === "string" && raw.trim()) {
+    try {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) {
+        return arr.map((s) => ({
+          content: typeof s?.content === "string" ? s.content : "",
+          imageUrl: typeof s?.imageUrl === "string" ? s.imageUrl : "",
+        }));
+      }
+    } catch {
+      // fall through to the single-segment reading
+    }
+  }
+  return [
+    {
+      content: String(formData.get("content") ?? ""),
+      imageUrl: String(formData.get("imageUrl") ?? ""),
+    },
+  ];
+}
+
 // ---------------------------------------------------------------------------
 // Compose: a new post, reply, draft, or scheduled post.
 // ---------------------------------------------------------------------------
@@ -63,22 +95,43 @@ export async function createPostAction(
   const authorId = resolveAuthor(ctx, formData);
   if (authorId == null) return { error: "You can't post as that persona." };
 
-  const parsed = composeSchema.safeParse({
-    content: formData.get("content"),
-    imageUrl: formData.get("imageUrl"),
+  // A post may be a single post or a self-thread: the composer submits one or
+  // more segments, each of which becomes a post replying to the one before it.
+  const segments = parseThreadSegments(formData);
+
+  // thread-wide fields: schedule, draft, and the external post the FIRST segment
+  // answers (later segments reply to their predecessor, forming the chain).
+  const shared = composeSchema.safeParse({
+    content: "",
     scheduledAt: formData.get("scheduledAt"),
     asDraft: formData.get("asDraft"),
     replyToPostId: formData.get("replyToPostId") || undefined,
   });
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Check your post." };
+  if (!shared.success) {
+    return { error: shared.error.issues[0]?.message ?? "Check your post." };
   }
-  const { content, imageUrl, scheduledAt, asDraft, replyToPostId } = parsed.data;
+  const { scheduledAt, asDraft, replyToPostId } = shared.data;
 
-  const text = content.trim();
-  if (!text && !imageUrl) return { error: "Write something or add an image." };
+  // validate + clean each segment, dropping any that are entirely empty
+  const cleaned: { content: string; imageUrl: string }[] = [];
+  for (const seg of segments) {
+    const p = composeSchema.safeParse({
+      content: seg.content,
+      imageUrl: seg.imageUrl,
+    });
+    if (!p.success) {
+      return { error: p.error.issues[0]?.message ?? "Check your post." };
+    }
+    const text = p.data.content.trim();
+    if (!text && !p.data.imageUrl) continue;
+    cleaned.push({ content: text, imageUrl: p.data.imageUrl });
+  }
+  if (cleaned.length === 0)
+    return { error: "Write something or add an image." };
+  if (cleaned.length > MAX_THREAD_POSTS)
+    return { error: `A thread can be at most ${MAX_THREAD_POSTS} posts.` };
 
-  // validate reply target (and remember its author so we can notify them)
+  // validate the reply target (and remember its author so we can notify them)
   let replyTarget: Visible | null = null;
   if (replyToPostId != null) {
     replyTarget = await loadVisibleTarget(ctx, replyToPostId);
@@ -87,9 +140,9 @@ export async function createPostAction(
     }
   }
 
-  // status + publish instant. Truncate to milliseconds so the value matches the
-  // precision of feed cursors (which round-trip through JS Date / ISO strings),
-  // keeping keyset pagination exact.
+  // status + publish instant, shared by every segment of the thread. Truncate to
+  // milliseconds so the value matches the precision of feed cursors (which
+  // round-trip through JS Date / ISO strings), keeping keyset pagination exact.
   let status: "draft" | "scheduled" | "published" = "published";
   let publishedAt: Date | ReturnType<typeof sql> | null = sql`date_trunc('milliseconds', now())`;
 
@@ -114,39 +167,52 @@ export async function createPostAction(
     // an unparseable time falls through to publish-now (the default above)
   }
 
-  const [created] = await db
-    .insert(posts)
-    .values({
-      campaignId: ctx.campaign.id,
-      personaId: authorId,
-      content: text,
-      imageUrl: imageUrl || null,
-      status,
-      publishedAt: publishedAt as Date | null,
-      replyToPostId: replyToPostId ?? null,
-    })
-    .returning({ id: posts.id });
+  // insert segments in order, chaining each as a reply to the previous so the
+  // run reads as one self-thread. The first answers the external reply target
+  // (if any); the rest answer their predecessor.
+  let parentId: number | null = replyToPostId ?? null;
+  const created: number[] = [];
+  for (const seg of cleaned) {
+    const [row] = await db
+      .insert(posts)
+      .values({
+        campaignId: ctx.campaign.id,
+        personaId: authorId,
+        content: seg.content,
+        imageUrl: seg.imageUrl || null,
+        status,
+        publishedAt: publishedAt as Date | null,
+        replyToPostId: parentId,
+      })
+      .returning({ id: posts.id });
+    created.push(row.id);
+    parentId = row.id;
+  }
 
-  // notify on reply + @mention, but only once the post is actually live — a
-  // scheduled or draft post shouldn't ping anyone before it's visible
+  // notify on reply + @mention, but only once posts are actually live — a
+  // scheduled or draft thread shouldn't ping anyone before it's visible. Only
+  // the first segment answers someone else; later segments reply to the author's
+  // own posts (a self-reply, which notify() skips), so only their mentions ping.
   if (status === "published") {
     const replyRecipient = replyTarget?.personaId ?? null;
-    if (replyToPostId != null && replyRecipient != null) {
-      await notify({
+    for (let i = 0; i < created.length; i++) {
+      if (i === 0 && replyToPostId != null && replyRecipient != null) {
+        await notify({
+          campaignId: ctx.campaign.id,
+          recipientPersonaId: replyRecipient,
+          actorPersonaId: authorId,
+          type: "reply",
+          postId: created[i],
+        });
+      }
+      await notifyMentions({
         campaignId: ctx.campaign.id,
-        recipientPersonaId: replyRecipient,
         actorPersonaId: authorId,
-        type: "reply",
-        postId: created.id,
+        postId: created[i],
+        content: cleaned[i].content,
+        exclude: i === 0 && replyRecipient != null ? [replyRecipient] : [],
       });
     }
-    await notifyMentions({
-      campaignId: ctx.campaign.id,
-      actorPersonaId: authorId,
-      postId: created.id,
-      content: text,
-      exclude: replyRecipient != null ? [replyRecipient] : [],
-    });
   }
 
   revalidatePath(`/c/${slug}`);

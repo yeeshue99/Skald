@@ -51,6 +51,17 @@ export default async function ThreadPage({
         highlight
       />
 
+      {/* the author's own continuation, shown as a connected self-thread */}
+      {thread.selfThread.map((p) => (
+        <PostCard
+          key={p.id}
+          post={p}
+          slug={slug}
+          myPersonaIds={myPersonaIds}
+          isDm={isDm}
+        />
+      ))}
+
       <div className="border-b border-border bg-surface/30">
         <Composer
           slug={slug}

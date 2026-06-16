@@ -908,6 +908,8 @@ export async function getPinnedPost(
 export type Thread = {
   root: PostView;
   ancestors: PostView[];
+  /** the root author's own continuation (a self-thread), in order after the root */
+  selfThread: PostView[];
   replies: PostView[];
 };
 
@@ -956,13 +958,48 @@ export async function getThread(
     )
     .orderBy(asc(posts.publishedAt), asc(posts.id));
 
-  const [rootViews, ancestorViews, replyViews] = await Promise.all([
+  // follow the author's own continuation: consecutive visible posts by the
+  // root's author, each replying to the previous, presented as one self-thread.
+  const selfRaw: RawPost[] = [];
+  const seenSelf = new Set<number>([rootRaw.id]);
+  let chainId = rootRaw.id;
+  for (let i = 0; i < 50; i++) {
+    const nx = await db
+      .select()
+      .from(posts)
+      .where(
+        and(
+          eq(posts.replyToPostId, chainId),
+          eq(posts.personaId, rootRaw.personaId),
+          eq(posts.campaignId, campaignId),
+          visibleCondition(),
+        ),
+      )
+      .orderBy(asc(posts.id))
+      .limit(1);
+    if (!nx[0] || seenSelf.has(nx[0].id)) break;
+    selfRaw.push(nx[0]);
+    seenSelf.add(nx[0].id);
+    chainId = nx[0].id;
+  }
+  // the first self-thread segment is also a direct reply to the root; keep it
+  // out of the generic replies list so it isn't rendered twice.
+  const selfIds = new Set(selfRaw.map((r) => r.id));
+  const otherReplies = replyRaw.filter((r) => !selfIds.has(r.id));
+
+  const [rootViews, ancestorViews, selfViews, replyViews] = await Promise.all([
     hydrate([rootRaw], viewerPersonaId, campaignId),
     hydrate(ancestorsRaw, viewerPersonaId, campaignId),
-    hydrate(replyRaw, viewerPersonaId, campaignId),
+    hydrate(selfRaw, viewerPersonaId, campaignId),
+    hydrate(otherReplies, viewerPersonaId, campaignId),
   ]);
 
-  return { root: rootViews[0], ancestors: ancestorViews, replies: replyViews };
+  return {
+    root: rootViews[0],
+    ancestors: ancestorViews,
+    selfThread: selfViews,
+    replies: replyViews,
+  };
 }
 
 // ---------------------------------------------------------------------------
