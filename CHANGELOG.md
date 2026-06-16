@@ -6,6 +6,49 @@ under Unreleased.
 
 ## Unreleased
 
+### Posts: composing, scheduling, and moderation
+
+- Image uploads: attach an image in the composer and it uploads to Vercel Blob
+  via `/api/upload` (signed-in only, image types only, 5MB cap). When
+  `BLOB_READ_WRITE_TOKEN` isn't set the route returns 501 and the composer falls
+  back to pasting an image URL.
+- Scheduling and drafts: compose now, schedule for later, or save a draft.
+  Visibility is purely time-based (a post is live once its `publishedAt` is in
+  the past), so scheduled posts go live with no background worker.
+- Queue page (`/c/<slug>/queue`, in the nav): lists your scheduled posts and
+  drafts, each with publish-now, reschedule, edit, and delete.
+- Post editing: the author (or the DM) can edit a post's content and image;
+  edited posts show an "edited" marker (`editedAt`). Status, author, and publish
+  time are preserved.
+- Delete with undo: deleting a post soft-deletes it (`deletedAt`), which keeps
+  reply threads intact and lets the delete be undone.
+- Pinned post: pin one of a persona's posts to the top of their profile
+  (`personas.pinnedPostId`); the pinned post is hidden from its normal
+  chronological slot. Unpin from the profile.
+- DM moderation: the DM can edit, delete, or pin any persona's post in their
+  campaign, not just their own.
+
+### Notifications
+
+- Per-persona notifications for likes, replies, follows, and @mentions, with an
+  unread badge in the nav and a notifications page. Un-liking or unfollowing
+  removes the matching notification; self-notifications and duplicates are
+  skipped (DB partial unique indexes back the dedup). Scheduled posts fire their
+  reply and mention notifications when they go live, not when they're queued.
+
+### Search and discovery
+
+- Search page (`/c/<slug>/search`, in the nav): search posts and people by text,
+  with inline Follow on people results. With an empty query it shows trending
+  hashtags for the campaign.
+
+### Responsive layout
+
+- Mobile navigation: below `md`, a top app bar (wordmark, notifications, search,
+  persona switcher) and a fixed bottom tab bar (Home, Explore, Queue, Profile,
+  with a center compose button and a safe-area inset). The desktop side nav takes
+  over at `md` and up.
+
 ### Accounts and membership
 
 - DM member provisioning: a "Add a member" form in Settings creates a login, a
