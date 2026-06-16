@@ -5,8 +5,6 @@ how grounded each item is: concrete gaps first, then ideas.
 
 ## Concrete gaps
 
-- [ ] Profile banner. The profile header is a gradient placeholder; let a persona
-      set a banner image (pairs with avatar uploads).
 - [ ] Compose multi-post threads. Reading a conversation works (`getThread`
       renders ancestors, root, and replies), but you can't author a self-thread
       (a chain of your own posts) as one unit.

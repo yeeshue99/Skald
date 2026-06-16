@@ -14,6 +14,9 @@ under Unreleased.
   back to pasting an image URL. The same uploader (a reusable `AvatarField`) now
   backs persona avatars in Edit profile and in onboarding: upload a file, paste a
   URL, or leave it blank for generated initials, with a live preview.
+- Profile banner: a persona can set a wide header image (`personas.bannerUrl`)
+  from Edit profile via the same uploader (a `BannerField`); the profile header
+  shows it, falling back to the theme gradient when unset.
 - Scheduling and drafts: compose now, schedule for later, or save a draft.
   Visibility is purely time-based (a post is live once its `publishedAt` is in
   the past), so scheduled posts go live with no background worker.

@@ -27,6 +27,7 @@ export default async function SettingsPage({
       displayName: personas.displayName,
       bio: personas.bio,
       avatarUrl: personas.avatarUrl,
+      bannerUrl: personas.bannerUrl,
       avatarFrame: personas.avatarFrame,
     })
     .from(personas)

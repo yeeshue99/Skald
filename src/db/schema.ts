@@ -107,6 +107,9 @@ export const personas = pgTable(
     handleLower: text("handle_lower").notNull(),
     displayName: text("display_name").notNull(),
     avatarUrl: text("avatar_url"),
+    // a wide header image shown on the profile (nullable; falls back to a theme
+    // gradient when unset)
+    bannerUrl: text("banner_url"),
     bio: text("bio"),
     isNpc: boolean("is_npc").notNull().default(false),
     // the persona's chosen avatar frame; "default" inherits the campaign theme's

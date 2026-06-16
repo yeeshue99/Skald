@@ -19,6 +19,7 @@ type Npc = {
   displayName: string;
   bio: string | null;
   avatarUrl: string | null;
+  bannerUrl: string | null;
   avatarFrame: PersonaAvatarFrame;
 };
 

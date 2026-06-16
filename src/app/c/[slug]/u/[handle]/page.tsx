@@ -56,13 +56,23 @@ export default async function ProfilePage({
       />
 
       <div className="border-b border-border">
-        <div
-          className="h-28"
-          style={{
-            backgroundImage:
-              "linear-gradient(120deg, var(--primary), var(--accent))",
-          }}
-        />
+        {persona.bannerUrl ? (
+          // user-provided URL, so a plain <img> (no domain allowlist)
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={persona.bannerUrl}
+            alt=""
+            className="h-28 w-full object-cover"
+          />
+        ) : (
+          <div
+            className="h-28"
+            style={{
+              backgroundImage:
+                "linear-gradient(120deg, var(--primary), var(--accent))",
+            }}
+          />
+        )}
         <div className="px-4 pb-4">
           <div className="-mt-12 flex items-end justify-between">
             <Avatar
@@ -83,6 +93,7 @@ export default async function ProfilePage({
                       displayName: persona.displayName,
                       bio: persona.bio,
                       avatarUrl: persona.avatarUrl,
+                      bannerUrl: persona.bannerUrl,
                       avatarFrame: persona.avatarFrame,
                     }}
                     label={isSelf ? "Edit profile" : "Edit"}

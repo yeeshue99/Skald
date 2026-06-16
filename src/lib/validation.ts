@@ -75,6 +75,7 @@ export const personaSchema = z.object({
   displayName,
   bio: z.string().trim().max(MAX_BIO_LENGTH).optional().default(""),
   avatarUrl: optionalUrl,
+  bannerUrl: optionalUrl,
   avatarFrame: z.enum(PERSONA_AVATAR_FRAMES).optional().default("default"),
 });
 

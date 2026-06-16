@@ -7,6 +7,7 @@ import { emptyFormState } from "@/lib/form";
 import { Button, ErrorText, Field, TextInput, Textarea } from "./ui";
 import { SubmitButton } from "./SubmitButton";
 import { AvatarField } from "./forms/AvatarField";
+import { BannerField } from "./forms/BannerField";
 import type { PersonaAvatarFrame } from "@/lib/theme-types";
 
 type EditablePersona = {
@@ -15,6 +16,7 @@ type EditablePersona = {
   displayName: string;
   bio: string | null;
   avatarUrl: string | null;
+  bannerUrl: string | null;
   avatarFrame: PersonaAvatarFrame;
 };
 
@@ -96,6 +98,7 @@ export function EditPersonaButton({
                 withFrame
                 defaultFrame={persona.avatarFrame}
               />
+              <BannerField defaultUrl={persona.bannerUrl} />
               <ErrorText>{state.error}</ErrorText>
               <div className="flex justify-end gap-2 pt-1">
                 <Button
