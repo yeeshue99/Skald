@@ -51,9 +51,10 @@ under Unreleased.
 ### Responsive layout
 
 - Mobile navigation: below `md`, a top app bar (wordmark, notifications, search,
-  persona switcher) and a fixed bottom tab bar (Home, Explore, Queue, Profile,
-  with a center compose button and a safe-area inset). The desktop side nav takes
-  over at `md` and up.
+  bookmarks, persona switcher) and a fixed bottom tab bar (Home, Explore, Queue,
+  Profile, with a center compose button and a safe-area inset). The desktop side
+  nav takes over at `md` and up. The top bar's wordmark truncates and the icon
+  group holds its size, so it never overflows on narrow phones.
 
 ### Accounts and membership
 

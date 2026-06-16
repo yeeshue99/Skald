@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Bell,
+  Bookmark,
   CalendarClock,
   Compass,
   Home,
@@ -50,10 +51,10 @@ export function MobileNav({
   return (
     <>
       <header className="chrome-bar sticky top-0 z-20 flex items-center justify-between gap-2 border-b border-border bg-bg/85 px-3 py-2 backdrop-blur md:hidden">
-        <Link href={base}>
-          <Wordmark name={appName} className="text-xl text-primary" />
+        <Link href={base} className="min-w-0 shrink overflow-hidden">
+          <Wordmark name={appName} className="block truncate text-xl text-primary" />
         </Link>
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1">
           <Link
             href={`${base}/notifications`}
             aria-label="Notifications"
@@ -71,7 +72,14 @@ export function MobileNav({
           >
             <Search className="size-5" />
           </Link>
-          <div className="w-44">
+          <Link
+            href={`${base}/bookmarks`}
+            aria-label="Bookmarks"
+            className="fx-btn rounded-full p-2 text-text hover:bg-surface-hover"
+          >
+            <Bookmark className="size-5" />
+          </Link>
+          <div className="w-32 sm:w-44">
             <PersonaSwitcher
               slug={slug}
               personas={personas}

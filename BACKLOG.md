@@ -8,9 +8,6 @@ how grounded each item is: concrete gaps first, then ideas.
 - [ ] Compose multi-post threads. Reading a conversation works (`getThread`
       renders ancestors, root, and replies), but you can't author a self-thread
       (a chain of your own posts) as one unit.
-- [ ] Bookmarks on mobile. The bottom tab bar is Home / Explore / Queue /
-      Profile; Bookmarks is reachable only from the desktop side nav. Add it to
-      the mobile top bar or an overflow.
 - [ ] Accessibility pass. The side-nav labels are `display:none` below `lg`, so
       audit icon-only controls for aria-labels, focus-visible styling, and color
       contrast across the theme presets.
