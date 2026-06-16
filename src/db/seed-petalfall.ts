@@ -46,6 +46,10 @@ interface PersonaJ {
   player?: string;
   avatarHint?: string;
   voice?: string;
+  /** optional login username for a PC; defaults to the handle if absent. Lets a
+   *  character sign in under their real name while posting under a Blackthorn
+   *  alias (handle + displayName). */
+  account?: string;
 }
 interface PostJ {
   ref: string;
@@ -184,9 +188,12 @@ async function main() {
   const pcs = seed.personas.filter((p) => p.kind === "pc");
   const npcs = seed.personas.filter((p) => p.kind === "npc");
 
-  // login usernames: one per PC (its handle) + a campaign DM account
+  // login usernames: one per PC (its real name via `account`, else its handle)
+  // + a campaign DM account
   const dmUsername = `${slug}_dm`;
-  const pcUsernames = pcs.map((p) => p.handle.replace(/^@+/, ""));
+  const pcUsername = (p: PersonaJ) =>
+    (p.account ?? p.handle).replace(/^@+/, "");
+  const pcUsernames = pcs.map(pcUsername);
   const allUsernamesLower = [dmUsername, ...pcUsernames].map((u) =>
     u.toLowerCase(),
   );
@@ -196,13 +203,23 @@ async function main() {
     `  ${npcs.length} NPCs, ${pcs.length} PCs, ${seed.posts.length} posts, ${seed.follows?.length ?? 0} follows`,
   );
 
-  // --- idempotent reset: drop the campaign (cascades), then its users ---
+  // --- idempotent reset: drop the campaign (cascades memberships/personas/
+  // posts), then the users it owned. Collect member user ids BEFORE deleting so
+  // a prior run with different usernames (e.g. alias-based) is cleaned up too. ---
   const existing = await db
     .select({ id: campaigns.id })
     .from(campaigns)
     .where(eq(campaigns.slug, slug));
   if (existing.length) {
+    const members = await db
+      .select({ userId: memberships.userId })
+      .from(memberships)
+      .where(eq(memberships.campaignId, existing[0].id));
     await db.delete(campaigns).where(eq(campaigns.slug, slug));
+    const memberIds = [...new Set(members.map((m) => m.userId))];
+    if (memberIds.length) {
+      await db.delete(users).where(inArray(users.id, memberIds));
+    }
   }
   await db.delete(users).where(inArray(users.usernameLower, allUsernamesLower));
 
@@ -221,7 +238,7 @@ async function main() {
   const ownerByRef = new Map<string, number>(); // persona ref -> owner user id
   for (const n of npcs) ownerByRef.set(n.ref, dmUser.id);
   for (const pc of pcs) {
-    const uname = pc.handle.replace(/^@+/, "");
+    const uname = pcUsername(pc);
     const [u] = await db
       .insert(users)
       .values({
@@ -418,7 +435,7 @@ async function main() {
   console.log(`    • ${dmUsername}   (DM — owns all ${npcs.length} NPC accounts)`);
   for (const pc of pcs) {
     console.log(
-      `    • ${pc.handle.replace(/^@+/, "")}   (PC: ${pc.displayName})`,
+      `    • ${pcUsername(pc)}   (plays "${pc.displayName}" / @${pc.handle.replace(/^@+/, "")})`,
     );
   }
   console.log("");

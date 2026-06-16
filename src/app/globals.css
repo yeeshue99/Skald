@@ -1478,6 +1478,8 @@ body {
       radial-gradient(2.4px 2.4px at 30% 50%, #fff0cf 0%, #ffa948 52%, transparent 72%),
       radial-gradient(1px 6px at 50% 70%, #ffb05a 0%, transparent 78%),
       radial-gradient(1px 5px at 73% 16%, #ffc06a 0%, transparent 78%);
+    /* kept low so the field stays a backdrop behind the transparent feed */
+    opacity: 0.45;
     will-change: transform, opacity;
     animation:
       motes-rise 22s linear infinite,
@@ -1498,19 +1500,21 @@ body {
     mask-size: 320px 320px;
     -webkit-mask-repeat: repeat;
     mask-repeat: repeat;
-    opacity: 0.9;
+    opacity: 0.45;
     will-change: transform, opacity;
     animation:
       motes-rise 30s linear infinite,
       mote-twinkle 4.2s ease-in-out infinite;
   }
+  /* twinkle range kept low (the animation drives opacity, overriding the static
+     value above) so motes stay a faint backdrop behind the transparent feed. */
   @keyframes mote-twinkle {
     0%,
     100% {
-      opacity: 0.5;
+      opacity: 0.22;
     }
     50% {
-      opacity: 1;
+      opacity: 0.48;
     }
   }
   /* dust: fine, crisp earthy flecks (hard falloff = specks, not blobs) at mixed
@@ -1526,7 +1530,7 @@ body {
       radial-gradient(1.2px 1.2px at 32% 24%, #8a7350 0%, transparent 58%),
       radial-gradient(1px 1px at 90% 48%, #6b5a42 0%, transparent 60%),
       radial-gradient(1.1px 1.1px at 8% 36%, #9c815a 0%, transparent 58%);
-    opacity: 0.8;
+    opacity: 0.4;
     will-change: transform;
     animation: dust-float 24s linear infinite;
   }
@@ -1597,13 +1601,15 @@ body {
       transform: translate3d(0, -200px, 0);
     }
   }
+  /* flicker range kept low (it drives ember opacity, overriding the static
+     value) so the sparks read as a faint backdrop, not a foreground glow. */
   @keyframes ember-flicker {
     0%,
     100% {
-      opacity: 0.9;
+      opacity: 0.45;
     }
     50% {
-      opacity: 0.55;
+      opacity: 0.25;
     }
   }
   @keyframes scanline-sweep {
@@ -1782,7 +1788,7 @@ body {
     mask-size: 260px 260px;
     -webkit-mask-repeat: repeat;
     mask-repeat: repeat;
-    opacity: 0.82;
+    opacity: 0.4;
     will-change: transform;
     animation: petal-fall 18s linear infinite;
   }
@@ -1797,7 +1803,7 @@ body {
       radial-gradient(2.6px 2.6px at 78% 72%, #fff6d6 0%, color-mix(in srgb, var(--accent) 75%, #f3d98a) 48%, transparent 72%),
       radial-gradient(1.5px 1.5px at 64% 16%, #ffe9a8 0%, transparent 66%),
       radial-gradient(1.3px 1.3px at 34% 86%, #f2cf5e 0%, transparent 66%);
-    opacity: 0.9;
+    opacity: 0.45;
     will-change: transform;
     animation: pollen-drift 28s linear infinite;
   }
@@ -1840,7 +1846,7 @@ body {
     position: absolute;
     inset: 0;
     background: var(--lc, #9aae2a);
-    opacity: 0.9;
+    opacity: 0.7;
     -webkit-mask-repeat: no-repeat;
     mask-repeat: no-repeat;
     -webkit-mask-position: center;
