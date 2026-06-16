@@ -8,6 +8,7 @@ import { campaigns, memberships, personas, users } from "@/db/schema";
 import {
   createSession,
   destroySession,
+  getCurrentUser,
   hashPassword,
   verifyPassword,
 } from "@/lib/auth";
@@ -154,6 +155,60 @@ export async function loginAction(
 
   await createSession(user.id);
   redirect(next);
+}
+
+// Self-service password change for the signed-in user. Verifies the current
+// password, then re-hashes the new one. (Sessions are token-based, so the
+// current session stays valid.)
+const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Enter your current password"),
+    newPassword: z
+      .string()
+      .min(8, "New password must be at least 8 characters")
+      .max(200),
+    confirmPassword: z.string(),
+  })
+  .refine((d) => d.newPassword === d.confirmPassword, {
+    message: "New passwords don't match",
+    path: ["confirmPassword"],
+  });
+
+export async function changePasswordAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const me = await getCurrentUser();
+  if (!me) return { error: "You're not signed in." };
+
+  const parsed = changePasswordSchema.safeParse({
+    currentPassword: formData.get("currentPassword"),
+    newPassword: formData.get("newPassword"),
+    confirmPassword: formData.get("confirmPassword"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Check the form." };
+  }
+  const { currentPassword, newPassword } = parsed.data;
+
+  const row = (
+    await db
+      .select({ passwordHash: users.passwordHash })
+      .from(users)
+      .where(eq(users.id, me.id))
+      .limit(1)
+  )[0];
+  if (!row) return { error: "Account not found." };
+
+  const ok = await verifyPassword(currentPassword, row.passwordHash);
+  if (!ok) return { error: "Your current password is incorrect." };
+  if (newPassword === currentPassword) {
+    return { error: "Your new password must be different." };
+  }
+
+  const passwordHash = await hashPassword(newPassword);
+  await db.update(users).set({ passwordHash }).where(eq(users.id, me.id));
+  return { ok: true };
 }
 
 export async function logoutAction(): Promise<void> {

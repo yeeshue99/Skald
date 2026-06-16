@@ -7,6 +7,7 @@ import { Avatar } from "@/components/Avatar";
 import { FeedList } from "@/components/FeedList";
 import { FollowButton } from "@/components/FollowButton";
 import { EditPersonaButton } from "@/components/EditPersonaButton";
+import { ChangePasswordButton } from "@/components/ChangePasswordButton";
 import { PageHeader } from "@/components/PageHeader";
 
 export default async function ProfilePage({
@@ -63,19 +64,22 @@ export default async function ProfilePage({
               size={88}
               className="border-4 border-bg"
             />
-            <div className="mb-1">
+            <div className="mb-1 flex items-center gap-2">
               {canEdit ? (
-                <EditPersonaButton
-                  slug={slug}
-                  persona={{
-                    id: persona.id,
-                    handle: persona.handle,
-                    displayName: persona.displayName,
-                    bio: persona.bio,
-                    avatarUrl: persona.avatarUrl,
-                  }}
-                  label={isSelf ? "Edit profile" : "Edit"}
-                />
+                <>
+                  <EditPersonaButton
+                    slug={slug}
+                    persona={{
+                      id: persona.id,
+                      handle: persona.handle,
+                      displayName: persona.displayName,
+                      bio: persona.bio,
+                      avatarUrl: persona.avatarUrl,
+                    }}
+                    label={isSelf ? "Edit profile" : "Edit"}
+                  />
+                  {isSelf ? <ChangePasswordButton /> : null}
+                </>
               ) : (
                 <FollowButton
                   slug={slug}
