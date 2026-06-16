@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { MoreHorizontal, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { deletePostAction } from "@/app/actions/posts";
+import { showToast } from "./Toaster";
 
 export function PostMenu({ slug, postId }: { slug: string; postId: number }) {
   const [open, setOpen] = useState(false);
@@ -17,14 +19,15 @@ export function PostMenu({ slug, postId }: { slug: string; postId: number }) {
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
+  // Soft-delete immediately and offer an Undo toast (no confirm dialog).
   function onDelete() {
-    if (!window.confirm("Delete this post?")) return;
+    setOpen(false);
     start(async () => {
       try {
         await deletePostAction(slug, postId);
-        setOpen(false);
+        showToast("Post deleted", { slug, postId });
       } catch {
-        /* ignore */
+        showToast("Couldn't delete that post");
       }
     });
   }
@@ -41,6 +44,13 @@ export function PostMenu({ slug, postId }: { slug: string; postId: number }) {
       </button>
       {open ? (
         <div className="absolute right-0 z-20 mt-1 w-40 overflow-hidden rounded-base border border-border bg-surface shadow-lg">
+          <Link
+            href={`/c/${slug}/post/${postId}/edit`}
+            onClick={() => setOpen(false)}
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-text transition-colors hover:bg-surface-hover"
+          >
+            <Pencil className="size-4" /> Edit
+          </Link>
           <button
             type="button"
             onClick={onDelete}

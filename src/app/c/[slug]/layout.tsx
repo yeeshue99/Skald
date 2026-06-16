@@ -5,6 +5,7 @@ import { themeToCssVars, themeDataAttrs, normalizeTheme } from "@/lib/themes";
 import { cn } from "@/lib/cn";
 import type { PersonaSummary } from "@/lib/queries";
 import { getUnreadNotificationCount } from "@/lib/queries";
+import { Toaster } from "@/components/Toaster";
 
 // Particle effects render as their own animated layer inside .campaign-motion;
 // card effects (pagecurl) are wrapper classes the CSS keys off.
@@ -157,6 +158,7 @@ export default async function CampaignLayout({
         </main>
         <RightRail ctx={ctx} />
       </div>
+      <Toaster />
     </div>
   );
 }

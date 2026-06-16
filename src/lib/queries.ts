@@ -772,6 +772,39 @@ export async function getPersonaByHandle(campaignId: number, handleLower: string
   return rows[0] ?? null;
 }
 
+// A post the author may edit: any non-deleted post in the campaign (including
+// scheduled/draft, which the thread view hides). Ownership is checked by the
+// caller against the post's personaId.
+export async function getPostForEdit(
+  campaignId: number,
+  postId: number,
+): Promise<{
+  id: number;
+  content: string;
+  imageUrl: string | null;
+  personaId: number;
+} | null> {
+  const row = (
+    await db
+      .select({
+        id: posts.id,
+        content: posts.content,
+        imageUrl: posts.imageUrl,
+        personaId: posts.personaId,
+      })
+      .from(posts)
+      .where(
+        and(
+          eq(posts.id, postId),
+          eq(posts.campaignId, campaignId),
+          isNull(posts.deletedAt),
+        ),
+      )
+      .limit(1)
+  )[0];
+  return row ?? null;
+}
+
 export async function getProfile(
   campaignId: number,
   handleLower: string,

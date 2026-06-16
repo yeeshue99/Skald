@@ -150,6 +150,14 @@ export function PostCard({
             >
               {relativeTime(new Date(when))}
             </Link>
+            {data.editedAt ? (
+              <span
+                className="shrink-0 text-muted"
+                title={`Edited ${new Date(data.editedAt).toISOString()}`}
+              >
+                · edited
+              </span>
+            ) : null}
             <div className="ml-auto flex items-center gap-1">
               {canFollow ? (
                 <FollowButton
