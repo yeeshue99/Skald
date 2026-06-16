@@ -130,6 +130,32 @@ What you get:
   the hint exactly would need a text-to-image API).
 - An invite code, printed at the end along with every login.
 
+## Posting from an external app (API keys)
+
+A DM can let another app (say, a session-notes tool) post into a campaign over
+HTTP. In Settings -> API access, generate a key. The raw key is shown once;
+only its hash is stored.
+
+The key is write-only and scoped to that one campaign. It can post as any NPC,
+or as the key creator's own character. Send it as a bearer token:
+
+```bash
+curl -X POST https://your-app.example/api/c/<slug>/posts \
+  -H "Authorization: Bearer skald_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "persona": "@chronicler",
+    "content": "Session 12 recap: the party finally reached Blackthorn…",
+    "imageUrl": "https://…",        // optional
+    "scheduledAt": "2026-07-01T18:00:00Z"  // optional ISO instant; posts later
+  }'
+```
+
+`persona` (a handle) plus `content` and/or `imageUrl` are required. On success
+it returns `201` with `{ id, status, persona, url }`. Bad or revoked keys get
+`401`; a persona the key can't post as gets `403`/`404`. Revoke a key any time
+from the same Settings panel.
+
 ## Useful scripts
 
 | Command | What it does |

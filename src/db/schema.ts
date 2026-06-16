@@ -431,6 +431,35 @@ export const sessions = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// campaignApiKeys — bearer tokens a DM mints so an external app can post into
+// this campaign over HTTP (write-only). Only the SHA-256 hash is stored; the
+// raw token is shown once at creation. `prefix` is a non-secret display hint.
+// Revoking sets revokedAt (the row is kept) so a key stops authenticating.
+// ---------------------------------------------------------------------------
+export const campaignApiKeys = pgTable(
+  "campaign_api_keys",
+  {
+    id: serial("id").primaryKey(),
+    campaignId: integer("campaign_id")
+      .notNull()
+      .references(() => campaigns.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull(),
+    prefix: text("prefix").notNull(),
+    label: text("label").notNull().default(""),
+    createdByUserId: integer("created_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: tstz("created_at").notNull().defaultNow(),
+    lastUsedAt: tstz("last_used_at"),
+    revokedAt: tstz("revoked_at"),
+  },
+  (t) => [
+    uniqueIndex("campaign_api_keys_hash_idx").on(t.tokenHash),
+    index("campaign_api_keys_campaign_idx").on(t.campaignId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // Inferred row types.
 // ---------------------------------------------------------------------------
 export type User = typeof users.$inferSelect;
@@ -443,6 +472,7 @@ export type Like = typeof likes.$inferSelect;
 export type Bookmark = typeof bookmarks.$inferSelect;
 export type Poll = typeof polls.$inferSelect;
 export type PollVote = typeof pollVotes.$inferSelect;
+export type CampaignApiKey = typeof campaignApiKeys.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type NotificationType = Notification["type"];
 export type Session = typeof sessions.$inferSelect;
