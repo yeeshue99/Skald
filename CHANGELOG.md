@@ -24,7 +24,8 @@ under Unreleased.
   reply threads intact and lets the delete be undone.
 - Pinned post: pin one of a persona's posts to the top of their profile
   (`personas.pinnedPostId`); the pinned post is hidden from its normal
-  chronological slot. Unpin from the profile.
+  chronological slot. Pin from a post's menu ("Pin to profile"); the pinned
+  slot's menu flips to "Unpin from profile".
 - DM moderation: the DM can edit, delete, or pin any persona's post in their
   campaign, not just their own.
 
