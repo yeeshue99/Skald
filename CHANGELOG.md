@@ -75,6 +75,15 @@ under Unreleased.
   one campaign. Keys are stored as a SHA-256 hash (raw token shown once) in
   `campaign_api_keys` and can be revoked. Documented in the README.
 
+### Security
+
+- Rate limiting on write paths. A small in-memory fixed-window limiter throttles
+  the campaign API (per IP and per key), login, and register (per IP), so a
+  leaked key or credential stuffing has a brake. The API returns `429` with a
+  `Retry-After` header; login/register surface a "try again later" message.
+  Per-process (fine for a single instance); swap in Upstash/Redis to make it
+  global if it ever scales out.
+
 ### Responsive layout
 
 - Mobile navigation: below `md`, a top app bar (wordmark, notifications, search,

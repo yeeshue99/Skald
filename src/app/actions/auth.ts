@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
@@ -20,6 +21,9 @@ import {
   USERNAME_RE,
 } from "@/lib/validation";
 import { type FormState, isUniqueViolation, safeNext } from "@/lib/form";
+import { ipFromHeaders, rateLimit } from "@/lib/rate-limit";
+
+const TOO_MANY = "Too many attempts. Try again in a few minutes.";
 
 const accountOnly = z.object({
   username: z
@@ -33,6 +37,11 @@ export async function registerAction(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
+  const ip = ipFromHeaders(await headers());
+  if (!rateLimit(`register:${ip}`, { limit: 10, windowMs: 600_000 }).ok) {
+    return { error: TOO_MANY };
+  }
+
   const code = String(formData.get("code") ?? "").trim().toUpperCase();
 
   // --- Path A: invite code present -> create account AND join the campaign ---
@@ -131,6 +140,11 @@ export async function loginAction(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
+  const ip = ipFromHeaders(await headers());
+  if (!rateLimit(`login:${ip}`, { limit: 10, windowMs: 600_000 }).ok) {
+    return { error: TOO_MANY };
+  }
+
   const parsed = loginSchema.safeParse({
     username: formData.get("username"),
     password: formData.get("password"),

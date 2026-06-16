@@ -5,9 +5,20 @@ import { campaignApiKeys, campaigns, personas, posts } from "@/db/schema";
 import { hashToken } from "@/lib/ids";
 import { composeSchema } from "@/lib/validation";
 import { notifyMentions } from "@/lib/notify";
+import { ipFromHeaders, rateLimit } from "@/lib/rate-limit";
 
-function json(data: unknown, status: number): Response {
-  return NextResponse.json(data, { status });
+function json(
+  data: unknown,
+  status: number,
+  headers?: Record<string, string>,
+): Response {
+  return NextResponse.json(data, { status, headers });
+}
+
+function tooMany(retryAfterSec: number): Response {
+  return json({ error: "Rate limit exceeded. Slow down." }, 429, {
+    "Retry-After": String(retryAfterSec),
+  });
 }
 
 // External integration: create a post in a campaign with a campaign API key.
@@ -24,6 +35,11 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> },
 ): Promise<Response> {
   const { slug } = await params;
+
+  // coarse per-IP throttle before auth, so unauthenticated spam is cheap to shed
+  const ip = ipFromHeaders(req.headers);
+  const ipLimit = rateLimit(`api-ip:${ip}`, { limit: 120, windowMs: 60_000 });
+  if (!ipLimit.ok) return tooMany(ipLimit.retryAfterSec);
 
   const auth = req.headers.get("authorization") ?? "";
   const m = auth.match(/^Bearer\s+(.+)$/i);
@@ -49,6 +65,10 @@ export async function POST(
       .limit(1)
   )[0];
   if (!key) return json({ error: "Invalid or revoked API key." }, 401);
+
+  // per-key throttle: a leaked key can't flood the campaign
+  const keyLimit = rateLimit(`api-key:${key.id}`, { limit: 60, windowMs: 60_000 });
+  if (!keyLimit.ok) return tooMany(keyLimit.retryAfterSec);
 
   let body: unknown;
   try {

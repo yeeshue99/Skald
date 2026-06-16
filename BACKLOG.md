@@ -13,11 +13,6 @@ how grounded each item is: concrete gaps first, then ideas.
       feed `visibleCondition` + keyset `encodeCursor`/`decodeCursor`, `getThread`
       self-thread chaining, `notify` self/dedup skips, and the compose / persona
       Zod schemas.
-- [ ] No rate limiting on write paths. Nothing throttles requests anywhere. The
-      campaign API (`POST /api/c/<slug>/posts`, bearer key), login, and register
-      are all unbounded, so a leaked key or credential stuffing has no brake. Add
-      a small per-key and per-IP limiter (in-memory is enough for a single
-      instance; Upstash or similar if it ever scales out).
 - [ ] Orphaned blobs are never cleaned up. `api/upload` only `put`s to Vercel
       Blob; nothing `del`s the old blob when an avatar, banner, or post image is
       replaced, or when its post or persona is deleted, so storage leaks over
