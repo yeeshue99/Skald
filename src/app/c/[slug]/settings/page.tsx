@@ -4,6 +4,7 @@ import { personas } from "@/db/schema";
 import { requireDmContext } from "@/lib/campaign";
 import { getCampaignMembers } from "@/lib/queries";
 import { ThemeEditorForm } from "@/components/forms/ThemeEditorForm";
+import { AddMemberForm } from "@/components/AddMemberForm";
 import { InviteManager } from "@/components/InviteManager";
 import { MembersAdmin } from "@/components/MembersAdmin";
 import { NpcManager } from "@/components/NpcManager";
@@ -56,6 +57,7 @@ export default async function SettingsPage({
         </Section>
 
         <Section title="Members" description="Everyone in this campaign.">
+          <AddMemberForm slug={slug} />
           <MembersAdmin
             slug={slug}
             members={members}

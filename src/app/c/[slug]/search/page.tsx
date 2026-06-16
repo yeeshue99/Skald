@@ -2,14 +2,17 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { requireCampaignContext } from "@/lib/campaign";
 import {
+  getTrendingHashtags,
   searchPersonas,
   searchPosts,
   type Feed,
   type PersonaSearchResult,
+  type TrendingTopic,
 } from "@/lib/queries";
 import { PageHeader } from "@/components/PageHeader";
 import { SearchBar } from "@/components/SearchBar";
 import { SearchPosts } from "@/components/SearchPosts";
+import { TrendingTopics } from "@/components/TrendingTopics";
 import { Avatar } from "@/components/Avatar";
 import { FollowButton } from "@/components/FollowButton";
 
@@ -29,11 +32,14 @@ export default async function SearchPage({
 
   let people: PersonaSearchResult[] = [];
   let feed: Feed = { posts: [], nextCursor: null };
+  let trends: TrendingTopic[] = [];
   if (query) {
     [people, feed] = await Promise.all([
       searchPersonas(ctx.campaign.id, ctx.actingPersona.id, query, 8),
       searchPosts(ctx.campaign.id, ctx.actingPersona.id, query, 0),
     ]);
+  } else {
+    trends = await getTrendingHashtags(ctx.campaign.id, 10);
   }
 
   const ownedIds = new Set(ctx.myPersonas.map((p) => p.id));
@@ -48,9 +54,19 @@ export default async function SearchPage({
       </div>
 
       {!query ? (
-        <p className="px-6 py-16 text-center text-muted">
-          Search posts and people across this campaign.
-        </p>
+        <div className="p-4">
+          <p className="px-2 py-6 text-center text-muted">
+            Search posts and people, or jump into a trend.
+          </p>
+          {trends.length > 0 ? (
+            <section>
+              <h2 className="mb-1 px-2 font-display text-base font-bold text-text">
+                Trending
+              </h2>
+              <TrendingTopics slug={slug} topics={trends} />
+            </section>
+          ) : null}
+        </div>
       ) : nothing ? (
         <p className="px-6 py-16 text-center text-muted">
           No results for &ldquo;{query}&rdquo;.

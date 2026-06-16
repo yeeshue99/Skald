@@ -1,15 +1,19 @@
 import Link from "next/link";
-import { KeyRound, Settings, UserPlus } from "lucide-react";
+import { KeyRound, Settings, TrendingUp, UserPlus } from "lucide-react";
 import type { CampaignContext } from "@/lib/campaign";
-import { getWhoToFollow } from "@/lib/queries";
+import { getTrendingHashtags, getWhoToFollow } from "@/lib/queries";
 import { Avatar } from "./Avatar";
 import { FollowButton } from "./FollowButton";
 import { CopyButton } from "./CopyButton";
+import { TrendingTopics } from "./TrendingTopics";
 import { Card } from "./ui";
 
 export async function RightRail({ ctx }: { ctx: CampaignContext }) {
   const { campaign, role, actingPersona } = ctx;
-  const suggestions = await getWhoToFollow(campaign.id, actingPersona.id, 5);
+  const [suggestions, trends] = await Promise.all([
+    getWhoToFollow(campaign.id, actingPersona.id, 5),
+    getTrendingHashtags(campaign.id, 6),
+  ]);
 
   return (
     <aside className="sticky top-0 hidden h-dvh w-[340px] shrink-0 overflow-y-auto px-5 py-4 xl:block">
@@ -47,6 +51,15 @@ export async function RightRail({ ctx }: { ctx: CampaignContext }) {
           </div>
         ) : null}
       </Card>
+
+      {trends.length > 0 ? (
+        <Card className="mb-4 p-4">
+          <h2 className="mb-2 flex items-center gap-2 font-display text-lg font-bold text-text">
+            <TrendingUp className="size-5" /> Trending
+          </h2>
+          <TrendingTopics slug={campaign.slug} topics={trends} />
+        </Card>
+      ) : null}
 
       {suggestions.length > 0 ? (
         <Card className="p-4">

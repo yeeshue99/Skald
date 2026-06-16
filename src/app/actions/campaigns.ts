@@ -5,14 +5,16 @@ import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { campaigns, memberships, personas } from "@/db/schema";
-import { getCurrentUser } from "@/lib/auth";
+import { campaigns, memberships, personas, users } from "@/db/schema";
+import { getCurrentUser, hashPassword } from "@/lib/auth";
 import { loadActionContext } from "@/lib/campaign";
 import {
   createCampaignSchema,
   slugify,
   HANDLE_RE,
+  USERNAME_RE,
   normalizeHandle,
+  normalizeUsername,
   MAX_DISPLAY_NAME,
 } from "@/lib/validation";
 import { AVAILABLE_FONTS, getPreset, type Theme } from "@/lib/themes";
@@ -346,6 +348,120 @@ export async function regenerateInviteAction(slug: string): Promise<void> {
 // ---------------------------------------------------------------------------
 // Member admin (DM only).
 // ---------------------------------------------------------------------------
+
+// Provision a new human member directly: creates a login, a player membership,
+// and their starting character persona. The DM shares the username + password
+// with the player (who can edit their character afterwards). This is the
+// invite-code flow's manual counterpart.
+const addMemberSchema = z.object({
+  username: z
+    .string()
+    .transform(normalizeUsername)
+    .pipe(
+      z
+        .string()
+        .regex(USERNAME_RE, "Username: 3-20 letters, numbers, or underscore"),
+    ),
+  password: z.string().min(8, "Password: at least 8 characters").max(200),
+  displayName: z
+    .string()
+    .trim()
+    .min(1, "Character name is required")
+    .max(MAX_DISPLAY_NAME, `Character name under ${MAX_DISPLAY_NAME} characters`),
+  handle: z
+    .string()
+    .transform(normalizeHandle)
+    .pipe(
+      z.string().regex(HANDLE_RE, "Handle: 2-24 letters, numbers, or underscore"),
+    ),
+});
+
+export async function addMemberAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const slug = String(formData.get("slug") ?? "");
+  const ctx = await loadActionContext(slug);
+  if (ctx.role !== "dm") return { error: "Only the DM can add members." };
+
+  const parsed = addMemberSchema.safeParse({
+    username: formData.get("username"),
+    password: formData.get("password"),
+    displayName: formData.get("displayName"),
+    handle: formData.get("handle"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Check the details." };
+  }
+  const { username, password, displayName, handle } = parsed.data;
+
+  // friendly pre-checks; the unique indexes remain the real guard against races
+  const takenUser = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.usernameLower, username.toLowerCase()))
+    .limit(1);
+  if (takenUser.length) return { error: "That username is already taken." };
+
+  const takenHandle = await db
+    .select({ id: personas.id })
+    .from(personas)
+    .where(
+      and(
+        eq(personas.campaignId, ctx.campaign.id),
+        eq(personas.handleLower, handle.toLowerCase()),
+      ),
+    )
+    .limit(1);
+  if (takenHandle.length)
+    return { error: "That character handle is taken in this campaign." };
+
+  const passwordHash = await hashPassword(password);
+  try {
+    await db.transaction(async (tx) => {
+      const [u] = await tx
+        .insert(users)
+        .values({
+          username,
+          usernameLower: username.toLowerCase(),
+          passwordHash,
+        })
+        .returning({ id: users.id });
+      await tx
+        .insert(memberships)
+        .values({ userId: u.id, campaignId: ctx.campaign.id, role: "player" });
+      const [p] = await tx
+        .insert(personas)
+        .values({
+          campaignId: ctx.campaign.id,
+          ownerUserId: u.id,
+          handle,
+          handleLower: handle.toLowerCase(),
+          displayName,
+          isNpc: false,
+        })
+        .returning({ id: personas.id });
+      await tx
+        .update(memberships)
+        .set({ actingPersonaId: p.id })
+        .where(
+          and(
+            eq(memberships.userId, u.id),
+            eq(memberships.campaignId, ctx.campaign.id),
+          ),
+        );
+    });
+  } catch (e) {
+    if (isUniqueViolation(e)) {
+      return { error: "That username or character handle was just taken." };
+    }
+    throw e;
+  }
+
+  revalidatePath(`/c/${slug}/settings`);
+  return { ok: true };
+}
+
 export async function setMemberRoleAction(
   slug: string,
   targetUserId: number,

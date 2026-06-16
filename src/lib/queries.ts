@@ -492,6 +492,55 @@ export async function searchPersonas(
 }
 
 // ---------------------------------------------------------------------------
+// Trending topics — the most-used hashtags across the campaign's recent visible
+// posts. Counts each tag once per post (so one spammy post can't run up a
+// trend) and keeps the most recent casing for display. Only posts containing a
+// '#' in the last 7 days are scanned, so the per-page cost stays small.
+// ---------------------------------------------------------------------------
+export type TrendingTopic = { tag: string; display: string; count: number };
+
+export async function getTrendingHashtags(
+  campaignId: number,
+  limit = 6,
+): Promise<TrendingTopic[]> {
+  const rows = await db
+    .select({ content: posts.content })
+    .from(posts)
+    .where(
+      and(
+        eq(posts.campaignId, campaignId),
+        visibleCondition(),
+        gt(posts.publishedAt, sql`now() - interval '7 days'`),
+        ilike(posts.content, "%#%"),
+      ),
+    )
+    .orderBy(desc(posts.publishedAt), desc(posts.id))
+    .limit(1000);
+
+  const re = /#([A-Za-z0-9_]+)/g;
+  const tally = new Map<string, { display: string; count: number }>();
+  for (const r of rows) {
+    const seen = new Set<string>();
+    re.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(r.content)) !== null) {
+      const key = m[1].toLowerCase();
+      if (seen.has(key)) continue; // each tag counts once per post
+      seen.add(key);
+      const cur = tally.get(key);
+      // rows are newest-first, so the first casing we see is the most recent
+      if (cur) cur.count += 1;
+      else tally.set(key, { display: m[1], count: 1 });
+    }
+  }
+
+  return [...tally.entries()]
+    .map(([tag, v]) => ({ tag, display: v.display, count: v.count }))
+    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
+    .slice(0, limit);
+}
+
+// ---------------------------------------------------------------------------
 // "Newer than" — posts that appeared after the cursor (for live updates).
 // Returns at most `limit` newest-first; an empty cursor (id 0) means "any".
 // ---------------------------------------------------------------------------
