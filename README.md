@@ -61,8 +61,8 @@ members, personas, theme, and invite code, all isolated from each other.
   its publish time has passed, so a scheduled reveal appears on its own.
 - Themes are data. Each campaign stores its theme as JSON on its row, applied at
   runtime, editable live under Settings -> Theme.
-- Private by design. Registration is invite-code only. It's your table, no
-  strangers.
+- Private by design. Registration is invite-code only, so only your table can
+  join.
 
 ## Local setup
 
@@ -174,8 +174,8 @@ curl -X POST https://your-app.example/api/c/<slug>/posts \
   -H "Content-Type: application/json" \
   -d '{
     "persona": "@chronicler",
-    "content": "Session 12 recap: the party finally reached Blackthorn…",
-    "imageUrl": "https://…",                 // optional
+    "content": "Session 12 recap: the party finally reached Blackthorn.",
+    "imageUrl": "https://...",               // optional
     "scheduledAt": "2026-07-01T18:00:00Z"    // optional ISO instant; posts later
   }'
 ```
