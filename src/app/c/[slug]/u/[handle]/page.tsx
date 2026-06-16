@@ -150,6 +150,7 @@ export default async function ProfilePage({
             slug={slug}
             myPersonaIds={myPersonaIds}
             isDm={isDm}
+            pinned={true}
           />
         </div>
       ) : null}

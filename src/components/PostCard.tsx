@@ -68,6 +68,7 @@ export function PostCard({
   isDm,
   highlight = false,
   showFollow = false,
+  pinned = false,
 }: {
   post: PostView;
   slug: string;
@@ -76,6 +77,8 @@ export function PostCard({
   highlight?: boolean;
   /** show an inline Follow button for authors you don't already follow */
   showFollow?: boolean;
+  /** this post is the author's pinned post (flips the menu to "Unpin") */
+  pinned?: boolean;
 }) {
   const isBoost = post.isBoost && post.repostOf != null;
   const data = isBoost ? post.repostOf! : post;
@@ -167,7 +170,9 @@ export function PostCard({
                   compact
                 />
               ) : null}
-              {canManage ? <PostMenu slug={slug} postId={data.id} /> : null}
+              {canManage ? (
+                <PostMenu slug={slug} postId={data.id} pinned={pinned} />
+              ) : null}
             </div>
           </div>
 

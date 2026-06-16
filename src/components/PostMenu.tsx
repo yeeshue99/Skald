@@ -2,11 +2,19 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { MoreHorizontal, Pencil, Pin, Trash2 } from "lucide-react";
-import { deletePostAction, pinPostAction } from "@/app/actions/posts";
+import { MoreHorizontal, Pencil, Pin, PinOff, Trash2 } from "lucide-react";
+import { deletePostAction, pinPostAction, unpinPostAction } from "@/app/actions/posts";
 import { showToast } from "./Toaster";
 
-export function PostMenu({ slug, postId }: { slug: string; postId: number }) {
+export function PostMenu({
+  slug,
+  postId,
+  pinned = false,
+}: {
+  slug: string;
+  postId: number;
+  pinned?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const ref = useRef<HTMLDivElement>(null);
@@ -36,10 +44,15 @@ export function PostMenu({ slug, postId }: { slug: string; postId: number }) {
     setOpen(false);
     start(async () => {
       try {
-        await pinPostAction(slug, postId);
-        showToast("Pinned to profile");
+        if (pinned) {
+          await unpinPostAction(slug, postId);
+          showToast("Unpinned from profile");
+        } else {
+          await pinPostAction(slug, postId);
+          showToast("Pinned to profile");
+        }
       } catch {
-        showToast("Couldn't pin that post");
+        showToast(pinned ? "Couldn't unpin" : "Couldn't pin that post");
       }
     });
   }
@@ -69,7 +82,15 @@ export function PostMenu({ slug, postId }: { slug: string; postId: number }) {
             disabled={pending}
             className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-text transition-colors hover:bg-surface-hover disabled:opacity-50"
           >
-            <Pin className="size-4" /> Pin to profile
+            {pinned ? (
+              <>
+                <PinOff className="size-4" /> Unpin from profile
+              </>
+            ) : (
+              <>
+                <Pin className="size-4" /> Pin to profile
+              </>
+            )}
           </button>
           <button
             type="button"
