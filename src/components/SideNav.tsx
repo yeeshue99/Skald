@@ -93,6 +93,8 @@ export function SideNav({
             <Link
               key={it.href}
               href={it.href}
+              aria-label={it.badge ? `${it.label}, ${it.badge} unread` : it.label}
+              aria-current={active ? "page" : undefined}
               className={cn(
                 "fx-btn flex items-center gap-4 rounded-full px-3 py-2.5 text-lg transition-colors hover:bg-surface-hover",
                 active ? "font-bold text-text" : "text-text/90",
@@ -116,6 +118,7 @@ export function SideNav({
 
         <Link
           href={`${base}/compose`}
+          aria-label="Post"
           className={cn(
             buttonClasses("primary", "lg"),
             "mt-2 lg:w-full lg:justify-center",
@@ -137,6 +140,7 @@ export function SideNav({
         <form action={logoutAction}>
           <button
             type="submit"
+            aria-label="Log out"
             className="fx-btn flex w-full items-center gap-3 rounded-full px-3 py-2 text-sm text-muted transition-colors hover:bg-surface-hover hover:text-text"
           >
             <LogOut className="size-5 shrink-0" />

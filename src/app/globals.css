@@ -79,6 +79,19 @@ body {
   border-radius: 999px;
 }
 
+/* Accessibility: a clear, consistent keyboard focus ring on every interactive
+   control. .ui-button supplies its own Tailwind focus-visible ring and sets
+   outline:none (specificity beats this), so this low-specificity :where()
+   baseline covers what it doesn't: links, the .fx-btn nav items and composer
+   toolbar icons, .action-btn, native controls, and any bare button. It uses
+   `outline` (not box-shadow) so it coexists with the decoration box-shadow
+   rings rather than clobbering them, and the offset keeps it clear of the
+   rounded-full shapes. */
+:where(a, button, [role="button"], [role="menuitem"], [role="tab"], input, textarea, select, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 /* ===========================================================================
    Phase 1 decorations — v2 refinement.
 

@@ -154,7 +154,9 @@ export const SCROLLR_THEME: Theme = {
     primary: "#9B2D26",
     primaryHover: "#7E2018",
     onPrimary: "#FBF3E1",
-    accent: "#A8791C",
+    // deepened gold so accent text (e.g. the NPC badge) clears WCAG AA (4.5:1)
+    // on the light parchment field; #A8791C was 3.22:1
+    accent: "#8A6210",
     like: "#B5232B",
     repost: "#3F6B3A",
     link: "#7A3E12",
@@ -193,9 +195,11 @@ export const BLOOMR_THEME: Theme = {
     primary: "#A8336A",
     primaryHover: "#8C2957",
     onPrimary: "#FBF7EE",
-    accent: "#C79A2B",
+    // deepened gold + green so accent (NPC badge) and repost (success text /
+    // boost counts) clear WCAG AA on the pale green field; were 2.26 / 4.28
+    accent: "#806010",
     like: "#BE3B5E",
-    repost: "#4E7C3A",
+    repost: "#477035",
     link: "#7A5AA8",
   },
   decorations: {

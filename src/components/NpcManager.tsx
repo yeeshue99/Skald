@@ -118,6 +118,7 @@ function NpcRow({ slug, npc }: { slug: string; npc: Npc }) {
         size="sm"
         variant="danger"
         disabled={pending}
+        aria-label={`Delete ${npc.displayName}`}
         onClick={() => {
           if (window.confirm(`Delete ${npc.displayName} and all their posts?`))
             start(async () => {
