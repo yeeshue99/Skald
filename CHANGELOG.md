@@ -20,6 +20,10 @@ under Unreleased.
   again with the new one.
 - Forgot-password path: since there's no email, the login page tells players to
   ask their DM to reset it (handled by the reset button above).
+- New-player onboarding: the DM can add a member with just a login (the character
+  is now optional). A player without a character is routed on first sign-in to an
+  onboarding screen to pick their own (name, @handle, bio), which becomes their
+  acting persona — instead of the DM presetting it.
 
 ### Feed and follow
 

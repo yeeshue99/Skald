@@ -21,9 +21,9 @@ export function AddMemberForm({ slug }: { slug: string }) {
         <UserPlus className="size-4" /> Add a member
       </h3>
       <p className="text-xs text-muted">
-        Creates a login and a starting character for a player. Share the username
-        and password with them so they can sign in; they can edit their character
-        later, and you can change their role below.
+        Creates a login for a player. Share the username and password with them so
+        they can sign in. Leave the character blank to let them pick it on first
+        sign-in, or preset one here. You can change their role below.
       </p>
       <input type="hidden" name="slug" value={slug} />
       <div className="grid gap-3 sm:grid-cols-2">
@@ -46,17 +46,16 @@ export function AddMemberForm({ slug }: { slug: string }) {
             required
           />
         </Field>
-        <Field label="Character name">
-          <TextInput name="displayName" placeholder="Maro Coppersmart" required />
+        <Field label="Character name" hint="Optional — they can pick it themselves.">
+          <TextInput name="displayName" placeholder="Maro Coppersmart" />
         </Field>
-        <Field label="Character handle">
+        <Field label="Character handle" hint="Optional.">
           <TextInput
             name="handle"
             placeholder="maro"
             autoCapitalize="none"
             autoComplete="off"
             spellCheck={false}
-            required
           />
         </Field>
       </div>

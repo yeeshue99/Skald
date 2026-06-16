@@ -99,7 +99,16 @@ export async function requireCampaignContext(
 
   const campaign = await getCampaignBySlug(slug);
   if (!campaign) redirect("/");
-  // logged in but not a member of an existing campaign
+  // ctx was null: tell apart "a member who hasn't created a character yet" (the
+  // DM provisioned a login but left the character to them) from "not a member".
+  const membership = await db
+    .select({ id: memberships.id })
+    .from(memberships)
+    .where(
+      and(eq(memberships.userId, user.id), eq(memberships.campaignId, campaign.id)),
+    )
+    .limit(1);
+  if (membership.length) redirect(`/onboard/${slug}`);
   redirect(`/join/${slug}`);
 }
 

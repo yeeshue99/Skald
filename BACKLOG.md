@@ -14,5 +14,3 @@ how grounded each item is: in-progress first, then concrete gaps, then ideas.
 - [ ] Notifications: likes, replies, follows, and @mentions for your personas.
 - [ ] Post editing and a proper delete-with-undo.
 - [ ] Pinned post on a profile.
-- [ ] Per-campaign onboarding for a brand-new player (pick/confirm their
-      character on first sign-in instead of the DM presetting it).

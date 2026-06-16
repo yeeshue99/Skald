@@ -349,11 +349,12 @@ export async function regenerateInviteAction(slug: string): Promise<void> {
 // Member admin (DM only).
 // ---------------------------------------------------------------------------
 
-// Provision a new human member directly: creates a login, a player membership,
-// and their starting character persona. The DM shares the username + password
-// with the player (who can edit their character afterwards). This is the
-// invite-code flow's manual counterpart.
-const addMemberSchema = z.object({
+// Provision a new human member directly: creates a login + player membership.
+// The character is OPTIONAL — leave it blank and the player picks/confirms their
+// own character on first sign-in (the onboarding flow); fill it in to preset one.
+// The DM shares the username + password with the player. The invite-code flow's
+// manual counterpart.
+const addMemberAccountSchema = z.object({
   username: z
     .string()
     .transform(normalizeUsername)
@@ -363,6 +364,8 @@ const addMemberSchema = z.object({
         .regex(USERNAME_RE, "Username: 3-20 letters, numbers, or underscore"),
     ),
   password: z.string().min(8, "Password: at least 8 characters").max(200),
+});
+const addMemberCharacterSchema = z.object({
   displayName: z
     .string()
     .trim()
@@ -384,16 +387,30 @@ export async function addMemberAction(
   const ctx = await loadActionContext(slug);
   if (ctx.role !== "dm") return { error: "Only the DM can add members." };
 
-  const parsed = addMemberSchema.safeParse({
+  const account = addMemberAccountSchema.safeParse({
     username: formData.get("username"),
     password: formData.get("password"),
-    displayName: formData.get("displayName"),
-    handle: formData.get("handle"),
   });
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Check the details." };
+  if (!account.success) {
+    return { error: account.error.issues[0]?.message ?? "Check the details." };
   }
-  const { username, password, displayName, handle } = parsed.data;
+  const { username, password } = account.data;
+
+  // The character is optional. If either field is filled, both must be valid;
+  // if both are blank, the player creates their character on first sign-in.
+  const rawName = String(formData.get("displayName") ?? "").trim();
+  const rawHandle = String(formData.get("handle") ?? "").trim().replace(/^@+/, "");
+  let character: { displayName: string; handle: string } | null = null;
+  if (rawName || rawHandle) {
+    const cp = addMemberCharacterSchema.safeParse({
+      displayName: rawName,
+      handle: rawHandle,
+    });
+    if (!cp.success) {
+      return { error: cp.error.issues[0]?.message ?? "Check the character." };
+    }
+    character = cp.data;
+  }
 
   // friendly pre-checks; the unique indexes remain the real guard against races
   const takenUser = await db
@@ -403,18 +420,20 @@ export async function addMemberAction(
     .limit(1);
   if (takenUser.length) return { error: "That username is already taken." };
 
-  const takenHandle = await db
-    .select({ id: personas.id })
-    .from(personas)
-    .where(
-      and(
-        eq(personas.campaignId, ctx.campaign.id),
-        eq(personas.handleLower, handle.toLowerCase()),
-      ),
-    )
-    .limit(1);
-  if (takenHandle.length)
-    return { error: "That character handle is taken in this campaign." };
+  if (character) {
+    const takenHandle = await db
+      .select({ id: personas.id })
+      .from(personas)
+      .where(
+        and(
+          eq(personas.campaignId, ctx.campaign.id),
+          eq(personas.handleLower, character.handle.toLowerCase()),
+        ),
+      )
+      .limit(1);
+    if (takenHandle.length)
+      return { error: "That character handle is taken in this campaign." };
+  }
 
   const passwordHash = await hashPassword(password);
   try {
@@ -430,26 +449,28 @@ export async function addMemberAction(
       await tx
         .insert(memberships)
         .values({ userId: u.id, campaignId: ctx.campaign.id, role: "player" });
-      const [p] = await tx
-        .insert(personas)
-        .values({
-          campaignId: ctx.campaign.id,
-          ownerUserId: u.id,
-          handle,
-          handleLower: handle.toLowerCase(),
-          displayName,
-          isNpc: false,
-        })
-        .returning({ id: personas.id });
-      await tx
-        .update(memberships)
-        .set({ actingPersonaId: p.id })
-        .where(
-          and(
-            eq(memberships.userId, u.id),
-            eq(memberships.campaignId, ctx.campaign.id),
-          ),
-        );
+      if (character) {
+        const [p] = await tx
+          .insert(personas)
+          .values({
+            campaignId: ctx.campaign.id,
+            ownerUserId: u.id,
+            handle: character.handle,
+            handleLower: character.handle.toLowerCase(),
+            displayName: character.displayName,
+            isNpc: false,
+          })
+          .returning({ id: personas.id });
+        await tx
+          .update(memberships)
+          .set({ actingPersonaId: p.id })
+          .where(
+            and(
+              eq(memberships.userId, u.id),
+              eq(memberships.campaignId, ctx.campaign.id),
+            ),
+          );
+      }
     });
   } catch (e) {
     if (isUniqueViolation(e)) {
