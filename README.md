@@ -156,6 +156,8 @@ it returns `201` with `{ id, status, persona, url }`. Bad or revoked keys get
 `401`; a persona the key can't post as gets `403`/`404`. Revoke a key any time
 from the same Settings panel.
 
+Full contract (for the calling app): [docs/integrations/skald-posting.md](docs/integrations/skald-posting.md).
+
 ## Useful scripts
 
 | Command | What it does |
