@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { AuthShell } from "@/components/AuthShell";
 import { CreateCampaignForm } from "@/components/forms/CreateCampaignForm";
+import { ImportCampaignForm } from "@/components/forms/ImportCampaignForm";
 
 export default async function NewCampaignPage() {
   const user = await getCurrentUser();
@@ -14,6 +15,14 @@ export default async function NewCampaignPage() {
       wide
     >
       <CreateCampaignForm />
+
+      <div className="my-6 flex items-center gap-3 text-xs uppercase tracking-wide text-muted">
+        <span className="h-px flex-1 bg-border" />
+        or restore a backup
+        <span className="h-px flex-1 bg-border" />
+      </div>
+
+      <ImportCampaignForm />
     </AuthShell>
   );
 }

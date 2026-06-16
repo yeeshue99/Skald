@@ -199,6 +199,14 @@ neutral default. Migrated from the old TODO; all ten dimensions shipped.
   and polls, with row ids preserved so the in-export relationships stay
   consistent for a future import. Password hashes, sessions, and notifications
   are excluded.
+- Campaign import: the other half of export. From the new-campaign page ("or
+  restore a backup"), a signed-in user uploads an export JSON and gets a fresh
+  campaign they DM. The import runs in one transaction, remapping every row id
+  onto new ones so replies, reposts, pins, follows, likes, bookmarks, and poll
+  votes are rebuilt against the new ids; it takes a fresh slug and invite code,
+  and every imported persona becomes one of the importer's NPCs (one owner can
+  hold a single player character, so PCs can't be restored as PCs). The source's
+  members and credentials aren't restored.
 - Schema migrations regenerated. Everything that had been applied to dev by hand
   (post `editedAt`; persona `avatarFrame`, `bannerUrl`, `pinnedPostId`; and the
   `bookmarks`, `polls`, and `poll_votes` tables) now has a Drizzle migration

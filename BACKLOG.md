@@ -13,12 +13,6 @@ how grounded each item is: concrete gaps first, then ideas.
       feed `visibleCondition` + keyset `encodeCursor`/`decodeCursor`, `getThread`
       self-thread chaining, `notify` self/dedup skips, and the compose / persona
       Zod schemas.
-- [ ] Import side of campaign export. The DM can download a campaign
-      (`/c/<slug>/settings/export`) but there's no importer, so "move between
-      deployments" is only half-built. Add a DM-only import that recreates a
-      campaign from the JSON, remapping row ids in dependency order (personas,
-      then posts with their reply / repost / poll refs, then follows / likes /
-      bookmarks, then polls and votes), guarded against double-import.
 - [ ] No rate limiting on write paths. Nothing throttles requests anywhere. The
       campaign API (`POST /api/c/<slug>/posts`, bearer key), login, and register
       are all unbounded, so a leaked key or credential stuffing has no brake. Add
