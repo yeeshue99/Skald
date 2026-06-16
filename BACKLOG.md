@@ -5,11 +5,6 @@ how grounded each item is: concrete gaps first, then ideas.
 
 ## Concrete gaps
 
-- [ ] Post images have no alt text. Every `<img>` renders `alt=""` (PostCard, the
-      composer preview, the quote embed, the queue, the profile header), fine for
-      decorative avatars but not for post images, which carry content a screen
-      reader then can't describe. Let the author add alt text in the composer
-      (and map a seeded post's `imageHint` to it).
 - [ ] Mark migrations applied on the existing dev DB. The schema is fully
       captured by migrations (`0000`-`0003`), so a from-scratch `db:migrate`
       reproduces it, but the current dev DB got the `0002` / `0003` columns and
