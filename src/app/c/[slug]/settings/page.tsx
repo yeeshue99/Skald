@@ -27,6 +27,7 @@ export default async function SettingsPage({
       displayName: personas.displayName,
       bio: personas.bio,
       avatarUrl: personas.avatarUrl,
+      avatarFrame: personas.avatarFrame,
     })
     .from(personas)
     .where(

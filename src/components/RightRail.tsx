@@ -70,7 +70,12 @@ export async function RightRail({ ctx }: { ctx: CampaignContext }) {
             {suggestions.map((p) => (
               <li key={p.id} className="flex items-center gap-2">
                 <Link href={`/c/${campaign.slug}/u/${p.handle.toLowerCase()}`}>
-                  <Avatar name={p.displayName} avatarUrl={p.avatarUrl} size={40} />
+                  <Avatar
+                    name={p.displayName}
+                    avatarUrl={p.avatarUrl}
+                    size={40}
+                    frame={p.avatarFrame}
+                  />
                 </Link>
                 <Link
                   href={`/c/${campaign.slug}/u/${p.handle.toLowerCase()}`}

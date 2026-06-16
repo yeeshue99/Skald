@@ -11,6 +11,7 @@ import { Avatar } from "./Avatar";
 import { EditPersonaButton } from "./EditPersonaButton";
 import { Button, ErrorText, Field, TextInput, Textarea } from "./ui";
 import { SubmitButton } from "./SubmitButton";
+import type { PersonaAvatarFrame } from "@/lib/theme-types";
 
 type Npc = {
   id: number;
@@ -18,6 +19,7 @@ type Npc = {
   displayName: string;
   bio: string | null;
   avatarUrl: string | null;
+  avatarFrame: PersonaAvatarFrame;
 };
 
 export function NpcManager({ slug, npcs }: { slug: string; npcs: Npc[] }) {
@@ -96,7 +98,12 @@ function NpcRow({ slug, npc }: { slug: string; npc: Npc }) {
   const [pending, start] = useTransition();
   return (
     <li className="flex items-center gap-3 py-3">
-      <Avatar name={npc.displayName} avatarUrl={npc.avatarUrl} size={36} />
+      <Avatar
+        name={npc.displayName}
+        avatarUrl={npc.avatarUrl}
+        size={36}
+        frame={npc.avatarFrame}
+      />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-text">
           {npc.displayName} <span className="text-muted">@{npc.handle}</span>

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PERSONA_AVATAR_FRAMES } from "./theme-types";
 
 export const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
 export const HANDLE_RE = /^[a-zA-Z0-9_]{2,24}$/;
@@ -74,6 +75,7 @@ export const personaSchema = z.object({
   displayName,
   bio: z.string().trim().max(MAX_BIO_LENGTH).optional().default(""),
   avatarUrl: optionalUrl,
+  avatarFrame: z.enum(PERSONA_AVATAR_FRAMES).optional().default("default"),
 });
 
 export const profileSchema = z.object({

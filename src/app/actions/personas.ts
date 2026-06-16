@@ -22,11 +22,12 @@ export async function createPersonaAction(
     displayName: formData.get("displayName"),
     bio: formData.get("bio"),
     avatarUrl: formData.get("avatarUrl"),
+    avatarFrame: formData.get("avatarFrame"),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Check the details." };
   }
-  const { handle, displayName, bio, avatarUrl } = parsed.data;
+  const { handle, displayName, bio, avatarUrl, avatarFrame } = parsed.data;
 
   try {
     await db.insert(personas).values({
@@ -37,6 +38,7 @@ export async function createPersonaAction(
       displayName,
       bio: bio || null,
       avatarUrl: avatarUrl || null,
+      avatarFrame,
       isNpc: true,
     });
   } catch (e) {
@@ -67,11 +69,12 @@ export async function updatePersonaAction(
     displayName: formData.get("displayName"),
     bio: formData.get("bio"),
     avatarUrl: formData.get("avatarUrl"),
+    avatarFrame: formData.get("avatarFrame"),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Check the details." };
   }
-  const { handle, displayName, bio, avatarUrl } = parsed.data;
+  const { handle, displayName, bio, avatarUrl, avatarFrame } = parsed.data;
 
   try {
     await db
@@ -82,6 +85,7 @@ export async function updatePersonaAction(
         displayName,
         bio: bio || null,
         avatarUrl: avatarUrl || null,
+        avatarFrame,
       })
       .where(
         and(eq(personas.id, personaId), eq(personas.campaignId, ctx.campaign.id)),

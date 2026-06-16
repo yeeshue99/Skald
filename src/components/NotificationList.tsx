@@ -81,6 +81,7 @@ export function NotificationList({
                     name={n.actor.displayName}
                     avatarUrl={n.actor.avatarUrl}
                     size={28}
+                    frame={n.actor.avatarFrame}
                   />
                   <p className="min-w-0 text-sm text-text">
                     <span className="font-semibold">{n.actor.displayName}</span>{" "}

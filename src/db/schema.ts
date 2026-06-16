@@ -14,6 +14,7 @@ import {
   check,
 } from "drizzle-orm/pg-core";
 import type { Theme } from "../lib/theme-types";
+import { PERSONA_AVATAR_FRAMES } from "../lib/theme-types";
 
 // All instants are timestamptz so scheduling and feed ordering are timezone-safe.
 const tstz = (name: string) =>
@@ -108,6 +109,11 @@ export const personas = pgTable(
     avatarUrl: text("avatar_url"),
     bio: text("bio"),
     isNpc: boolean("is_npc").notNull().default(false),
+    // the persona's chosen avatar frame; "default" inherits the campaign theme's
+    // frame, any other value overrides it for this persona's avatar.
+    avatarFrame: text("avatar_frame", { enum: PERSONA_AVATAR_FRAMES })
+      .notNull()
+      .default("default"),
     // a published post this persona pins to the top of its profile (nullable;
     // plain column, visibility re-checked on read since posts are soft-deleted)
     pinnedPostId: integer("pinned_post_id"),

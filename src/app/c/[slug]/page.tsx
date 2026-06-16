@@ -30,6 +30,7 @@ export default async function HomeFeedPage({
     displayName: p.displayName,
     avatarUrl: p.avatarUrl,
     isNpc: p.isNpc,
+    avatarFrame: p.avatarFrame,
   }));
 
   return (

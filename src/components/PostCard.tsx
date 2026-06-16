@@ -126,7 +126,12 @@ export function PostCard({
 
       <div className="flex gap-3">
         <Link href={profileHref} className="pt-0.5">
-          <Avatar name={author.displayName} avatarUrl={author.avatarUrl} size={44} />
+          <Avatar
+            name={author.displayName}
+            avatarUrl={author.avatarUrl}
+            size={44}
+            frame={author.avatarFrame}
+          />
         </Link>
 
         <div className="min-w-0 flex-1">
@@ -202,6 +207,7 @@ export function PostCard({
                   name={data.repostOf.author.displayName}
                   avatarUrl={data.repostOf.author.avatarUrl}
                   size={20}
+                  frame={data.repostOf.author.avatarFrame}
                 />
                 <span className="font-semibold text-text">
                   {data.repostOf.author.displayName}

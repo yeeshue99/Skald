@@ -92,6 +92,21 @@ export type AmbientEffect =
   | "pollen"
   | "leaves";
 
+/** Per-persona avatar frame. "default" inherits the campaign theme's avatar
+ *  frame (the DM's pick); every other value overrides it for that one persona's
+ *  avatar wherever it appears. The named frames mirror the campaign-level
+ *  Decorations["avatarFrame"] set so the same ring CSS can be reused. */
+export const PERSONA_AVATAR_FRAMES = [
+  "default",
+  "none",
+  "manaHalo",
+  "medallion",
+  "hudBracket",
+  "wreath",
+  "blossom",
+] as const;
+export type PersonaAvatarFrame = (typeof PERSONA_AVATAR_FRAMES)[number];
+
 export const AMBIENT_EFFECTS: AmbientEffect[] = [
   "embers",
   "motes",

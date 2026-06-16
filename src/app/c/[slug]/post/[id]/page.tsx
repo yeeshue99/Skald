@@ -24,6 +24,7 @@ export default async function ThreadPage({
     displayName: p.displayName,
     avatarUrl: p.avatarUrl,
     isNpc: p.isNpc,
+    avatarFrame: p.avatarFrame,
   }));
   const myPersonaIds = personas.map((p) => p.id);
   const isDm = ctx.role === "dm";

@@ -957,6 +957,53 @@ body {
   opacity: 0;
 }
 
+/* ---- Per-persona avatar frame override (data-frame) -------------------
+   A persona may pick their own avatar frame; the Avatar publishes it as
+   data-frame on the .avatar-frame wrapper. These rules sit AFTER every campaign
+   data-avatar-frame rule above, so at equal specificity source order wins: a
+   framed avatar shows its own resting ring instead of the campaign default.
+   The ::after reset drops any campaign frame's pseudo-element layers (pulse,
+   corner brackets, gleam) from these avatars so two frames never stack — the
+   resting ring alone reads each frame. Rings mirror the campaign values so the
+   same frame looks identical whether it's the campaign pick or a persona's. */
+[data-campaign] .avatar-frame[data-frame]::after {
+  content: none;
+}
+[data-campaign] .avatar-frame[data-frame="none"] {
+  box-shadow: none;
+}
+[data-campaign] .avatar-frame[data-frame="manaHalo"] {
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--accent) 85%, transparent),
+    0 0 14px 1px color-mix(in srgb, var(--accent) 60%, transparent),
+    0 0 22px 2px color-mix(in srgb, var(--primary) 35%, transparent);
+}
+[data-campaign] .avatar-frame[data-frame="medallion"] {
+  box-shadow:
+    0 0 0 2px #c8a33a,
+    0 0 0 4px #6e551f,
+    0 0 0 5px color-mix(in srgb, #2b2118 55%, transparent),
+    0 1px 3px color-mix(in srgb, #2b2118 35%, transparent);
+}
+[data-campaign] .avatar-frame[data-frame="hudBracket"] {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--primary) 70%, transparent),
+    0 0 8px -1px color-mix(in srgb, var(--primary) 55%, transparent);
+}
+[data-campaign] .avatar-frame[data-frame="wreath"] {
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--repost) 80%, #2b3a1e),
+    0 0 0 4px #6e551f,
+    0 0 0 5px color-mix(in srgb, #2b2118 45%, transparent),
+    0 1px 3px color-mix(in srgb, #2b2118 30%, transparent);
+}
+[data-campaign] .avatar-frame[data-frame="blossom"] {
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--accent) 80%, transparent),
+    0 0 10px 1px color-mix(in srgb, var(--accent) 45%, transparent),
+    0 0 16px 2px color-mix(in srgb, var(--primary) 28%, transparent);
+}
+
 /* depth: verdant (green ambient) + rose (pink bloom). Explicit hexes so the
    name matches the hue on every palette (kept in sync with the DEPTH_SHADOW /
    DEPTH_GLOW maps in themeToCssVars; the inline vars win for rendering). */

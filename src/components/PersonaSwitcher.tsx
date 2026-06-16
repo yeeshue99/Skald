@@ -45,7 +45,12 @@ export function PersonaSwitcher({
           !single && "hover:bg-surface-hover",
         )}
       >
-        <Avatar name={current.displayName} avatarUrl={current.avatarUrl} size={36} />
+        <Avatar
+          name={current.displayName}
+          avatarUrl={current.avatarUrl}
+          size={36}
+          frame={current.avatarFrame}
+        />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-semibold text-text">
             {current.displayName}
@@ -71,7 +76,12 @@ export function PersonaSwitcher({
               onClick={() => choose(p.id)}
               className="flex w-full items-center gap-2 rounded-[calc(var(--app-radius)/1.5)] px-2 py-1.5 text-left hover:bg-surface-hover"
             >
-              <Avatar name={p.displayName} avatarUrl={p.avatarUrl} size={28} />
+              <Avatar
+                name={p.displayName}
+                avatarUrl={p.avatarUrl}
+                size={28}
+                frame={p.avatarFrame}
+              />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium text-text">
                   {p.displayName}

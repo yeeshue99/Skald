@@ -70,6 +70,7 @@ export default async function ProfilePage({
               avatarUrl={persona.avatarUrl}
               size={88}
               className="border-4 border-bg"
+              frame={persona.avatarFrame}
             />
             <div className="mb-1 flex items-center gap-2">
               {canEdit ? (
@@ -82,6 +83,7 @@ export default async function ProfilePage({
                       displayName: persona.displayName,
                       bio: persona.bio,
                       avatarUrl: persona.avatarUrl,
+                      avatarFrame: persona.avatarFrame,
                     }}
                     label={isSelf ? "Edit profile" : "Edit"}
                   />

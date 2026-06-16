@@ -17,6 +17,7 @@ export default async function ComposePage({
     displayName: p.displayName,
     avatarUrl: p.avatarUrl,
     isNpc: p.isNpc,
+    avatarFrame: p.avatarFrame,
   }));
 
   return (

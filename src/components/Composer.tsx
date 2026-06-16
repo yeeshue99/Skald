@@ -127,7 +127,12 @@ export function Composer({
       ) : null}
 
       <div className="pt-1">
-        <Avatar name={author.displayName} avatarUrl={author.avatarUrl} size={44} />
+        <Avatar
+          name={author.displayName}
+          avatarUrl={author.avatarUrl}
+          size={44}
+          frame={author.avatarFrame}
+        />
       </div>
 
       <div className="min-w-0 flex-1">
@@ -157,7 +162,12 @@ export function Composer({
                       p.id === authorId && "bg-surface-hover",
                     )}
                   >
-                    <Avatar name={p.displayName} avatarUrl={p.avatarUrl} size={28} />
+                    <Avatar
+                      name={p.displayName}
+                      avatarUrl={p.avatarUrl}
+                      size={28}
+                      frame={p.avatarFrame}
+                    />
                     <span className="min-w-0">
                       <span className="block truncate font-medium text-text">
                         {p.displayName}

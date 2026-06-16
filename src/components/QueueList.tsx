@@ -42,6 +42,7 @@ function QueueItem({ slug, post }: { slug: string; post: PostView }) {
           name={post.author.displayName}
           avatarUrl={post.author.avatarUrl}
           size={28}
+          frame={post.author.avatarFrame}
         />
         <span className="font-semibold text-text">
           {post.author.displayName}

@@ -91,6 +91,7 @@ export default async function CampaignLayout({
     displayName: p.displayName,
     avatarUrl: p.avatarUrl,
     isNpc: p.isNpc,
+    avatarFrame: p.avatarFrame,
   }));
 
   const unread = await getUnreadNotificationCount(

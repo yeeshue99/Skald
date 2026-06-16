@@ -32,6 +32,7 @@ import {
   type PostStatus,
 } from "@/db/schema";
 import { notify, notifyMentions } from "@/lib/notify";
+import type { PersonaAvatarFrame } from "@/lib/theme-types";
 
 export const PAGE_SIZE = 25;
 
@@ -41,6 +42,8 @@ export type PersonaSummary = {
   displayName: string;
   avatarUrl: string | null;
   isNpc: boolean;
+  /** the persona's chosen avatar frame ("default" = inherit campaign theme) */
+  avatarFrame: PersonaAvatarFrame;
 };
 
 export type PostView = {
@@ -91,6 +94,7 @@ const personaCols = {
   displayName: personas.displayName,
   avatarUrl: personas.avatarUrl,
   isNpc: personas.isNpc,
+  avatarFrame: personas.avatarFrame,
 };
 
 // A post is visible once it is published (publishedAt <= now), using the DB
@@ -287,6 +291,7 @@ async function hydrate(
           displayName: "Unknown",
           avatarUrl: null,
           isNpc: false,
+          avatarFrame: "default",
         },
       replyToPostId: r.replyToPostId,
       likeCount: c.like,
@@ -1122,6 +1127,7 @@ export async function getNotifications(
     displayName: "Someone",
     avatarUrl: null,
     isNpc: false,
+    avatarFrame: "default",
   };
   return rows.map((r) => ({
     id: r.id,
