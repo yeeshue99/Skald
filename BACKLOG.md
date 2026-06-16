@@ -1,42 +1,32 @@
 # Backlog
 
 Future work for Skald. Shipped items live in CHANGELOG.md. Roughly ordered by
-how grounded each item is: in-progress first, then concrete gaps, then ideas.
-
-## In progress
-
-Being built in parallel; tracked here so the backlog reflects reality. These
-move to CHANGELOG.md once they ship.
-
-- [ ] Notifications: likes, replies, follows, and @mentions for your personas,
-      with an unread badge in the nav.
-- [ ] Search and trending: search posts and people, plus a trending-topics rail.
-- [ ] Post editing (with an "edited" marker) and a proper delete-with-undo.
-- [ ] Pinned post on a profile.
+how grounded each item is: concrete gaps first, then ideas.
 
 ## Concrete gaps
 
-- [ ] Real image uploads. Posts and avatars still use generated / placeholder
-      images (DiceBear + picsum from `imageHint`s). Wire the attach-image button
-      and an avatar picker to Vercel Blob (the store already exists) so people
-      upload their own. Onboarding and Edit-profile should let a player set an
-      avatar.
-- [ ] Mobile navigation. The right rail and parts of the nav are xl-only
-      (>=1280px). Add a bottom tab bar (or a drawer) so Home, Search, Bookmarks,
-      Notifications, and Profile are reachable on a phone.
-- [ ] Threads. Compose and read a multi-post thread as one unit, not just single
-      replies.
-- [ ] Profile banner. The header is a gradient placeholder; let a persona set a
-      banner image (pairs with image uploads).
-- [ ] DM moderation. Let the DM delete or hide any persona's post in their
-      campaign, not just their own.
-- [ ] Accessibility pass. Audit keyboard navigation, focus-visible styling, ARIA
-      on the icon-only buttons, and color contrast across the theme presets.
+- [ ] Avatar uploads. Post images already upload to Vercel Blob (the
+      `/api/upload` route + the composer file picker, with a pasted-URL
+      fallback), but persona avatars are still a pasted URL only (Edit profile)
+      or auto-generated (onboarding). Reuse `/api/upload` to add a file picker to
+      the persona and onboarding forms.
+- [ ] Profile banner. The profile header is a gradient placeholder; let a persona
+      set a banner image (pairs with avatar uploads).
+- [ ] Compose multi-post threads. Reading a conversation works (`getThread`
+      renders ancestors, root, and replies), but you can't author a self-thread
+      (a chain of your own posts) as one unit.
+- [ ] Bookmarks on mobile. The bottom tab bar is Home / Explore / Queue /
+      Profile; Bookmarks is reachable only from the desktop side nav. Add it to
+      the mobile top bar or an overflow.
+- [ ] Accessibility pass. The side-nav labels are `display:none` below `lg`, so
+      audit icon-only controls for aria-labels, focus-visible styling, and color
+      contrast across the theme presets.
 
 ## Optional / nice-to-have
 
-- [ ] Real text-to-image (needs an API key) so avatars and post images match
-      their `imageHint`s, instead of generated avatars + stand-in placeholders.
+- [ ] Real text-to-image (needs an API key) so seeded avatars and post images
+      match their `imageHint`s, instead of generated avatars + stand-in
+      placeholders.
 
 ## Ideas (unscoped)
 
@@ -47,6 +37,6 @@ move to CHANGELOG.md once they ship.
 - [ ] Mute / block a persona from your own feed.
 - [ ] In-world flavor: a per-campaign "lore" / rules page the DM pins, and
       optional in-character "language" tags on posts (Common, Elvish, ...).
-- [ ] DM session tooling: queue NPC posts to drop live during a session
-      (builds on scheduled posts), plus an auto-generated session-recap post.
+- [ ] DM session tooling: an auto-generated session-recap post (scheduled posts
+      and a publish queue already exist to build on).
 - [ ] Export a campaign's feed (JSON) for backup or moving between deployments.
