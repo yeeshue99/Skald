@@ -136,6 +136,7 @@ export function FeedList({
               slug={slug}
               myPersonaIds={myPersonaIds}
               isDm={isDm}
+              showFollow={type !== "profile"}
             />
           ))}
           {cursor ? (

@@ -10,11 +10,14 @@ export function FollowButton({
   targetPersonaId,
   initialFollowing,
   size = "sm",
+  compact = false,
 }: {
   slug: string;
   targetPersonaId: number;
   initialFollowing: boolean;
   size?: "sm" | "md";
+  /** drop the fixed min-width for tight, inline placements (e.g. feed posts) */
+  compact?: boolean;
 }) {
   const [following, setFollowing] = useState(initialFollowing);
   const [hovering, setHovering] = useState(false);
@@ -40,9 +43,11 @@ export function FollowButton({
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
       className={cn(
-        following
-          ? buttonClasses("secondary", size, "min-w-[6rem]")
-          : buttonClasses("primary", size, "min-w-[6rem]"),
+        buttonClasses(
+          following ? "secondary" : "primary",
+          size,
+          compact ? "min-w-0" : "min-w-24",
+        ),
         following && hovering && "border-like/50 text-like",
       )}
     >

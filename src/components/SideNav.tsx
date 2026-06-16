@@ -8,6 +8,7 @@ import {
   Home,
   LogOut,
   PenSquare,
+  Search,
   Settings,
   User,
 } from "lucide-react";
@@ -44,6 +45,7 @@ export function SideNav({
   const items: Item[] = [
     { href: base, label: "Home", icon: Home, exact: true },
     { href: `${base}/explore`, label: "Explore", icon: Compass },
+    { href: `${base}/search`, label: "Search", icon: Search },
     { href: `${base}/queue`, label: "Queue", icon: CalendarClock },
     { href: `${base}/u/${myHandle.toLowerCase()}`, label: "Profile", icon: User },
     ...(isDm

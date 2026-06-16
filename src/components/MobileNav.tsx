@@ -7,6 +7,7 @@ import {
   Compass,
   Home,
   Plus,
+  Search,
   User,
 } from "lucide-react";
 import type { ComponentType } from "react";
@@ -49,12 +50,21 @@ export function MobileNav({
         <Link href={base}>
           <Wordmark name={appName} className="text-xl text-primary" />
         </Link>
-        <div className="w-44">
-          <PersonaSwitcher
-            slug={slug}
-            personas={personas}
-            actingPersonaId={actingPersonaId}
-          />
+        <div className="flex items-center gap-1">
+          <Link
+            href={`${base}/search`}
+            aria-label="Search"
+            className="fx-btn rounded-full p-2 text-text hover:bg-surface-hover"
+          >
+            <Search className="size-5" />
+          </Link>
+          <div className="w-44">
+            <PersonaSwitcher
+              slug={slug}
+              personas={personas}
+              actingPersonaId={actingPersonaId}
+            />
+          </div>
         </div>
       </header>
 

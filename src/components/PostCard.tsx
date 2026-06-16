@@ -10,10 +10,12 @@ import { cn } from "@/lib/cn";
 import { Avatar } from "./Avatar";
 import { PostActions } from "./PostActions";
 import { PostMenu } from "./PostMenu";
+import { FollowButton } from "./FollowButton";
 
 function renderRichText(text: string, slug: string): ReactNode[] {
   const nodes: ReactNode[] = [];
-  const re = /(@[a-zA-Z0-9_]{2,24})|(https?:\/\/[^\s]+)/g;
+  // @mention -> profile, #hashtag -> search, bare URL -> external link
+  const re = /(@[a-zA-Z0-9_]{2,24})|(#[a-zA-Z0-9_]+)|(https?:\/\/[^\s]+)/g;
   let last = 0;
   let key = 0;
   let m: RegExpExecArray | null;
@@ -32,14 +34,24 @@ function renderRichText(text: string, slug: string): ReactNode[] {
       );
     } else if (m[2]) {
       nodes.push(
+        <Link
+          key={key++}
+          href={`/c/${slug}/search?q=${encodeURIComponent(m[2])}`}
+          className="text-link hover:underline"
+        >
+          {m[2]}
+        </Link>,
+      );
+    } else if (m[3]) {
+      nodes.push(
         <a
           key={key++}
-          href={m[2]}
+          href={m[3]}
           target="_blank"
           rel="noreferrer"
           className="text-link hover:underline"
         >
-          {m[2]}
+          {m[3]}
         </a>,
       );
     }
@@ -55,18 +67,24 @@ export function PostCard({
   myPersonaIds,
   isDm,
   highlight = false,
+  showFollow = false,
 }: {
   post: PostView;
   slug: string;
   myPersonaIds: number[];
   isDm: boolean;
   highlight?: boolean;
+  /** show an inline Follow button for authors you don't already follow */
+  showFollow?: boolean;
 }) {
   const isBoost = post.isBoost && post.repostOf != null;
   const data = isBoost ? post.repostOf! : post;
   const boostedBy = isBoost ? post.author : null;
   const author = data.author;
   const canManage = isDm || myPersonaIds.includes(author.id);
+  // inline follow: only for other people's authors you don't already follow
+  const canFollow =
+    showFollow && !myPersonaIds.includes(author.id) && !data.authorFollowedByMe;
   // dates may arrive as strings when revived from a server action; normalize
   const when = new Date(data.publishedAt ?? data.createdAt);
   const profileHref = `/c/${slug}/u/${author.handle.toLowerCase()}`;
@@ -132,7 +150,15 @@ export function PostCard({
             >
               {relativeTime(new Date(when))}
             </Link>
-            <div className="ml-auto">
+            <div className="ml-auto flex items-center gap-1">
+              {canFollow ? (
+                <FollowButton
+                  slug={slug}
+                  targetPersonaId={author.id}
+                  initialFollowing={false}
+                  compact
+                />
+              ) : null}
               {canManage ? <PostMenu slug={slug} postId={data.id} /> : null}
             </div>
           </div>
