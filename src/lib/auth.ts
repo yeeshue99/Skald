@@ -48,6 +48,13 @@ export async function destroySession(): Promise<void> {
   }
 }
 
+/** Delete every session for a user (used to sign them out everywhere after a
+ *  password change or a DM-initiated reset). Doesn't touch cookies; the caller
+ *  re-establishes its own session if it wants to stay signed in. */
+export async function revokeUserSessions(userId: number): Promise<void> {
+  await db.delete(sessions).where(eq(sessions.userId, userId));
+}
+
 /** Current signed-in user, or null. Memoized per request. */
 export const getCurrentUser = cache(async (): Promise<PublicUser | null> => {
   const jar = await cookies();

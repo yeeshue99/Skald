@@ -6,7 +6,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { campaigns, memberships, personas, users } from "@/db/schema";
-import { getCurrentUser, hashPassword } from "@/lib/auth";
+import { getCurrentUser, hashPassword, revokeUserSessions } from "@/lib/auth";
 import { loadActionContext } from "@/lib/campaign";
 import {
   createCampaignSchema,
@@ -460,6 +460,43 @@ export async function addMemberAction(
 
   revalidatePath(`/c/${slug}/settings`);
   return { ok: true };
+}
+
+// DM resets a member's login password (e.g. when they forget the temporary one).
+// Forces that member to sign in again with the new password.
+export async function resetMemberPasswordAction(
+  slug: string,
+  targetUserId: number,
+  newPassword: string,
+): Promise<void> {
+  const ctx = await loadActionContext(slug);
+  if (ctx.role !== "dm") throw new Error("Only the DM can reset passwords.");
+  if (targetUserId === ctx.user.id)
+    throw new Error("Use Change password for your own account.");
+
+  const member = (
+    await db
+      .select({ id: memberships.id })
+      .from(memberships)
+      .where(
+        and(
+          eq(memberships.campaignId, ctx.campaign.id),
+          eq(memberships.userId, targetUserId),
+        ),
+      )
+      .limit(1)
+  )[0];
+  if (!member) throw new Error("That user isn't a member of this campaign.");
+
+  if (typeof newPassword !== "string" || newPassword.length < 8)
+    throw new Error("Password must be at least 8 characters.");
+
+  const passwordHash = await hashPassword(newPassword);
+  await db
+    .update(users)
+    .set({ passwordHash })
+    .where(eq(users.id, targetUserId));
+  await revokeUserSessions(targetUserId);
 }
 
 export async function setMemberRoleAction(

@@ -27,6 +27,9 @@ export default async function LoginPage({
       }
     >
       <LoginForm next={next} />
+      <p className="mt-4 text-center text-xs text-muted">
+        Forgot your password? Ask your campaign&apos;s DM to reset it for you.
+      </p>
     </AuthShell>
   );
 }

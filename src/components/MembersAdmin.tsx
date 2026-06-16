@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import {
   removeMemberAction,
+  resetMemberPasswordAction,
   setMemberRoleAction,
 } from "@/app/actions/campaigns";
 import type { MemberRow } from "@/lib/queries";
@@ -21,6 +22,25 @@ export function MembersAdmin({
   meUserId: number;
 }) {
   const [pending, start] = useTransition();
+
+  function resetPassword(userId: number, username: string) {
+    const pw = window.prompt(
+      `New temporary password for @${username} (at least 8 characters). Share it with them; it signs them out everywhere and they'll use it next sign-in.`,
+    );
+    if (pw == null) return;
+    if (pw.length < 8) {
+      window.alert("Password must be at least 8 characters.");
+      return;
+    }
+    start(async () => {
+      try {
+        await resetMemberPasswordAction(slug, userId, pw);
+        window.alert(`Password reset for @${username}. Share the new one with them.`);
+      } catch (e) {
+        window.alert(e instanceof Error ? e.message : "Couldn't reset the password.");
+      }
+    });
+  }
 
   return (
     <ul className="divide-y divide-border">
@@ -47,46 +67,58 @@ export function MembersAdmin({
               </p>
             </div>
 
-            {!isMe && !isCreator ? (
-              <div className="flex shrink-0 gap-2">
+            {isMe ? (
+              <span className="shrink-0 text-xs text-muted">you</span>
+            ) : (
+              <div className="flex shrink-0 flex-wrap justify-end gap-2">
                 <Button
                   size="sm"
                   variant="secondary"
                   disabled={pending}
-                  onClick={() =>
-                    start(async () => {
-                      await setMemberRoleAction(
-                        slug,
-                        m.userId,
-                        m.role === "dm" ? "player" : "dm",
-                      );
-                    })
-                  }
+                  onClick={() => resetPassword(m.userId, m.username)}
                 >
-                  {m.role === "dm" ? "Make player" : "Make DM"}
+                  Reset password
                 </Button>
-                <Button
-                  size="sm"
-                  variant="danger"
-                  disabled={pending}
-                  onClick={() => {
-                    if (
-                      window.confirm(
-                        `Remove ${m.username}? Their personas and posts will be deleted.`,
-                      )
-                    )
-                      start(async () => {
-                        await removeMemberAction(slug, m.userId);
-                      });
-                  }}
-                >
-                  Remove
-                </Button>
+                {isCreator ? (
+                  <span className="self-center text-xs text-muted">creator</span>
+                ) : (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={pending}
+                      onClick={() =>
+                        start(async () => {
+                          await setMemberRoleAction(
+                            slug,
+                            m.userId,
+                            m.role === "dm" ? "player" : "dm",
+                          );
+                        })
+                      }
+                    >
+                      {m.role === "dm" ? "Make player" : "Make DM"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      disabled={pending}
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            `Remove ${m.username}? Their personas and posts will be deleted.`,
+                          )
+                        )
+                          start(async () => {
+                            await removeMemberAction(slug, m.userId);
+                          });
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  </>
+                )}
               </div>
-            ) : (
-              <span className="shrink-0 text-xs text-muted">
-                {isMe ? "you" : "creator"}
-              </span>
             )}
           </li>
         );

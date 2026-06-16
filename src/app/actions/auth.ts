@@ -10,6 +10,7 @@ import {
   destroySession,
   getCurrentUser,
   hashPassword,
+  revokeUserSessions,
   verifyPassword,
 } from "@/lib/auth";
 import {
@@ -208,6 +209,11 @@ export async function changePasswordAction(
 
   const passwordHash = await hashPassword(newPassword);
   await db.update(users).set({ passwordHash }).where(eq(users.id, me.id));
+
+  // Sign out everywhere, then re-establish this device's session so the user
+  // who just changed their password stays logged in here but not elsewhere.
+  await revokeUserSessions(me.id);
+  await createSession(me.id);
   return { ok: true };
 }
 
