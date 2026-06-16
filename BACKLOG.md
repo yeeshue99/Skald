@@ -5,13 +5,6 @@ how grounded each item is: concrete gaps first, then ideas.
 
 ## Concrete gaps
 
-- [ ] Integration tests against a throwaway Postgres. The unit suite (32 tests)
-      covers pure logic; the DB-bound paths still ship verified by hand. Add
-      integration tests (feed `visibleCondition` + keyset pagination, `getThread`
-      ancestor / self-thread chaining, `notify` dedup via the partial unique
-      indexes, and the quote target / reply-XOR-repost guards in
-      `createPostAction`) that run against an ephemeral DB, and wire that DB into
-      CI.
 - [ ] Post images have no alt text. Every `<img>` renders `alt=""` (PostCard, the
       composer preview, the quote embed, the queue, the profile header), fine for
       decorative avatars but not for post images, which carry content a screen

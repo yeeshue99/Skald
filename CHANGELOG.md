@@ -223,11 +223,18 @@ neutral default. Migrated from the old TODO; all ten dimensions shipped.
   (`encodeCursor` / `decodeCursor`), the compose / persona / poll / auth /
   campaign Zod schemas and slug/handle normalizers, the blob-cleanup helpers
   (`blobPathname`, `pickOrphans`), and `notify`'s self-skip + dedup (db mocked).
-  DB-bound paths (`getThread`, feed `visibleCondition`) are left for integration
-  tests against a throwaway database.
+  DB-bound paths are covered by the integration suite below.
+- Integration tests against a real Postgres (`pnpm test:integration`, the
+  `*.itest.ts` files). They cover feed visibility + keyset pagination (including
+  tied timestamps), `getThread` ancestor / self-thread chaining and its edges,
+  `notify` dedup via the partial unique indexes, and the post CHECK constraints
+  (reply-XOR-repost, draft-has-no-publish-time, no self-reply). They run via the
+  node-postgres driver against `TEST_DATABASE_URL`, pushing the current schema
+  first; without that env var they skip, so the default `pnpm test` is unaffected.
 - CI: a GitHub Actions workflow (`.github/workflows/ci.yml`) runs `typecheck`,
-  `lint`, `test`, and `build` on every push and pull request. The app is fully
-  dynamic (cookie-based), so build needs no database (a dummy `DATABASE_URL`
+  `lint`, `test`, and `build` on every push and pull request, plus a separate
+  job that spins up a Postgres service and runs the integration suite. The app is
+  fully dynamic (cookie-based), so build needs no database (a dummy `DATABASE_URL`
   satisfies the lazy pool constructor).
 
 ### Fixes
