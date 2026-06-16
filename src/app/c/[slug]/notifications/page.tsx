@@ -27,7 +27,7 @@ export default async function NotificationsPage({
     <>
       <PageHeader
         title="Notifications"
-        subtitle="Likes, replies, follows, and mentions"
+        subtitle="Likes, replies, quotes, follows, and mentions"
       />
       <MarkNotificationsRead slug={slug} hasUnread={hasUnread} />
       <NotificationList

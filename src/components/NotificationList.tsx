@@ -2,7 +2,14 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { AtSign, Heart, Loader2, MessageCircle, UserPlus } from "lucide-react";
+import {
+  AtSign,
+  Heart,
+  Loader2,
+  MessageCircle,
+  Quote,
+  UserPlus,
+} from "lucide-react";
 import type { NotificationType } from "@/db/schema";
 import type { NotificationView } from "@/lib/queries";
 import { fetchNotificationsPageAction } from "@/app/actions/notifications";
@@ -16,6 +23,7 @@ const ICON = {
   reply: MessageCircle,
   follow: UserPlus,
   mention: AtSign,
+  quote: Quote,
 } as const;
 
 const TINT: Record<NotificationType, string> = {
@@ -23,6 +31,7 @@ const TINT: Record<NotificationType, string> = {
   reply: "text-link",
   follow: "text-repost",
   mention: "text-accent",
+  quote: "text-repost",
 };
 
 // "liked your post" — or "liked @npc's post" when you act as several personas.
@@ -42,6 +51,8 @@ function phrase(
       return `followed ${owner}`;
     case "mention":
       return `mentioned ${owner}`;
+    case "quote":
+      return `quoted ${ownerPost}`;
   }
 }
 
@@ -72,7 +83,8 @@ export function NotificationList({
   if (items.length === 0) {
     return (
       <p className="px-6 py-16 text-center text-muted">
-        No notifications yet. Likes, replies, follows, and mentions land here.
+        No notifications yet. Likes, replies, quotes, follows, and mentions land
+        here.
       </p>
     );
   }

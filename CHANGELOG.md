@@ -69,6 +69,10 @@ under Unreleased.
   removes the matching notification; self-notifications and duplicates are
   skipped (DB partial unique indexes back the dedup). Scheduled posts fire their
   reply and mention notifications when they go live, not when they're queued.
+- Quote notifications: quoting someone's post notifies the quoted author (a new
+  `quote` type), linking to the quote so they see who quoted them and what they
+  added. Self-quotes notify no one, and a quote that also @mentions the quoted
+  author pings them once, not twice.
 - Notifications paginate and don't grow without bound: the page keyset-paginates
   (created_at, id) with a "Load more" button like the feed, and each visit lazily
   prunes the persona's read notifications older than 30 days (unread and recent

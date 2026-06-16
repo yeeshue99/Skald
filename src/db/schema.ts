@@ -375,7 +375,7 @@ export const notifications = pgTable(
     recipientPersonaId: integer("recipient_persona_id").notNull(),
     actorPersonaId: integer("actor_persona_id").notNull(),
     type: text("type", {
-      enum: ["like", "reply", "follow", "mention"],
+      enum: ["like", "reply", "follow", "mention", "quote"],
     }).notNull(),
     postId: integer("post_id"),
     readAt: tstz("read_at"),

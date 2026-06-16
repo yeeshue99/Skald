@@ -174,14 +174,16 @@ export async function createPostAction(
     }
   }
 
-  // validate the quote target. A quote is a single post and is never also a
-  // reply (the DB enforces reply-XOR-repost) or a poll.
+  // validate the quote target (remember its author so we can notify them). A
+  // quote is a single post and is never also a reply (the DB enforces
+  // reply-XOR-repost) or a poll.
+  let quoteTarget: Visible | null = null;
   if (repostOfPostId != null) {
     if (replyToPostId != null)
       return { error: "A post can't be both a reply and a quote." };
     if (cleaned.length > 1) return { error: "A quote is a single post." };
     if (poll) return { error: "A quote can't carry a poll." };
-    const quoteTarget = await loadVisibleTarget(ctx, repostOfPostId);
+    quoteTarget = await loadVisibleTarget(ctx, repostOfPostId);
     if (!quoteTarget)
       return { error: "That post is no longer available to quote." };
   }
@@ -262,6 +264,7 @@ export async function createPostAction(
   // own posts (a self-reply, which notify() skips), so only their mentions ping.
   if (status === "published") {
     const replyRecipient = replyTarget?.personaId ?? null;
+    const quoteRecipient = quoteTarget?.personaId ?? null;
     for (let i = 0; i < created.length; i++) {
       if (i === 0 && replyToPostId != null && replyRecipient != null) {
         await notify({
@@ -272,12 +275,29 @@ export async function createPostAction(
           postId: created[i],
         });
       }
+      // a quote pings the quoted author; only the first (and only) post carries
+      // the ref, and notify() skips the self-quote case.
+      if (i === 0 && quoteRecipient != null) {
+        await notify({
+          campaignId: ctx.campaign.id,
+          recipientPersonaId: quoteRecipient,
+          actorPersonaId: authorId,
+          type: "quote",
+          postId: created[i],
+        });
+      }
       await notifyMentions({
         campaignId: ctx.campaign.id,
         actorPersonaId: authorId,
         postId: created[i],
         content: cleaned[i].content,
-        exclude: i === 0 && replyRecipient != null ? [replyRecipient] : [],
+        // don't double-notify anyone we already pinged for this post
+        exclude:
+          i === 0
+            ? [replyRecipient, quoteRecipient].filter(
+                (x): x is number => x != null,
+              )
+            : [],
       });
     }
   }
