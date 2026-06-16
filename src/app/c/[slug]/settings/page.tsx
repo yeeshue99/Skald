@@ -1,10 +1,11 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { personas } from "@/db/schema";
+import { campaignApiKeys, personas } from "@/db/schema";
 import { requireDmContext } from "@/lib/campaign";
 import { getCampaignMembers } from "@/lib/queries";
 import { ThemeEditorForm } from "@/components/forms/ThemeEditorForm";
 import { AddMemberForm } from "@/components/AddMemberForm";
+import { ApiKeysManager } from "@/components/ApiKeysManager";
 import { InviteManager } from "@/components/InviteManager";
 import { MembersAdmin } from "@/components/MembersAdmin";
 import { NpcManager } from "@/components/NpcManager";
@@ -36,6 +37,19 @@ export default async function SettingsPage({
       and(eq(personas.campaignId, ctx.campaign.id), eq(personas.isNpc, true)),
     )
     .orderBy(asc(personas.displayName));
+
+  const apiKeys = await db
+    .select({
+      id: campaignApiKeys.id,
+      label: campaignApiKeys.label,
+      prefix: campaignApiKeys.prefix,
+      createdAt: campaignApiKeys.createdAt,
+      lastUsedAt: campaignApiKeys.lastUsedAt,
+      revokedAt: campaignApiKeys.revokedAt,
+    })
+    .from(campaignApiKeys)
+    .where(eq(campaignApiKeys.campaignId, ctx.campaign.id))
+    .orderBy(desc(campaignApiKeys.createdAt));
 
   return (
     <>
@@ -74,6 +88,13 @@ export default async function SettingsPage({
           description="Download this campaign as a JSON file (personas, posts, the social graph, and polls) for safekeeping or moving between deployments."
         >
           <ExportButton slug={slug} />
+        </Section>
+
+        <Section
+          title="API access"
+          description="Bearer keys that let an external app post into this campaign over HTTP (write-only)."
+        >
+          <ApiKeysManager slug={slug} apiKeys={apiKeys} />
         </Section>
       </div>
     </>

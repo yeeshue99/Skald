@@ -65,6 +65,16 @@ under Unreleased.
   with inline Follow on people results. With an empty query it shows trending
   hashtags for the campaign.
 
+### Integrations
+
+- Campaign API keys: the DM can mint bearer keys in Settings -> API access so an
+  external app (e.g. a session-notes tool) can post into the campaign over HTTP.
+  `POST /api/c/<slug>/posts` takes `persona` (a @handle), `content` and/or
+  `imageUrl`, and an optional `scheduledAt`; it posts as any NPC or the key
+  creator's own persona and fires @mention notifications. Write-only, scoped to
+  one campaign. Keys are stored as a SHA-256 hash (raw token shown once) in
+  `campaign_api_keys` and can be revoked. Documented in the README.
+
 ### Responsive layout
 
 - Mobile navigation: below `md`, a top app bar (wordmark, notifications, search,
