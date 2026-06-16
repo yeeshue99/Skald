@@ -1292,36 +1292,6 @@ body {
     animation: mana-pulse 3.2s ease-in-out infinite;
   }
 
-  @keyframes strix-drift {
-    from {
-      transform: translate3d(0, 0, 0);
-    }
-    to {
-      transform: translate3d(64px, 42px, 0);
-    }
-  }
-
-  /* Gentle opacity breathe for the atmospheric wash (motion=on). */
-  @keyframes ambient-breathe {
-    0%,
-    100% {
-      opacity: 0.55;
-    }
-    50% {
-      opacity: 1;
-    }
-  }
-
-  @keyframes holonet-scan {
-    from {
-      transform: translate3d(0, 0, 0);
-    }
-    to {
-      /* one base-grid cell (40px) so the sweep loops seamlessly */
-      transform: translate3d(0, 40px, 0);
-    }
-  }
-
   @keyframes holonet-glitch {
     0%   { transform: translate(0, 0);       opacity: 1; }
     14%  { transform: translate(-1px, 1px);  opacity: 0.88; }
@@ -1448,15 +1418,6 @@ body {
       transform: scale(2.6);
     }
   }
-  @keyframes scrollr-drift {
-    from {
-      transform: translate3d(0, 0, 0);
-    }
-    to {
-      transform: translate3d(-46px, 30px, 0);
-    }
-  }
-
   /* ---- Ambient effects (.fx layers, decorations.effects) ----------------
      Each effect is an independent child of .campaign-motion, so any combination
      works. Soft-edged dots (no shimmer) on a tile translated by exactly one

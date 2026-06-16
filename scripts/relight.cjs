@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 // Rewrites the Petalfall seed's posts + follows with a lighter, banter-forward
 // tone, sets PC logins (real names) + fun @handles (display stays the alias),
 // lightens the campaign meta, and removes the wall / Maret Voss / Petal-Prophet

@@ -34,9 +34,12 @@ export function FeedList({
   const [pendingNew, setPendingNew] = useState<PostView[]>([]);
   const [loadingMore, startLoadMore] = useTransition();
 
-  // keep the latest posts readable inside the polling closure
+  // keep the latest posts readable inside the polling closure. Sync after commit
+  // (not during render) so we never write a ref mid-render.
   const postsRef = useRef(posts);
-  postsRef.current = posts;
+  useEffect(() => {
+    postsRef.current = posts;
+  });
 
   const prepend = useCallback((fresh: PostView[]) => {
     if (fresh.length === 0) return;

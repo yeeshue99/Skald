@@ -88,6 +88,9 @@ neutral default. Migrated from the old TODO; all ten dimensions shipped.
   fetch path on Node 24 (use the WebSocket query path in dev).
 - Removed the laurel/bookstack avatar frames that didn't read well; retired
   values coerce to "none".
+- Lint cleanup: `pnpm lint` is error-free. Canonicalized Tailwind arbitrary
+  classes, resolved the react-hooks errors (`EditPersonaButton`, `LocalTime`,
+  `FeedList`, `Composer`), and removed dead `@keyframes` from `globals.css`.
 
 ### Platform
 

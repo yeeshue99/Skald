@@ -32,6 +32,8 @@ export function EditPersonaButton({
   const [state, action] = useActionState(updatePersonaAction, emptyFormState);
 
   useEffect(() => {
+    // close the dialog once the server action reports success
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (state.ok) setOpen(false);
   }, [state]);
 

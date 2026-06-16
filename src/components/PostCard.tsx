@@ -164,7 +164,7 @@ export function PostCard({
           </div>
 
           {data.content ? (
-            <p className="mt-0.5 whitespace-pre-wrap break-words text-[15px] leading-relaxed text-text">
+            <p className="mt-0.5 whitespace-pre-wrap wrap-break-word text-[15px] leading-relaxed text-text">
               {renderRichText(data.content, slug)}
             </p>
           ) : null}
@@ -174,7 +174,7 @@ export function PostCard({
             <img
               src={data.imageUrl}
               alt=""
-              className="mt-2 max-h-[28rem] w-full rounded-base border border-border object-cover"
+              className="mt-2 max-h-112 w-full rounded-base border border-border object-cover"
             />
           ) : null}
 

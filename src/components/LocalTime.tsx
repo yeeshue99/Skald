@@ -30,6 +30,8 @@ export function LocalTime({
               hour: "numeric",
               minute: "2-digit",
             };
+    // client-only locale formatting; the SSR fallback is the useState initializer
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setText(new Intl.DateTimeFormat(undefined, opts).format(new Date(iso)));
   }, [iso, mode]);
 

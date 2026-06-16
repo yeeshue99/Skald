@@ -9,15 +9,6 @@ how grounded each item is: in-progress first, then concrete gaps, then ideas.
       match their `imageHint`s, instead of generated avatars + stand-in
       placeholders.
 
-## Tech debt
-
-- [ ] Canonicalize Tailwind arbitrary classes flagged by lint
-      (`min-w-[6rem]` -> `min-w-24`, `max-h-[28rem]` -> `max-h-112`,
-      `break-words` -> `wrap-break-word`).
-- [ ] Resolve the pre-existing react-hooks lint errors (setState-in-effect in
-      `EditPersonaButton` / `LocalTime`, ref-write-during-render in `FeedList`).
-- [ ] Remove dead keyframes left in `globals.css` from earlier iterations.
-
 ## Ideas (unscoped)
 
 - [ ] Notifications: likes, replies, follows, and @mentions for your personas.

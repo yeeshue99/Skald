@@ -44,6 +44,7 @@ export function Composer({
   const [personaOpen, setPersonaOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [localWhen, setLocalWhen] = useState("");
+  const [minDateTime, setMinDateTime] = useState("");
 
   const draftRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -58,10 +59,13 @@ export function Composer({
   // reset after a successful post, and nudge any visible feed to pull it in
   useEffect(() => {
     if (state.ok) {
+      // clear the composer once the post action succeeds
+      /* eslint-disable react-hooks/set-state-in-effect */
       setContent("");
       setImageUrl("");
       setScheduleOpen(false);
       setLocalWhen("");
+      /* eslint-enable react-hooks/set-state-in-effect */
       window.dispatchEvent(new Event("skald:posted"));
     }
   }, [state]);
@@ -97,11 +101,19 @@ export function Composer({
     if (url) setImageUrl(url);
   }
 
-  const minDateTime = (() => {
-    const d = new Date(Date.now() + 5 * 60 * 1000);
-    const off = d.getTimezoneOffset();
-    return new Date(d.getTime() - off * 60000).toISOString().slice(0, 16);
-  })();
+  function toggleSchedule() {
+    const opening = !scheduleOpen;
+    if (opening) {
+      // floor the picker ~5 min out, computed in this handler rather than during
+      // render (Date.now() is impure and not allowed in render).
+      const d = new Date(Date.now() + 5 * 60 * 1000);
+      const off = d.getTimezoneOffset();
+      setMinDateTime(
+        new Date(d.getTime() - off * 60000).toISOString().slice(0, 16),
+      );
+    }
+    setScheduleOpen(opening);
+  }
 
   return (
     <form action={formAction} className="flex gap-3 px-4 py-3">
@@ -255,7 +267,7 @@ export function Composer({
           </button>
           <button
             type="button"
-            onClick={() => setScheduleOpen((v) => !v)}
+            onClick={toggleSchedule}
             className={cn(
               "fx-btn rounded-full p-2 hover:bg-primary/10",
               scheduleOpen ? "text-accent" : "text-primary",
