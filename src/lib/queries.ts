@@ -31,6 +31,7 @@ import {
   type NotificationType,
   type PostStatus,
 } from "@/db/schema";
+import { notify, notifyMentions } from "@/lib/notify";
 
 export const PAGE_SIZE = 25;
 
@@ -335,7 +336,9 @@ export type Feed = { posts: PostView[]; nextCursor: string | null };
 // (visibility was already time-based), so this runs lazily from the read paths.
 // Idempotent and usually a 0-row UPDATE (indexed by campaign + status).
 export async function publishDueScheduledPosts(campaignId: number): Promise<void> {
-  await db
+  // Flip due scheduled posts to published and capture exactly the rows THIS call
+  // graduated. The UPDATE is atomic, so each row is returned to one caller only.
+  const flipped = await db
     .update(posts)
     .set({ status: "published" })
     .where(
@@ -346,7 +349,54 @@ export async function publishDueScheduledPosts(campaignId: number): Promise<void
         lte(posts.publishedAt, sql`now()`),
         isNull(posts.deletedAt),
       ),
-    );
+    )
+    .returning({
+      id: posts.id,
+      personaId: posts.personaId,
+      content: posts.content,
+      replyToPostId: posts.replyToPostId,
+    });
+
+  if (flipped.length === 0) return;
+
+  // Reply + @mention notifications are deferred at compose time (a scheduled
+  // post shouldn't ping anyone before it's visible). Fire them now that it has
+  // gone live — once per post, since the flip above only returns it to us.
+  for (const p of flipped) {
+    let replyRecipient: number | null = null;
+    if (p.replyToPostId != null) {
+      const parent = (
+        await db
+          .select({ personaId: posts.personaId })
+          .from(posts)
+          .where(
+            and(
+              eq(posts.id, p.replyToPostId),
+              eq(posts.campaignId, campaignId),
+              visibleCondition(),
+            ),
+          )
+          .limit(1)
+      )[0];
+      if (parent) {
+        replyRecipient = parent.personaId;
+        await notify({
+          campaignId,
+          recipientPersonaId: parent.personaId,
+          actorPersonaId: p.personaId,
+          type: "reply",
+          postId: p.id,
+        });
+      }
+    }
+    await notifyMentions({
+      campaignId,
+      actorPersonaId: p.personaId,
+      postId: p.id,
+      content: p.content,
+      exclude: replyRecipient != null ? [replyRecipient] : [],
+    });
+  }
 }
 
 async function pageFeed(
