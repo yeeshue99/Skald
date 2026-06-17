@@ -47,6 +47,13 @@ how grounded each item is: concrete gaps first, then ideas.
       per-membership selection would let one upload be worn in several campaigns.
       The selection already lives on `memberships`, so only the authored-pack
       scope would change.
+- [ ] Public, anonymous viewing of campaigns. Let a campaign expose a read-only
+      view that doesn't require sign-in or membership: an unauthenticated visitor
+      could browse the feed, posts, and profiles. Needs a per-campaign visibility
+      flag (public vs members-only), gating in the campaign/feed loaders to allow
+      anonymous reads when public, hiding compose/interaction affordances for
+      anonymous visitors, and a deliberate call on what stays private (DM tools,
+      member-only content, drafts).
 - [ ] Add the `0005`/`0006` decoration snapshots to `drizzle/meta`. Their
       migration SQL + journal entries were hand-authored (consistent with `0004`),
       but no `meta/000{5,6}_snapshot.json` were written, so `drizzle-kit generate`
