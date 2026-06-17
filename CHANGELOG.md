@@ -47,6 +47,15 @@ under Unreleased.
   DM theme editor and this editor share one option list (`decoration-options.ts`).
   All managed on the Appearance page (`/c/<slug>/appearance`), linked from the
   sidebar and the mobile header.
+- Decoration preview shows every dimension. The live preview's sample now carries
+  one element per previewable dimension (`.chrome-bar`, `.wordmark`, `.post-card`,
+  a single `.avatar-frame`, `.ui-card`, `.ui-button`), so card depth, card frame,
+  and top-bar chrome — which target `.ui-card`/`.chrome-bar` and previously had no
+  element to style — now render. The redundant nested `.avatar-frame` that drew
+  the ring twice was collapsed. (Same enrichment applied to the DM theme editor
+  preview.) Backdrop motion, ambient effects, reaction flourishes, and named
+  textures still only show on the real feed; they are motion/event/fixed-layer
+  driven, not static.
 - Multi-post threads: the composer can author a self-thread. "Add another post"
   chains a run of segments (each with its own text, image, and counter), posted
   in order as replies to one another and sharing one publish / schedule / draft

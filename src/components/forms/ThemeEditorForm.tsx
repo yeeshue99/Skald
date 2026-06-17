@@ -302,11 +302,15 @@ export function ThemeEditorForm({
           style={themeToCssVars(theme)}
           className="overflow-hidden rounded-base border border-border"
         >
-          <div className="bg-bg p-4 font-body text-text">
-            <div className="wordmark font-display text-2xl font-bold text-primary">
-              {theme.appName || "Your campaign"}
+          <div className="bg-bg font-body text-text">
+            {/* chrome-bar so the top-bar chrome decoration previews */}
+            <div className="chrome-bar px-4 py-3">
+              <div className="wordmark font-display text-2xl font-bold text-primary">
+                {theme.appName || "Your campaign"}
+              </div>
+              <p className="text-sm text-muted">{theme.tagline}</p>
             </div>
-            <p className="text-sm text-muted">{theme.tagline}</p>
+            <div className="px-4 pb-4">
             <div className="post-card mt-3 rounded-base border border-border bg-surface p-3">
               <div className="flex items-center gap-2">
                 <Avatar name="Mystic Raven" size={36} />
@@ -325,12 +329,16 @@ export function ThemeEditorForm({
                 <Heart className="size-4 text-like" />
               </div>
             </div>
+            <div className="ui-card mt-3 rounded-base border border-border bg-surface p-3 text-sm text-muted">
+              A side panel. Shows the card depth and frame.
+            </div>
             <button
               type="button"
               className="ui-button mt-4 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-on-primary"
             >
               Post
             </button>
+            </div>
           </div>
         </div>
       </div>

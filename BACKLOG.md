@@ -42,6 +42,18 @@ how grounded each item is: concrete gaps first, then ideas.
       contained box, so named *textures* and backdrop motion aren't previewed
       (same limitation as the DM theme editor). A contained texture renderer would
       fix both.
+- [ ] Preview fidelity on a themed campaign (nested `[data-campaign]`). The
+      preview wrapper is nested inside the layout's own `[data-campaign]`, and the
+      value-keyed decoration rules use identical selector text, so on a campaign
+      whose theme is NON-default the attribute-driven dimensions (divider,
+      wordmark, avatar frame, card frame, chrome) can tie at equal specificity and
+      the page's value wins by stylesheet order instead of the draft's. Inline-var
+      dims (depth, buttons) and the backdrop always reflect the draft. The clean
+      fix is to isolate the preview from the outer `[data-campaign]` — render it in
+      an iframe (its own document, stylesheets cloned by element, not by reading
+      cross-origin `.cssRules`) or portal it outside the layout wrapper. Marker-
+      class specificity bumps are NOT viable: the rule bodies are large SVG
+      backgrounds, so ~25 of them would have to be duplicated.
 - [ ] Reuse a decoration across campaigns. A decoration is scoped to the campaign
       it was made in (`decorations.campaign_id`). A user-level library plus a
       per-membership selection would let one upload be worn in several campaigns.

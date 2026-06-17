@@ -115,9 +115,18 @@ function backdropLayer(
   };
 }
 
-// A contained preview of a spec over the campaign theme: applies named-dimension
-// data-attrs (so dividers, frames, depth, wordmark, etc. show) but strips the
-// fixed texture layer and draws any custom backdrop inside the box instead.
+// A contained preview of a spec over the campaign theme. The sample carries one
+// element per previewable dimension so every preset has something to render:
+//   .chrome-bar  -> top-bar chrome      .wordmark   -> wordmark
+//   .post-card   -> post divider        .avatar-frame (Avatar's own) -> avatar frame
+//   .ui-card     -> card depth + frame  .ui-button  -> button FX
+// The fixed texture layer is stripped (it would escape the box); a custom
+// backdrop is drawn as a contained layer instead. Note: because this wrapper is
+// nested inside the page's own [data-campaign], attribute-driven dimensions
+// (divider, wordmark, avatar frame, card frame, chrome) can show the campaign's
+// value instead of the draft's on a campaign whose theme is NON-default — an
+// equal-specificity tie resolved by stylesheet order. Inline-var dimensions
+// (depth, buttons) and the backdrop always reflect the draft. See BACKLOG.
 function SpecPreview({ theme, spec }: { theme: Theme; spec: DecorationSpec }) {
   const { dataAttrs, cssVars } = campaignRenderProps(theme, spec);
   const attrs: Record<string, string> = { ...dataAttrs };
@@ -129,40 +138,50 @@ function SpecPreview({ theme, spec }: { theme: Theme; spec: DecorationSpec }) {
       data-campaign
       {...attrs}
       style={cssVars}
-      className="relative overflow-hidden rounded-base border border-border"
+      className="decoration-preview relative overflow-hidden rounded-base border border-border"
     >
       {bg ? (
         <div aria-hidden className="pointer-events-none absolute inset-0" style={bg} />
       ) : null}
-      <div className="relative bg-bg/70 p-4 font-body text-text">
-        <div className="wordmark font-display text-xl font-bold text-primary">
-          Your campaign
+      <div className="relative font-body text-text">
+        {/* top-bar chrome + wordmark */}
+        <div className="chrome-bar flex items-center border-b border-border px-3 py-2">
+          <span className="wordmark font-display text-lg font-bold text-primary">
+            Your campaign
+          </span>
         </div>
-        <div className="post-card mt-3 rounded-base border border-border bg-surface p-3">
-          <div className="flex items-center gap-2">
-            <span className="avatar-frame inline-flex">
+        <div className="space-y-3 bg-bg/70 p-4">
+          {/* feed post: divider + avatar frame (Avatar renders its own single
+              .avatar-frame, so we don't wrap it in a second one) */}
+          <div className="post-card rounded-base border border-border bg-surface p-3">
+            <div className="flex items-center gap-2">
               <Avatar name="Mystic Raven" size={32} />
-            </span>
-            <div className="text-sm">
-              <span className="font-semibold text-text">Mystic Raven</span>{" "}
-              <span className="text-muted">@raven · 2h</span>
+              <div className="text-sm">
+                <span className="font-semibold text-text">Mystic Raven</span>{" "}
+                <span className="text-muted">@raven · 2h</span>
+              </div>
+            </div>
+            <p className="mt-2 text-[14px] text-text">
+              The portal opened at dusk. Meet me at the old library.
+            </p>
+            <div className="mt-2 flex gap-6 text-muted">
+              <MessageCircle className="size-4" />
+              <Repeat2 className="size-4 text-repost" />
+              <Heart className="size-4 text-like" />
             </div>
           </div>
-          <p className="mt-2 text-[14px] text-text">
-            The portal opened at dusk. Meet me at the old library.
-          </p>
-          <div className="mt-2 flex gap-6 text-muted">
-            <MessageCircle className="size-4" />
-            <Repeat2 className="size-4 text-repost" />
-            <Heart className="size-4 text-like" />
+          {/* standalone card: depth + card frame */}
+          <div className="ui-card rounded-base border border-border bg-surface p-3 text-[13px] text-muted">
+            A side panel. Shows card depth and the card frame.
           </div>
+          {/* button FX */}
+          <button
+            type="button"
+            className="ui-button rounded-full bg-primary px-4 py-2 text-sm font-semibold text-on-primary"
+          >
+            Post
+          </button>
         </div>
-        <button
-          type="button"
-          className="ui-button mt-3 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-on-primary"
-        >
-          Post
-        </button>
       </div>
     </div>
   );
