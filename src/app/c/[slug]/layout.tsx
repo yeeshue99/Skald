@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { Metadata } from "next";
 import { requireCampaignContext } from "@/lib/campaign";
-import { campaignRenderProps, normalizeTheme } from "@/lib/themes";
+import { campaignRenderProps } from "@/lib/themes";
 import { cn } from "@/lib/cn";
 import type { PersonaSummary } from "@/lib/queries";
 import { getUnreadNotificationCount } from "@/lib/queries";
@@ -79,14 +79,14 @@ export default async function CampaignLayout({
   const { slug } = await params;
   const ctx = await requireCampaignContext(slug);
 
-  // campaign theme + this member's personal decoration (if any) layered on top.
-  // Other members have no selection, so they render the campaign default.
-  const { dataAttrs, cssVars } = campaignRenderProps(
+  // campaign theme + this viewer's active decoration layered on top: their own
+  // pick if they made one, else the campaign default the DM set, else nothing.
+  const { dataAttrs, cssVars, effects } = campaignRenderProps(
     ctx.campaign.theme,
-    ctx.selectedDecoration,
+    ctx.selectedDecoration ?? ctx.worldDecoration,
   );
 
-  const enabled = new Set(normalizeTheme(ctx.campaign.theme).decorations!.effects);
+  const enabled = new Set(effects);
   const particleEffects = PARTICLE_EFFECTS.filter((e) => enabled.has(e));
   const cardEffectClasses = CARD_EFFECTS.filter((e) => enabled.has(e)).map(
     (e) => `fx-${e}`,

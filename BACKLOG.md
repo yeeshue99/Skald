@@ -30,20 +30,25 @@ how grounded each item is: concrete gaps first, then ideas.
 - [ ] Parent context on reply cards. The profile Replies tab renders bare reply
       cards (no "Replying to @x" line). `PostView` carries only `replyToPostId`;
       surfacing the parent author would touch hydration and `PostCard`.
-- [ ] Extend the decoration "mod" SDK past the backdrop. `DecorationSpec` is a
-      discriminated union on `kind` with only `"backdrop"` today. Natural next
-      kinds: a custom post divider image, a custom avatar-frame overlay, and a
-      custom card frame. Each needs a new `kind`, a `campaignRenderProps` branch
-      that emits its vars/attrs, and a CSS hook (mirroring the
-      `[data-texture="custom"]` rule). The Appearance UI would grow a kind picker.
-- [ ] Reuse a decoration across campaigns. A decoration is currently scoped to the
-      campaign it was made in (`decorations.campaign_id`), so the same backdrop
-      has to be re-uploaded per game. A user-level library (drop the campaign FK,
-      or add a `user_decorations` table) plus a per-membership selection would let
-      one upload be worn in several campaigns. The selection already lives on
-      `memberships`, so only the authored-pack scope would change.
-- [ ] Add the `0005` (personal_decorations) snapshot to `drizzle/meta`. The
-      migration SQL + journal entry were hand-authored (consistent with `0004`),
-      but no `meta/0005_snapshot.json` was written, so `drizzle-kit generate`
-      still diffs against the `0004` snapshot. Folds into the existing
-      migration-chain reconciliation item above.
+- [ ] More upload-backed decoration dimensions. A `DecorationSpec` overrides all
+      named dimensions today, but the only *uploaded* asset is the backdrop image
+      (`spec.backdrop`). Natural next custom assets: a divider image, an
+      avatar-frame overlay, a card-frame border. Each needs a field on the spec, a
+      `campaignRenderProps` branch emitting its vars/attrs, and a CSS hook
+      (mirroring the `[data-texture="custom"]` rule), plus an editor control.
+- [ ] Live preview of the backdrop + named texture. The Appearance editor preview
+      shows named dimensions (divider/frame/depth/wordmark/...) and a custom
+      backdrop, but the fixed `::before` texture layer can't render inside a
+      contained box, so named *textures* and backdrop motion aren't previewed
+      (same limitation as the DM theme editor). A contained texture renderer would
+      fix both.
+- [ ] Reuse a decoration across campaigns. A decoration is scoped to the campaign
+      it was made in (`decorations.campaign_id`). A user-level library plus a
+      per-membership selection would let one upload be worn in several campaigns.
+      The selection already lives on `memberships`, so only the authored-pack
+      scope would change.
+- [ ] Add the `0005`/`0006` decoration snapshots to `drizzle/meta`. Their
+      migration SQL + journal entries were hand-authored (consistent with `0004`),
+      but no `meta/000{5,6}_snapshot.json` were written, so `drizzle-kit generate`
+      still diffs against the `0004` snapshot. Folds into the migration-chain
+      reconciliation item above.

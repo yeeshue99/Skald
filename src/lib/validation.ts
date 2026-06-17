@@ -1,11 +1,17 @@
 import { z } from "zod";
 import {
   PERSONA_AVATAR_FRAMES,
+  DECORATION_SCOPES,
   DECORATION_NAME_MAX,
   DECORATION_SIZE_MIN,
   DECORATION_SIZE_MAX,
   DECORATION_SIZE_DEFAULT,
 } from "./theme-types";
+import {
+  DECORATION_FIELDS,
+  DECORATION_VALUES,
+  AMBIENT_EFFECT_VALUES,
+} from "./decoration-options";
 import { safeCssUrl } from "./themes";
 
 export const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
@@ -86,16 +92,27 @@ export const personaSchema = z.object({
   avatarFrame: z.enum(PERSONA_AVATAR_FRAMES).optional().default("default"),
 });
 
-// A player-authored decoration "mod". Declarative only: an image asset plus a
-// few bounded knobs that the render layer maps onto the existing backdrop. The
-// image must pass the same url() safety check used at render time (safeCssUrl),
-// so a URL that would be dropped on screen is rejected at creation instead.
-export const decorationSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, "Name your decoration")
-    .max(DECORATION_NAME_MAX, `Keep it under ${DECORATION_NAME_MAX} characters`),
+// A decoration "mod". Declarative only: a partial override of the campaign's
+// named decoration dimensions, plus an optional custom backdrop image. Built
+// from the shared option list so the accepted values never drift from the
+// editor. The backdrop image must pass the same url() safety check used at
+// render time (safeCssUrl), so a URL that would be dropped on screen is rejected
+// at creation instead.
+const tuple = (vals: string[]) => vals as [string, ...string[]];
+
+const decorationOverridesSchema = z
+  .object(
+    Object.fromEntries([
+      ...DECORATION_FIELDS.map((f) => [
+        f.key,
+        z.enum(tuple(f.options.map((o) => o[0]))).optional(),
+      ]),
+      ["effects", z.array(z.enum(tuple(AMBIENT_EFFECT_VALUES))).max(9).optional()],
+    ]),
+  )
+  .strict();
+
+const backdropSchema = z.object({
   imageUrl: z
     .string()
     .trim()
@@ -111,20 +128,29 @@ export const decorationSchema = z.object({
     .optional()
     .default(DECORATION_SIZE_DEFAULT),
   opacity: z.coerce.number().min(0).max(1).optional().default(0.2),
-  scroll: z
-    .enum([
-      "static",
-      "down",
-      "up",
-      "left",
-      "right",
-      "diagonal",
-      "sineDown",
-      "sway",
-      "sineUp",
-    ])
-    .optional()
-    .default("static"),
+  scroll: z.enum(tuple(DECORATION_VALUES.bgScroll)).optional().default("static"),
+});
+
+export const decorationSpecSchema = z
+  .object({
+    overrides: decorationOverridesSchema.optional().default({}),
+    backdrop: backdropSchema.nullish(),
+  })
+  .refine(
+    (s) =>
+      (s.backdrop && safeCssUrl(s.backdrop.imageUrl) !== "none") ||
+      Object.keys(s.overrides ?? {}).length > 0,
+    "Pick at least one decoration or add a backdrop image",
+  );
+
+export const decorationSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Name your decoration")
+    .max(DECORATION_NAME_MAX, `Keep it under ${DECORATION_NAME_MAX} characters`),
+  scope: z.enum(DECORATION_SCOPES).optional().default("personal"),
+  spec: decorationSpecSchema,
 });
 export type DecorationInput = z.infer<typeof decorationSchema>;
 

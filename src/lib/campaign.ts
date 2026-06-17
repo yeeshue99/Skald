@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, or } from "drizzle-orm";
 import { db } from "@/db";
 import {
   campaigns,
@@ -35,10 +35,40 @@ export type CampaignContext = {
   actingPersona: Persona;
   /** every persona this user may act as in this campaign (own PC + any NPCs they own) */
   myPersonas: Persona[];
-  /** this member's chosen personal decoration to layer over the campaign theme,
-   *  or null to use the campaign (world) default. Resolved server-side from the
-   *  membership, so it only ever reflects this user's own pick. */
+  /** this member's chosen decoration (personal, or a shared campaign one they
+   *  picked) to layer over the campaign theme; null = none picked. Resolved
+   *  server-side from the membership, so it only reflects this user's own pick. */
   selectedDecoration: DecorationSpec | null;
+  /** the campaign default decoration the DM promoted, applied to anyone without
+   *  a personal pick; null = fall back to the campaign theme's named texture. */
+  worldDecoration: DecorationSpec | null;
+};
+
+// Resolve a decoration's spec for rendering. Scoped to the campaign; when
+// forUserId is given (a personal pick) it must be the user's own OR a shared
+// campaign decoration, so a stale/foreign id silently falls back to the default.
+const loadDecorationSpec = async (
+  decorationId: number | null,
+  campaignId: number,
+  forUserId: number | null,
+): Promise<DecorationSpec | null> => {
+  if (decorationId == null) return null;
+  const scoped = and(
+    eq(decorations.id, decorationId),
+    eq(decorations.campaignId, campaignId),
+    forUserId != null
+      ? or(
+          eq(decorations.ownerUserId, forUserId),
+          eq(decorations.scope, "campaign"),
+        )
+      : undefined,
+  );
+  const rows = await db
+    .select({ spec: decorations.spec })
+    .from(decorations)
+    .where(scoped)
+    .limit(1);
+  return rows[0]?.spec ?? null;
 };
 
 export const getCampaignContext = cache(
@@ -78,23 +108,11 @@ export const getCampaignContext = cache(
     if (!membership) return null;
     if (myPersonas.length === 0) return null;
 
-    // resolve the member's personal decoration, if any. Filter by owner +
-    // campaign too, so a stale/foreign selection silently falls back to default.
-    let selectedDecoration: DecorationSpec | null = null;
-    if (membership.selectedDecorationId != null) {
-      const decoRows = await db
-        .select({ spec: decorations.spec })
-        .from(decorations)
-        .where(
-          and(
-            eq(decorations.id, membership.selectedDecorationId),
-            eq(decorations.campaignId, campaign.id),
-            eq(decorations.ownerUserId, user.id),
-          ),
-        )
-        .limit(1);
-      selectedDecoration = decoRows[0]?.spec ?? null;
-    }
+    // the member's own pick, and the campaign default, resolved in parallel
+    const [selectedDecoration, worldDecoration] = await Promise.all([
+      loadDecorationSpec(membership.selectedDecorationId, campaign.id, user.id),
+      loadDecorationSpec(campaign.worldDecorationId, campaign.id, null),
+    ]);
 
     const actingPersona =
       myPersonas.find((p) => p.id === membership.actingPersonaId) ??
@@ -108,6 +126,7 @@ export const getCampaignContext = cache(
       actingPersona,
       myPersonas,
       selectedDecoration,
+      worldDecoration,
     };
   },
 );

@@ -81,22 +81,23 @@ export interface Decorations {
 }
 
 // ---------------------------------------------------------------------------
-// Player decoration "mods". A member can author their own decoration and apply
-// it to themselves in one campaign; everyone else keeps the campaign (world)
-// default. To keep this a safe "first-party modding SDK" — never arbitrary CSS
-// or JS — a mod is a declarative spec the render layer maps onto the existing
-// decoration machinery. v1 ships one kind (a feed backdrop); the discriminated
-// union on `kind` is the extension point for future kinds (divider, frame, …).
+// Decoration "mods". A member authors a decoration and applies it to themselves
+// in one campaign; everyone else keeps the campaign (world) default. A DM can
+// also share decorations campaign-wide and promote one to the campaign default.
+// To keep this a safe "first-party modding SDK" — never arbitrary CSS or JS — a
+// mod is a declarative spec: a partial override of the campaign's named
+// decoration dimensions, plus the one upload-backed dimension (a custom
+// backdrop image). The render layer merges it over the campaign theme through
+// the existing decoration machinery, so every named dimension is covered.
 // ---------------------------------------------------------------------------
 
 /** How a backdrop image fills the field behind the feed. */
 export type DecorationFit = "tile" | "cover";
 
-/** A custom feed backdrop: an uploaded (or pasted) image plus a few declarative
- *  knobs. Reuses the campaign backdrop's opacity dial and the bgScroll motions,
- *  so it animates and dims exactly like a built-in texture. */
-export interface BackdropDecoration {
-  kind: "backdrop";
+/** A custom uploaded feed backdrop: an image plus a few declarative knobs. The
+ *  one upload-backed dimension. Reuses the campaign backdrop's opacity dial and
+ *  the bgScroll motions, so it animates and dims exactly like a built-in texture. */
+export interface BackdropImage {
   /** image asset URL (our Vercel Blob upload, or a pasted http(s) image URL) */
   imageUrl: string;
   /** tile the image at `size`px, or scale one copy to cover the viewport */
@@ -109,9 +110,21 @@ export interface BackdropDecoration {
   scroll: Decorations["bgScroll"];
 }
 
-/** A player-authored decoration mod. Discriminated on `kind` so more dimensions
- *  can be added without reworking storage or the render layer. */
-export type DecorationSpec = BackdropDecoration;
+/** A decoration mod. `overrides` replaces any subset of the campaign's named
+ *  decoration dimensions for one viewer; `backdrop`, when set, supplies the
+ *  texture backdrop as a custom uploaded image instead of a named texture. A
+ *  viewer sees exactly one active mod (their personal pick, else the campaign
+ *  default) applied over the campaign theme. */
+export interface DecorationSpec {
+  overrides: Partial<Decorations>;
+  backdrop?: BackdropImage | null;
+}
+
+/** Whether a decoration is the author's own (personal) or shared campaign-wide
+ *  by the DM. A campaign-scoped decoration is offered to every member and is the
+ *  only kind that may be promoted to the campaign default. */
+export const DECORATION_SCOPES = ["personal", "campaign"] as const;
+export type DecorationScope = (typeof DECORATION_SCOPES)[number];
 
 /** Clamp bounds for a custom backdrop, shared by the normalizer and validator. */
 export const DECORATION_SIZE_MIN = 24;

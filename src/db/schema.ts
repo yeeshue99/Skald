@@ -13,9 +13,10 @@ import {
   foreignKey,
   check,
   customType,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import type { Theme, DecorationSpec } from "../lib/theme-types";
-import { PERSONA_AVATAR_FRAMES } from "../lib/theme-types";
+import { PERSONA_AVATAR_FRAMES, DECORATION_SCOPES } from "../lib/theme-types";
 
 // All instants are timestamptz so scheduling and feed ordering are timezone-safe.
 const tstz = (name: string) =>
@@ -60,6 +61,15 @@ export const campaigns = pgTable(
     createdByUserId: integer("created_by_user_id")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
+    // the DM's chosen campaign-default decoration (nullable -> no default; the
+    // named theme texture is used). Points at a campaign-scoped decoration; set
+    // to null if that decoration is deleted, so the campaign falls back cleanly.
+    // AnyPgColumn return type breaks the campaigns<->decorations circular FK for
+    // TS inference (drizzle's documented pattern for circular references).
+    worldDecorationId: integer("world_decoration_id").references(
+      (): AnyPgColumn => decorations.id,
+      { onDelete: "set null" },
+    ),
     createdAt: tstz("created_at").notNull().defaultNow(),
   },
   (t) => [
@@ -169,9 +179,18 @@ export const decorations = pgTable(
     // the declarative decoration spec (see DecorationSpec). Never executed; the
     // render layer maps it onto the existing decoration CSS machinery.
     spec: jsonb("spec").$type<DecorationSpec>().notNull(),
+    // "personal" = only the author's; "campaign" = shared by the DM with every
+    // member (and the only kind that may be the campaign default).
+    scope: text("scope", { enum: DECORATION_SCOPES })
+      .notNull()
+      .default("personal"),
     createdAt: tstz("created_at").notNull().defaultNow(),
   },
-  (t) => [index("decorations_owner_idx").on(t.ownerUserId, t.campaignId)],
+  (t) => [
+    index("decorations_owner_idx").on(t.ownerUserId, t.campaignId),
+    // listing the shared library for a campaign: (campaign, scope)
+    index("decorations_campaign_scope_idx").on(t.campaignId, t.scope),
+  ],
 );
 
 // ---------------------------------------------------------------------------

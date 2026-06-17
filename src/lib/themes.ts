@@ -1,10 +1,17 @@
 import type { CSSProperties } from "react";
-import type { Theme, Decorations, DecorationSpec, DecorationFit } from "./theme-types";
+import type {
+  Theme,
+  Decorations,
+  DecorationSpec,
+  DecorationFit,
+  BackdropImage,
+} from "./theme-types";
 import {
   DECORATION_SIZE_MIN,
   DECORATION_SIZE_MAX,
   DECORATION_SIZE_DEFAULT,
 } from "./theme-types";
+import { DECORATION_VALUES, AMBIENT_EFFECT_VALUES } from "./decoration-options";
 
 export type {
   Theme,
@@ -14,7 +21,7 @@ export type {
   AmbientEffect,
   DecorationSpec,
   DecorationFit,
-  BackdropDecoration,
+  BackdropImage,
 } from "./theme-types";
 
 // ---------------------------------------------------------------------------
@@ -445,37 +452,58 @@ export function themeToCssVars(theme: Theme): CSSProperties {
 }
 
 // ---------------------------------------------------------------------------
-// Player decoration mods. A member's selected decoration is layered over the
-// campaign theme at render time (in the campaign layout), for that member's
-// request only — so "all others default to the world default" needs no extra
-// work: a member with no selection just gets the campaign theme unchanged.
+// Decoration mods. A viewer's active decoration (their personal pick, else the
+// campaign default) is layered over the campaign theme at render time (in the
+// campaign layout), for that viewer's request only — so "all others default to
+// the world default" needs no extra work: a viewer with no active mod just gets
+// the campaign theme unchanged. A mod overrides any subset of the named
+// dimensions (merged into the theme so the existing CSS machinery covers them)
+// and may supply a custom uploaded backdrop image.
 // ---------------------------------------------------------------------------
 
-const BG_SCROLLS: Decorations["bgScroll"][] = [
-  "static",
-  "down",
-  "up",
-  "left",
-  "right",
-  "diagonal",
-  "sineDown",
-  "sway",
-  "sineUp",
-];
-
-/** Clamp a stored/submitted backdrop spec into its valid ranges. Pure. */
-export function normalizeDecorationSpec(spec: DecorationSpec): DecorationSpec {
-  const fit: DecorationFit = spec.fit === "cover" ? "cover" : "tile";
-  const rawSize = Math.round(Number(spec.size));
+/** Clamp a custom backdrop image into its valid ranges. Pure. */
+export function normalizeBackdrop(b: BackdropImage): BackdropImage {
+  const fit: DecorationFit = b.fit === "cover" ? "cover" : "tile";
+  const rawSize = Math.round(Number(b.size));
   const size = Number.isFinite(rawSize)
     ? Math.min(DECORATION_SIZE_MAX, Math.max(DECORATION_SIZE_MIN, rawSize))
     : DECORATION_SIZE_DEFAULT;
-  const rawOpacity = Number(spec.opacity);
+  const rawOpacity = Number(b.opacity);
   const opacity = Number.isFinite(rawOpacity)
     ? Math.min(1, Math.max(0, rawOpacity))
     : 0.2;
-  const scroll = BG_SCROLLS.includes(spec.scroll) ? spec.scroll : "static";
-  return { kind: "backdrop", imageUrl: spec.imageUrl, fit, size, opacity, scroll };
+  const scroll = (DECORATION_VALUES.bgScroll ?? []).includes(b.scroll)
+    ? b.scroll
+    : "static";
+  return { imageUrl: b.imageUrl, fit, size, opacity, scroll };
+}
+
+/** Keep only known dimensions set to a value the CSS understands; junk keys or
+ *  values would otherwise emit dead data-attrs or `undefined` derived vars. */
+export function normalizeOverrides(
+  overrides: Partial<Decorations> | undefined,
+): Partial<Decorations> {
+  const out: Partial<Decorations> = {};
+  if (!overrides) return out;
+  for (const [key, allowed] of Object.entries(DECORATION_VALUES)) {
+    const v = (overrides as Record<string, unknown>)[key];
+    if (typeof v === "string" && allowed.includes(v)) {
+      (out as Record<string, unknown>)[key] = v;
+    }
+  }
+  if (Array.isArray(overrides.effects)) {
+    out.effects = overrides.effects.filter(
+      (e) => typeof e === "string" && AMBIENT_EFFECT_VALUES.includes(e),
+    ) as Decorations["effects"];
+  }
+  return out;
+}
+
+/** Clamp a stored/submitted decoration mod into its valid ranges. Pure. */
+export function normalizeDecorationSpec(spec: DecorationSpec): DecorationSpec {
+  const overrides = normalizeOverrides(spec.overrides);
+  const backdrop = spec.backdrop ? normalizeBackdrop(spec.backdrop) : null;
+  return backdrop ? { overrides, backdrop } : { overrides };
 }
 
 /** Build a safe CSS `url("…")` token from a user-supplied image URL. Returns
@@ -491,35 +519,58 @@ export function safeCssUrl(url: string | null | undefined): string {
 }
 
 /**
- * The data-* attributes and inline CSS vars for the campaign wrapper, with an
- * optional player decoration layered on top. Without `custom` this is exactly
- * `themeDataAttrs` + `themeToCssVars`; with a backdrop mod it repoints the
- * texture machinery at the custom image (and takes over its motion + opacity).
+ * The data-* attributes, inline CSS vars, and effective ambient effects for the
+ * campaign wrapper, with one optional decoration mod layered on top. Without
+ * `mod` this is exactly `themeDataAttrs` + `themeToCssVars`. A mod's named
+ * `overrides` are merged into the theme's decorations so the existing CSS
+ * machinery (data-attrs + derived vars) covers every dimension; a `backdrop`
+ * then repoints the texture machinery at the custom image (and takes over its
+ * motion + opacity). `effects` is the merged ambient-effect list the layout
+ * uses to render particle layers.
  */
 export function campaignRenderProps(
   theme: Theme,
-  custom?: DecorationSpec | null,
-): { dataAttrs: Record<string, string>; cssVars: CSSProperties } {
-  const dataAttrs: Record<string, string> = { ...themeDataAttrs(theme) };
+  mod?: DecorationSpec | null,
+): {
+  dataAttrs: Record<string, string>;
+  cssVars: CSSProperties;
+  effects: Decorations["effects"];
+} {
+  // merge the mod's named overrides into the campaign decorations, then run the
+  // existing data-attr + var derivation over the merged theme so divider, card
+  // frame, wordmark, depth, etc. all flow through unchanged.
+  const baseDecor = normalizeTheme(theme).decorations!;
+  const overrides = mod ? normalizeOverrides(mod.overrides) : {};
+  const mergedDecor: Decorations = { ...baseDecor, ...overrides };
+  const mergedTheme: Theme = { ...theme, decorations: mergedDecor };
+
+  const dataAttrs: Record<string, string> = { ...themeDataAttrs(mergedTheme) };
   const cssVars: Record<string, string | number | undefined> = {
-    ...(themeToCssVars(theme) as Record<string, string | number | undefined>),
+    ...(themeToCssVars(mergedTheme) as Record<string, string | number | undefined>),
   };
 
-  if (custom && custom.kind === "backdrop") {
-    const spec = normalizeDecorationSpec(custom);
-    const cssImage = safeCssUrl(spec.imageUrl);
+  const backdrop = mod?.backdrop ? normalizeBackdrop(mod.backdrop) : null;
+  if (backdrop) {
+    const cssImage = safeCssUrl(backdrop.imageUrl);
     if (cssImage !== "none") {
       dataAttrs["data-texture"] = "custom";
-      // a custom backdrop fully owns motion: set its own scroll, or clear the
-      // campaign's so a "static" pick really is static
-      if (spec.scroll !== "static") dataAttrs["data-bg-scroll"] = spec.scroll;
+      // a custom backdrop fully owns motion: set its own scroll, or clear it so
+      // a "static" pick really is static
+      if (backdrop.scroll !== "static")
+        dataAttrs["data-bg-scroll"] = backdrop.scroll;
       else delete dataAttrs["data-bg-scroll"];
       cssVars["--texture-image"] = cssImage;
-      cssVars["--texture-opacity"] = String(spec.opacity);
-      cssVars["--texture-size"] = spec.fit === "cover" ? "cover" : `${spec.size}px`;
-      cssVars["--texture-repeat"] = spec.fit === "cover" ? "no-repeat" : "repeat";
+      cssVars["--texture-opacity"] = String(backdrop.opacity);
+      cssVars["--texture-size"] =
+        backdrop.fit === "cover" ? "cover" : `${backdrop.size}px`;
+      cssVars["--texture-repeat"] =
+        backdrop.fit === "cover" ? "no-repeat" : "repeat";
     }
   }
 
-  return { dataAttrs, cssVars: cssVars as CSSProperties };
+  return {
+    dataAttrs,
+    cssVars: cssVars as CSSProperties,
+    effects: mergedDecor.effects,
+  };
 }

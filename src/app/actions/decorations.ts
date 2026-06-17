@@ -1,19 +1,19 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import { db } from "@/db";
-import { decorations, memberships } from "@/db/schema";
+import { campaigns, decorations, memberships } from "@/db/schema";
 import { loadActionContext } from "@/lib/campaign";
 import { decorationSchema } from "@/lib/validation";
-import { normalizeDecorationSpec } from "@/lib/themes";
-import type { DecorationSpec } from "@/lib/theme-types";
+import { normalizeDecorationSpec, type DecorationSpec } from "@/lib/themes";
 import { type FormState } from "@/lib/form";
 
-// Any member can author their own decoration in a campaign. It's stored as a
-// declarative spec (never executed) and auto-selected for its creator — the
-// "upload it, then it's mine until I change it" flow. Everyone else is
-// unaffected; their membership has no selection, so they keep the world default.
+// Author a decoration. A "personal" decoration is the member's own and is
+// auto-selected for them (the "make it, it's mine" flow). A "campaign"
+// decoration is shared by the DM with every member and is NOT auto-applied — the
+// DM is curating the library, not changing their own view. The spec is a
+// declarative override set (+ optional backdrop image), never executed.
 export async function createDecorationAction(
   _prev: FormState,
   formData: FormData,
@@ -21,28 +21,27 @@ export async function createDecorationAction(
   const slug = String(formData.get("slug") ?? "");
   const ctx = await loadActionContext(slug);
 
-  // absent optional knobs arrive as null from FormData; coerce to undefined so
-  // the schema defaults apply (the form may omit fit/size/opacity/scroll)
+  let specRaw: unknown;
+  try {
+    specRaw = JSON.parse(String(formData.get("spec") ?? ""));
+  } catch {
+    return { error: "Could not read the decoration." };
+  }
+
   const parsed = decorationSchema.safeParse({
     name: formData.get("name"),
-    imageUrl: formData.get("imageUrl"),
-    fit: formData.get("fit") ?? undefined,
-    size: formData.get("size") ?? undefined,
-    opacity: formData.get("opacity") ?? undefined,
-    scroll: formData.get("scroll") ?? undefined,
+    scope: formData.get("scope") ?? undefined,
+    spec: specRaw,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Check the details." };
   }
-  const { name, imageUrl, fit, size, opacity, scroll } = parsed.data;
-  const spec: DecorationSpec = normalizeDecorationSpec({
-    kind: "backdrop",
-    imageUrl,
-    fit,
-    size,
-    opacity,
-    scroll,
-  });
+  const { name, scope } = parsed.data;
+  if (scope === "campaign" && ctx.role !== "dm") {
+    return { error: "Only the DM can share a campaign decoration." };
+  }
+  // the zod tuple-enums widen `scroll` to string; normalize re-validates it
+  const spec = normalizeDecorationSpec(parsed.data.spec as DecorationSpec);
 
   const inserted = await db
     .insert(decorations)
@@ -51,11 +50,14 @@ export async function createDecorationAction(
       ownerUserId: ctx.user.id,
       name,
       spec,
+      scope,
     })
     .returning({ id: decorations.id });
   const newId = inserted[0]?.id;
 
-  if (newId != null) {
+  // auto-select only a personal decoration for its creator; a shared one is
+  // added to the library without changing the DM's own view
+  if (newId != null && scope === "personal") {
     await db
       .update(memberships)
       .set({ selectedDecorationId: newId })
@@ -67,14 +69,12 @@ export async function createDecorationAction(
       );
   }
 
-  // "layout" so the campaign backdrop (rendered in the campaign layout) updates,
-  // along with the appearance page nested under it.
   revalidatePath(`/c/${slug}`, "layout");
   return { ok: true };
 }
 
-// Apply one of your decorations to yourself, or pass null to fall back to the
-// campaign (world) default. Only your own decorations are selectable.
+// Apply a decoration to yourself, or pass null to fall back to the campaign
+// default. You may select your own personal decoration or any shared campaign one.
 export async function selectDecorationAction(
   slug: string,
   decorationId: number | null,
@@ -83,18 +83,21 @@ export async function selectDecorationAction(
 
   if (decorationId !== null) {
     if (!Number.isInteger(decorationId)) throw new Error("Bad request.");
-    const owned = await db
+    const ok = await db
       .select({ id: decorations.id })
       .from(decorations)
       .where(
         and(
           eq(decorations.id, decorationId),
           eq(decorations.campaignId, ctx.campaign.id),
-          eq(decorations.ownerUserId, ctx.user.id),
+          or(
+            eq(decorations.ownerUserId, ctx.user.id),
+            eq(decorations.scope, "campaign"),
+          ),
         ),
       )
       .limit(1);
-    if (!owned[0]) throw new Error("That decoration isn't yours.");
+    if (!ok[0]) throw new Error("You can't select that decoration.");
   }
 
   await db
@@ -110,8 +113,46 @@ export async function selectDecorationAction(
   revalidatePath(`/c/${slug}`, "layout");
 }
 
-// Delete one of your own decorations. The membership FK is ON DELETE SET NULL,
-// so if it was your active pick you silently fall back to the world default.
+// DM promotes a shared campaign decoration to the campaign default (applied to
+// anyone without a personal pick), or passes null to clear it.
+export async function setWorldDecorationAction(
+  slug: string,
+  decorationId: number | null,
+): Promise<void> {
+  const ctx = await loadActionContext(slug);
+  if (ctx.role !== "dm") {
+    throw new Error("Only the DM can set the campaign default.");
+  }
+
+  if (decorationId !== null) {
+    if (!Number.isInteger(decorationId)) throw new Error("Bad request.");
+    const shared = await db
+      .select({ id: decorations.id })
+      .from(decorations)
+      .where(
+        and(
+          eq(decorations.id, decorationId),
+          eq(decorations.campaignId, ctx.campaign.id),
+          eq(decorations.scope, "campaign"),
+        ),
+      )
+      .limit(1);
+    if (!shared[0]) {
+      throw new Error("The campaign default must be a shared decoration.");
+    }
+  }
+
+  await db
+    .update(campaigns)
+    .set({ worldDecorationId: decorationId })
+    .where(eq(campaigns.id, ctx.campaign.id));
+
+  revalidatePath(`/c/${slug}`, "layout");
+}
+
+// Delete one of your own decorations (personal, or a shared one you created).
+// FKs are ON DELETE SET NULL, so any member selection and the campaign default
+// that pointed at it silently fall back.
 export async function deleteDecorationAction(
   slug: string,
   decorationId: number,
