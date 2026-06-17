@@ -15,6 +15,7 @@ import {
 } from "./schema";
 import { getPreset } from "../lib/themes";
 import { generateInviteCode } from "../lib/ids";
+import { generateAvatar, generatePostImage } from "../lib/image-gen";
 import {
   HANDLE_RE,
   MAX_BIO_LENGTH,
@@ -110,18 +111,10 @@ function parseWhen(s: string, now: number): Date {
   return new Date(now - ms);
 }
 
-// Keyless, deterministic avatar per persona (DiceBear, seeded by handle), so a
-// seeded campaign reads as populated instead of a wall of initials.
-function genAvatar(handle: string): string {
-  return `https://api.dicebear.com/9.x/adventurer/svg?seed=${encodeURIComponent(handle)}`;
-}
-
-// Placeholder image for a post that carries an imageHint. It does NOT match the
-// hint (that needs a text-to-image API); it just fills the image slot so layouts
-// with media are exercised. Seeded by the post ref so it's stable across reseeds.
-function postImage(ref: string): string {
-  return `https://picsum.photos/seed/${encodeURIComponent("skald-" + ref)}/900/506`;
-}
+// Avatar and post-image generation live in ../lib/image-gen. With no
+// IMAGE_GEN_API_KEY they return the same deterministic placeholders this seeder
+// used inline before (DiceBear by handle, picsum by post ref); with a key set
+// they generate from each hint and fall back to the placeholder on any error.
 
 function validate(seed: Seed): void {
   const errs: string[] = [];
@@ -299,23 +292,29 @@ async function main() {
   ]);
 
   // --- personas ---
+  // Resolve avatar URLs first. generateAvatar may hit an image API per persona
+  // when IMAGE_GEN_API_KEY is set, so run it sequentially (await in a for-loop,
+  // NOT Promise.all over the whole cast) to avoid 429s from a real provider.
+  // With no key each call returns the deterministic placeholder synchronously.
+  const personaValues: (typeof personas.$inferInsert)[] = [];
+  for (const p of seed.personas) {
+    const h = p.handle.replace(/^@+/, "");
+    const avatarUrl =
+      p.avatarUrl ?? (await generateAvatar({ handle: h, hint: p.avatarHint }));
+    personaValues.push({
+      campaignId: cid,
+      ownerUserId: ownerByRef.get(p.ref)!,
+      handle: h,
+      handleLower: h.toLowerCase(),
+      displayName: p.displayName,
+      bio: p.bio ?? null,
+      avatarUrl,
+      isNpc: p.kind === "npc",
+    });
+  }
   const personaRows = await db
     .insert(personas)
-    .values(
-      seed.personas.map((p) => {
-        const h = p.handle.replace(/^@+/, "");
-        return {
-          campaignId: cid,
-          ownerUserId: ownerByRef.get(p.ref)!,
-          handle: h,
-          handleLower: h.toLowerCase(),
-          displayName: p.displayName,
-          bio: p.bio ?? null,
-          avatarUrl: p.avatarUrl ?? genAvatar(h),
-          isNpc: p.kind === "npc",
-        };
-      }),
-    )
+    .values(personaValues)
     .returning({ id: personas.id, handleLower: personas.handleLower });
 
   // map persona ref -> id (via handle, which we kept unique)
@@ -378,7 +377,10 @@ async function main() {
           personaId: personaId(t.author),
           content: t.content ?? "",
           imageUrl:
-            t.imageUrl ?? (t.imageHint?.trim() ? postImage(t.ref) : null),
+            t.imageUrl ??
+            (t.imageHint && t.imageHint.trim()
+              ? await generatePostImage({ ref: t.ref, hint: t.imageHint })
+              : null),
           status: "published" as const,
           publishedAt: parseWhen(t.postedAt, now),
           replyToPostId,

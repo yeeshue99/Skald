@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, getTableColumns } from "drizzle-orm";
 import { db } from "@/db";
 import {
   bookmarks,
@@ -12,6 +12,14 @@ import {
   posts,
   users,
 } from "@/db/schema";
+
+// Every post column except the generated full-text search_vector, which is
+// derived from content (and is a tsvector, not portable JSON), so it has no
+// place in an export. An importer rebuilds it from content on insert. Stripping
+// the one key (rather than listing every column) keeps new columns in exports
+// automatically. The pulled-out searchVector is intentionally unused.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const { searchVector, ...postExportCols } = getTableColumns(posts);
 
 // Bump when the shape changes so an importer can branch on it.
 export const EXPORT_VERSION = 1;
@@ -53,7 +61,7 @@ export async function exportCampaign(campaignId: number) {
       .where(eq(memberships.campaignId, campaignId))
       .orderBy(asc(memberships.userId)),
     db.select().from(personas).where(eq(personas.campaignId, campaignId)).orderBy(asc(personas.id)),
-    db.select().from(posts).where(eq(posts.campaignId, campaignId)).orderBy(asc(posts.id)),
+    db.select(postExportCols).from(posts).where(eq(posts.campaignId, campaignId)).orderBy(asc(posts.id)),
     db.select().from(follows).where(eq(follows.campaignId, campaignId)).orderBy(asc(follows.id)),
     db.select().from(likes).where(eq(likes.campaignId, campaignId)).orderBy(asc(likes.id)),
     db.select().from(bookmarks).where(eq(bookmarks.campaignId, campaignId)).orderBy(asc(bookmarks.id)),

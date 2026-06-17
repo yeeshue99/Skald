@@ -2,11 +2,17 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Pin } from "lucide-react";
 import { requireCampaignContext } from "@/lib/campaign";
-import { getPersonaPosts, getPinnedPost, getProfile } from "@/lib/queries";
+import {
+  getPersonaPosts,
+  getPersonaReplies,
+  getPinnedPost,
+  getProfile,
+} from "@/lib/queries";
 import { compactNumber } from "@/lib/format";
 import { Avatar } from "@/components/Avatar";
 import { FeedList } from "@/components/FeedList";
 import { PostCard } from "@/components/PostCard";
+import { ProfileTabs } from "@/components/ProfileTabs";
 import { FollowButton } from "@/components/FollowButton";
 import { UnpinButton } from "@/components/UnpinButton";
 import { EditPersonaButton } from "@/components/EditPersonaButton";
@@ -15,10 +21,14 @@ import { PageHeader } from "@/components/PageHeader";
 
 export default async function ProfilePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string; handle: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { slug, handle } = await params;
+  const { tab } = await searchParams;
+  const replies = tab === "replies";
   const ctx = await requireCampaignContext(slug);
   const handleLower = decodeURIComponent(handle)
     .replace(/^@/, "")
@@ -33,7 +43,9 @@ export default async function ProfilePage({
 
   const persona = profile.persona;
   const [feed, pinned] = await Promise.all([
-    getPersonaPosts(ctx.campaign.id, persona.id, ctx.actingPersona.id, null),
+    replies
+      ? getPersonaReplies(ctx.campaign.id, persona.id, ctx.actingPersona.id, null)
+      : getPersonaPosts(ctx.campaign.id, persona.id, ctx.actingPersona.id, null),
     getPinnedPost(ctx.campaign.id, persona.id, ctx.actingPersona.id),
   ]);
   const canEdit =
@@ -41,10 +53,13 @@ export default async function ProfilePage({
   const isSelf = persona.id === ctx.actingPersona.id;
   const myPersonaIds = ctx.myPersonas.map((p) => p.id);
   const isDm = ctx.role === "dm";
-  // keep the pinned post from also appearing in its chronological slot
-  const initialPosts = pinned
-    ? feed.posts.filter((p) => p.id !== pinned.id)
-    : feed.posts;
+  // keep the pinned post from also appearing in its chronological slot — but
+  // only on the Posts tab, where the pinned block is shown. On Replies the
+  // pinned post (a top-level post) belongs in the feed and must not be dropped.
+  const initialPosts =
+    !replies && pinned
+      ? feed.posts.filter((p) => p.id !== pinned.id)
+      : feed.posts;
 
   return (
     <>
@@ -152,7 +167,13 @@ export default async function ProfilePage({
         </div>
       </div>
 
-      {pinned ? (
+      <ProfileTabs
+        slug={slug}
+        handleLower={handleLower}
+        active={replies ? "replies" : "posts"}
+      />
+
+      {!replies && pinned ? (
         <div>
           <div className="flex items-center gap-1.5 px-4 pt-2 text-xs font-semibold text-muted">
             <Pin className="size-3.5" /> Pinned
@@ -169,14 +190,19 @@ export default async function ProfilePage({
       ) : null}
 
       <FeedList
+        key={replies ? "replies" : "posts"}
         slug={slug}
-        type="profile"
+        type={replies ? "replies" : "profile"}
         handleLower={handleLower}
         initialPosts={initialPosts}
         initialCursor={feed.nextCursor}
         myPersonaIds={myPersonaIds}
         isDm={isDm}
-        emptyMessage={`${persona.displayName} hasn't posted yet.`}
+        emptyMessage={
+          replies
+            ? `${persona.displayName} hasn't replied to anything yet.`
+            : `${persona.displayName} hasn't posted yet.`
+        }
       />
     </>
   );

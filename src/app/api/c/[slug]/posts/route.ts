@@ -38,7 +38,7 @@ export async function POST(
 
   // coarse per-IP throttle before auth, so unauthenticated spam is cheap to shed
   const ip = ipFromHeaders(req.headers);
-  const ipLimit = rateLimit(`api-ip:${ip}`, { limit: 120, windowMs: 60_000 });
+  const ipLimit = await rateLimit(`api-ip:${ip}`, { limit: 120, windowMs: 60_000 });
   if (!ipLimit.ok) return tooMany(ipLimit.retryAfterSec);
 
   const auth = req.headers.get("authorization") ?? "";
@@ -67,7 +67,7 @@ export async function POST(
   if (!key) return json({ error: "Invalid or revoked API key." }, 401);
 
   // per-key throttle: a leaked key can't flood the campaign
-  const keyLimit = rateLimit(`api-key:${key.id}`, { limit: 60, windowMs: 60_000 });
+  const keyLimit = await rateLimit(`api-key:${key.id}`, { limit: 60, windowMs: 60_000 });
   if (!keyLimit.ok) return tooMany(keyLimit.retryAfterSec);
 
   let body: unknown;

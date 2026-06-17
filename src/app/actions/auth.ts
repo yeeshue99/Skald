@@ -38,7 +38,7 @@ export async function registerAction(
   formData: FormData,
 ): Promise<FormState> {
   const ip = ipFromHeaders(await headers());
-  if (!rateLimit(`register:${ip}`, { limit: 10, windowMs: 600_000 }).ok) {
+  if (!(await rateLimit(`register:${ip}`, { limit: 10, windowMs: 600_000 })).ok) {
     return { error: TOO_MANY };
   }
 
@@ -141,7 +141,7 @@ export async function loginAction(
   formData: FormData,
 ): Promise<FormState> {
   const ip = ipFromHeaders(await headers());
-  if (!rateLimit(`login:${ip}`, { limit: 10, windowMs: 600_000 }).ok) {
+  if (!(await rateLimit(`login:${ip}`, { limit: 10, windowMs: 600_000 })).ok) {
     return { error: TOO_MANY };
   }
 

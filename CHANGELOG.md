@@ -61,6 +61,11 @@ under Unreleased.
   personas (server-resolved, ranked exact > prefix), with arrow-key / Enter / Tab
   / click selection that inserts `@handle`. Works on every composer segment and
   feeds the existing mention notifications.
+- Composer draft autosave: an in-progress post is saved to `localStorage`
+  (debounced) and restored on reload, then cleared once the post is submitted.
+  The feed composer and the `/compose` page share one draft; a reply composer
+  keeps a per-parent draft. Storage failures in private or blocked-storage modes
+  degrade to a silent no-op, so the composer always works.
 
 ### Notifications
 
@@ -84,6 +89,13 @@ under Unreleased.
 - Search page (`/c/<slug>/search`, in the nav): search posts and people by text,
   with inline Follow on people results. With an empty query it shows trending
   hashtags for the campaign.
+- Post search now uses Postgres full-text search. Free-text queries match and
+  rank against a stored, GIN-indexed `search_vector` (`to_tsvector('english',
+  content)`) via `websearch_to_tsquery` + `ts_rank`, giving multi-word AND
+  semantics and relevance ranking. Stopword-only or untokenizable queries fall
+  back to the previous substring match so they stay discoverable. Hashtag,
+  mention, person, and trending searches are unchanged. Campaign exports omit the
+  derived `search_vector` column.
 
 ### Integrations
 
@@ -103,6 +115,12 @@ under Unreleased.
   `Retry-After` header; login/register surface a "try again later" message.
   Per-process (fine for a single instance); swap in Upstash/Redis to make it
   global if it ever scales out.
+- Cross-instance rate limiting (optional). When `UPSTASH_REDIS_REST_URL` and
+  `UPSTASH_REDIS_REST_TOKEN` are set, the write-path counters live in Upstash
+  Redis via a dependency-free REST pipeline (`INCR` + `PEXPIRE NX` + `PTTL`) so
+  every instance shares one fixed window; otherwise it keeps the per-process
+  in-memory limiter. On any Upstash error it falls back to the in-memory limiter
+  for that call rather than failing open.
 
 ### Performance
 
@@ -133,6 +151,12 @@ under Unreleased.
   and the Bloomr boost green so text on the light fields clears WCAG AA (4.5:1).
   The default theme's primary as 12px text is a known 4.25:1 (it can't be
   lightened without dropping the white-on-primary button label below AA).
+- Accessible dialogs. Edit profile and Change password now share one `Modal`
+  component instead of hand-rolled divs: `role="dialog"`, `aria-modal`,
+  `aria-labelledby`, a Tab / Shift+Tab focus trap, Escape and scrim-click to
+  close, and focus moved into the panel on open and restored to the trigger on
+  close (guarded for a trigger that has since unmounted). The Compose flow is an
+  inline route, not a modal, so it is intentionally left as is.
 
 ### Accounts and membership
 
@@ -171,6 +195,13 @@ under Unreleased.
 - Bookmarks: a private "save post" toggle on every post (optimistic), plus a
   Bookmarks page (`/c/<slug>/bookmarks`) and nav link listing what the acting
   persona saved. No public count or notification.
+- Reposts and quotes are counted separately. The repost icon shows plain boosts
+  only, with a separate "N quotes" link beside it that opens a new
+  `/c/<slug>/post/<id>/quotes` page listing who quote-reposted a post. The boost
+  toggle's optimistic count stays correct because it tracks boosts alone.
+- Posts and Replies tabs on a profile (`?tab=replies`). The Replies tab shows the
+  persona's top-level posts and replies together, newest first, sharing the home
+  feed's visibility rules. Pinned posts still show only on the Posts tab.
 
 ### Campaign seeding
 
@@ -185,6 +216,13 @@ under Unreleased.
 - Seeded personas get a deterministic generated avatar (DiceBear, by handle), and
   posts with an `imageHint` get a seeded placeholder image, so a fresh seed reads
   as a populated feed instead of initials and blank cards.
+- Optional real image generation. With `IMAGE_GEN_API_KEY` set, the seeder
+  generates avatars and post images from each `avatarHint` / `imageHint` via an
+  image-gen API (provider-pluggable, default OpenAI; base64 output is uploaded to
+  Vercel Blob). With no key the seeder is unchanged (deterministic DiceBear
+  avatars and picsum placeholders). Any provider error or timeout falls back to
+  the placeholder, so a seed never hard-fails on the image path; with a key,
+  reseeds produce fresh, non-deterministic images.
 
 ### Theme decorations (per-campaign styling)
 
@@ -287,5 +325,13 @@ neutral default. Migrated from the old TODO; all ten dimensions shipped.
   (`0002`, `0003`), so a fresh `db:migrate` reproduces the whole schema.
   `drizzle-kit generate` runs offline (schema vs snapshots, no DB), so it
   sidesteps the Neon connection hang that blocks `migrate` / `push` here.
+- `pnpm db:mark-migrations`: an idempotent dev-only script that backfills
+  `drizzle.__drizzle_migrations` so a from-scratch `db:migrate` is a no-op on a
+  hand-built dev database (the recurring gap when dev was created with `db:push`
+  or by hand). Hashes and timestamps come straight from drizzle-orm for exact
+  parity; it inserts only the missing rows in a transaction, supports `--dry-run`
+  (prints the full journal table plus planned inserts), refuses a placeholder or
+  invalid `DATABASE_URL`, and requires `--yes` with a host echo for any non-local
+  target.
 - Rebranded internal `twttr` identifiers to `skald`.
 - Deployed to Vercel.

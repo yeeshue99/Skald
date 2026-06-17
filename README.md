@@ -133,6 +133,16 @@ it, you can still attach images by pasting an image URL; the app falls back
 automatically. `pnpm blob:sweep` deletes orphaned blobs no post or persona
 references.
 
+### Rate limiting (optional)
+
+Write paths (the campaign API, login, and register) are rate-limited. By default
+the limiter is an in-memory fixed window, so it throttles per process. To make
+the limit hold across serverless instances, set `UPSTASH_REDIS_REST_URL` and
+`UPSTASH_REDIS_REST_TOKEN` from an Upstash Redis database; the limiter then keeps
+its counters in Upstash over the REST API (no extra dependency). Both are
+optional, and if Upstash is unreachable at request time the limiter degrades to
+in-memory rather than failing open.
+
 ## Seeding a campaign from a world
 
 You can generate a whole campaign (the world, NPCs, player characters, and a feed
@@ -157,6 +167,14 @@ its accounts, then rebuilds. You get a DM login plus one login per player
 character (all sharing a dev password the DM can reset), a generated avatar per
 persona, placeholder images for posts that carry an `imageHint`, and an invite
 code printed at the end.
+
+By default avatars are deterministic DiceBear images (by handle) and posts with
+an `imageHint` get a picsum placeholder. Set `IMAGE_GEN_API_KEY` (and optionally
+`IMAGE_GEN_PROVIDER` / `IMAGE_GEN_MODEL`) to have the seeder generate real avatars
+and post images from each `avatarHint` / `imageHint` instead. OpenAI returns
+base64, so `BLOB_READ_WRITE_TOKEN` must also be set for generated images to
+persist; otherwise generation falls back to the placeholder. With a key set,
+reseeds produce fresh, non-deterministic images.
 
 A whole campaign can also be exported and re-imported as JSON from Settings, for
 backup or moving between deployments.
@@ -200,6 +218,7 @@ a persona the key can't post as gets `403`/`404`. Full contract:
 | `pnpm seed` | Load the STR/X demo campaign |
 | `pnpm seed:petalfall` | Load the Petalfall demo (or a custom world JSON) |
 | `pnpm blob:sweep` | Delete orphaned Vercel Blob images |
+| `pnpm db:mark-migrations` | Backfill the drizzle journal so `db:migrate` is a no-op on a hand-built dev DB |
 
 CI runs typecheck, lint, build, and the test suite on every push.
 
@@ -225,4 +244,9 @@ docs/                 the worldbuilder seed prompt + integration contract
 - The acting persona lives server-side on your membership, not in a cookie, and
   every post / like / follow re-checks that you own the persona you're acting as.
 - Scheduled times are picked in your local timezone and stored as UTC instants.
+- If a dev database was built by hand or with `db:push`, its drizzle journal is
+  empty and `pnpm db:migrate` would try to re-run every migration. Run
+  `pnpm db:mark-migrations --dry-run` to preview, then `pnpm db:mark-migrations`
+  to backfill the journal so migrate is a no-op. It is idempotent and refuses
+  non-local URLs unless you pass `--yes`.
 - `CHANGELOG.md` records what's shipped; `BACKLOG.md` tracks what's next.

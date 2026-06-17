@@ -21,7 +21,7 @@ export function FeedList({
   emptyMessage = "Nothing here yet.",
 }: {
   slug: string;
-  type: "home" | "explore" | "profile" | "bookmarks";
+  type: "home" | "explore" | "profile" | "replies" | "bookmarks";
   handleLower?: string;
   initialPosts: PostView[];
   initialCursor: string | null;
@@ -157,7 +157,7 @@ export function FeedList({
               slug={slug}
               myPersonaIds={myPersonaIds}
               isDm={isDm}
-              showFollow={type !== "profile"}
+              showFollow={type !== "profile" && type !== "replies"}
             />
           ))}
           {cursor ? (

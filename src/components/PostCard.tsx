@@ -230,6 +230,8 @@ export function PostCard({
             liked={data.likedByMe}
             repostCount={data.repostCount}
             reposted={data.repostedByMe}
+            quoteCount={data.quoteCount}
+            quotesHref={`/c/${slug}/post/${data.id}/quotes`}
             replyCount={data.replyCount}
             bookmarked={data.bookmarkedByMe}
             canInteract

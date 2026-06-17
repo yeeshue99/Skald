@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { sql, type SQL } from "drizzle-orm";
 import {
   pgTable,
   serial,
@@ -12,6 +12,7 @@ import {
   unique,
   foreignKey,
   check,
+  customType,
 } from "drizzle-orm/pg-core";
 import type { Theme } from "../lib/theme-types";
 import { PERSONA_AVATAR_FRAMES } from "../lib/theme-types";
@@ -19,6 +20,13 @@ import { PERSONA_AVATAR_FRAMES } from "../lib/theme-types";
 // All instants are timestamptz so scheduling and feed ordering are timezone-safe.
 const tstz = (name: string) =>
   timestamp(name, { withTimezone: true, mode: "date" });
+
+// drizzle-orm 0.45 has no first-class tsvector type, so spell it out. The column
+// is never read in app code (we only match/rank against it), so the mapped data
+// type is just string for typing purposes.
+const tsvector = customType<{ data: string }>({
+  dataType: () => "tsvector",
+});
 
 // ---------------------------------------------------------------------------
 // users — one global login per real person.
@@ -164,6 +172,13 @@ export const posts = pgTable(
     deletedAt: tstz("deleted_at"),
     // set when the author edits the post, to show an "edited" marker
     editedAt: tstz("edited_at"),
+    // STORED full-text index of the content, kept in sync by Postgres. The
+    // config is pinned to the literal 'english' so the expression is immutable
+    // (a requirement for a STORED generated column) and so push/migrate agree.
+    // Never written by app code; searchPosts matches and ranks against it.
+    searchVector: tsvector("search_vector").generatedAlwaysAs(
+      (): SQL => sql`to_tsvector('english', ${posts.content})`,
+    ),
   },
   (t) => [
     foreignKey({
@@ -199,6 +214,9 @@ export const posts = pgTable(
     index("posts_feed_idx").on(t.campaignId, t.publishedAt, t.id),
     index("posts_persona_idx").on(t.personaId),
     index("posts_reply_to_idx").on(t.replyToPostId),
+    // full-text search: a GIN index over the STORED search_vector turns the
+    // content match into an index lookup (searchPosts text branch).
+    index("posts_search_vector_idx").using("gin", t.searchVector),
   ],
 );
 

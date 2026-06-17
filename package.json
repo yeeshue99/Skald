@@ -18,7 +18,8 @@
     "db:studio": "drizzle-kit studio",
     "seed": "tsx src/db/seed.ts",
     "seed:petalfall": "tsx src/db/seed-petalfall.ts",
-    "blob:sweep": "tsx src/db/blob-sweep.ts"
+    "blob:sweep": "tsx src/db/blob-sweep.ts",
+    "db:mark-migrations": "tsx scripts/mark-migrations.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

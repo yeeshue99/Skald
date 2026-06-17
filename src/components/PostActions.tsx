@@ -15,6 +15,8 @@ export function PostActions({
   liked,
   repostCount,
   reposted,
+  quoteCount,
+  quotesHref,
   replyCount,
   bookmarked,
   canInteract,
@@ -23,8 +25,12 @@ export function PostActions({
   postId: number;
   likeCount: number;
   liked: boolean;
+  /** plain boosts only; the boost icon's optimistic +/-1 tracks this number */
   repostCount: number;
   reposted: boolean;
+  /** quote-reposts of this post; rendered as a separate "N quotes" link */
+  quoteCount: number;
+  quotesHref: string;
   replyCount: number;
   bookmarked: boolean;
   canInteract: boolean;
@@ -173,6 +179,19 @@ export function PostActions({
           </div>
         ) : null}
       </div>
+
+      {quoteCount > 0 ? (
+        <Link
+          href={quotesHref}
+          className="action-btn group flex items-center gap-1.5 text-sm transition-colors hover:text-repost"
+          aria-label={`${quoteCount} ${quoteCount === 1 ? "quote" : "quotes"}`}
+        >
+          <span className="rounded-full p-1.5 transition-colors group-hover:bg-repost/10">
+            <Quote className="size-4.5" />
+          </span>
+          {compactNumber(quoteCount)}
+        </Link>
+      ) : null}
 
       <button
         type="button"

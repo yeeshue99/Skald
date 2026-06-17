@@ -72,7 +72,10 @@ export type PostView = {
   replyToPostId: number | null;
   likeCount: number;
   replyCount: number;
+  /** plain boosts only (empty-content reposts); quotes are counted separately */
   repostCount: number;
+  /** quote-reposts (a new post that embeds this one), shown as "N quotes" */
+  quoteCount: number;
   likedByMe: boolean;
   repostedByMe: boolean;
   /** whether the viewing (acting) persona already follows this post's author */
@@ -116,6 +119,7 @@ const personaCols = {
 // clock, and not soft-deleted.
 function visibleCondition() {
   return and(
+    isNull(posts.deletedAt),
     isNotNull(posts.publishedAt),
     lte(posts.publishedAt, sql`now()`),
   );
@@ -142,12 +146,12 @@ async function loadPersonas(ids: number[]): Promise<Map<number, PersonaSummary>>
   return map;
 }
 
-type Counts = { like: number; reply: number; repost: number };
+type Counts = { like: number; reply: number; repost: number; quote: number };
 
 async function loadCounts(ids: number[]): Promise<Map<number, Counts>> {
   const map = new Map<number, Counts>();
   if (ids.length === 0) return map;
-  for (const id of ids) map.set(id, { like: 0, reply: 0, repost: 0 });
+  for (const id of ids) map.set(id, { like: 0, reply: 0, repost: 0, quote: 0 });
 
   const [likeRows, replyRows, repostRows] = await Promise.all([
     db
@@ -160,8 +164,16 @@ async function loadCounts(ids: number[]): Promise<Map<number, Counts>> {
       .from(posts)
       .where(and(inArray(posts.replyToPostId, ids), visibleCondition()))
       .groupBy(posts.replyToPostId),
+    // One row per referenced post, splitting plain boosts (empty content) from
+    // quotes (non-empty) via conditional FILTER aggregates so it stays a single
+    // round trip. content is NOT NULL (defaults to ''), so neither filter drops
+    // rows silently.
     db
-      .select({ id: posts.repostOfPostId, c: count() })
+      .select({
+        id: posts.repostOfPostId,
+        repost: sql<number>`count(*) filter (where ${posts.content} = '')`,
+        quote: sql<number>`count(*) filter (where ${posts.content} <> '')`,
+      })
       .from(posts)
       .where(and(inArray(posts.repostOfPostId, ids), visibleCondition()))
       .groupBy(posts.repostOfPostId),
@@ -169,7 +181,12 @@ async function loadCounts(ids: number[]): Promise<Map<number, Counts>> {
 
   for (const r of likeRows) map.get(r.id)!.like = Number(r.c);
   for (const r of replyRows) if (r.id != null) map.get(r.id)!.reply = Number(r.c);
-  for (const r of repostRows) if (r.id != null) map.get(r.id)!.repost = Number(r.c);
+  for (const r of repostRows)
+    if (r.id != null) {
+      const m = map.get(r.id)!;
+      m.repost = Number(r.repost);
+      m.quote = Number(r.quote);
+    }
   return map;
 }
 
@@ -405,7 +422,7 @@ async function hydrate(
     ]);
 
   const build = (r: RawPost): PostView => {
-    const c = countMap.get(r.id) ?? { like: 0, reply: 0, repost: 0 };
+    const c = countMap.get(r.id) ?? { like: 0, reply: 0, repost: 0, quote: 0 };
     return {
       id: r.id,
       content: r.content,
@@ -427,6 +444,7 @@ async function hydrate(
       likeCount: c.like,
       replyCount: c.reply,
       repostCount: c.repost,
+      quoteCount: c.quote,
       likedByMe: viewer.liked.has(r.id),
       repostedByMe: viewer.reposted.has(r.id),
       authorFollowedByMe: followedAuthors.has(r.personaId),
@@ -577,6 +595,9 @@ async function pageFeed(
   whereExtra: ReturnType<typeof and>,
   viewerPersonaId: number,
   cursor: Cursor | null,
+  // when true the feed keeps replies as well as top-level posts (the
+  // posts-and-replies profile tab); the timelines leave it false
+  includeReplies = false,
 ): Promise<Feed> {
   await publishDueScheduledPosts(campaignId);
   const rows = await db
@@ -586,7 +607,7 @@ async function pageFeed(
       and(
         eq(posts.campaignId, campaignId),
         visibleCondition(),
-        isNull(posts.replyToPostId),
+        includeReplies ? undefined : isNull(posts.replyToPostId),
         whereExtra,
         keysetBefore(cursor),
       ),
@@ -668,16 +689,74 @@ export async function getBookmarksFeed(
   };
 }
 
+// Quote-reposts of a given post: visible posts in the campaign that reference
+// it (repostOfPostId = postId) and carry their own content (content <> ''),
+// newest-first. The target's own visibility is confirmed first so quotes of a
+// deleted or foreign-campaign post can't be enumerated. Returns null when the
+// target isn't visible (the route turns that into a 404).
+export async function getQuotesOf(
+  campaignId: number,
+  postId: number,
+  viewerPersonaId: number,
+  cursor: Cursor | null,
+): Promise<Feed | null> {
+  const target = await db
+    .select({ id: posts.id })
+    .from(posts)
+    .where(
+      and(
+        eq(posts.id, postId),
+        eq(posts.campaignId, campaignId),
+        visibleCondition(),
+      ),
+    )
+    .limit(1);
+  if (target.length === 0) return null;
+
+  const rows = await db
+    .select()
+    .from(posts)
+    .where(
+      and(
+        eq(posts.campaignId, campaignId),
+        visibleCondition(),
+        eq(posts.repostOfPostId, postId),
+        ne(posts.content, ""),
+        keysetBefore(cursor),
+      ),
+    )
+    .orderBy(desc(posts.publishedAt), desc(posts.id))
+    .limit(PAGE_SIZE + 1);
+
+  const hasMore = rows.length > PAGE_SIZE;
+  const pageRows = hasMore ? rows.slice(0, PAGE_SIZE) : rows;
+  const views = await hydrate(pageRows, viewerPersonaId, campaignId);
+  const last = pageRows[pageRows.length - 1];
+  return {
+    posts: views,
+    nextCursor:
+      hasMore && last?.publishedAt
+        ? encodeCursor({ publishedAt: last.publishedAt, id: last.id })
+        : null,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Search — posts by content and people by handle / display name / bio, scoped
 // to the campaign. The query is parsed so a leading # or @ is treated as a
 // hashtag / mention TOKEN (matched on word boundaries) instead of a loose
-// substring. Results are ranked by relevance (token / whole-word / prefix
-// matches first), then recency. LIKE wildcards are escaped so they match
-// literally; regex metacharacters are escaped before a POSIX `~*` match.
-// Post results use OFFSET paging (small, point-in-time result sets) since the
-// relevance order isn't a stable keyset. (At larger scale a pg_trgm GIN index
-// on posts.content would turn the content scan into an index lookup.)
+// substring. Results are ranked by relevance, then recency. LIKE wildcards are
+// escaped so they match literally; regex metacharacters are escaped before a
+// POSIX `~*` match.
+//
+// A free-text post query runs through Postgres full-text search: the STORED
+// posts.search_vector (to_tsvector('english', content), GIN-indexed) is matched
+// with websearch_to_tsquery and ranked with ts_rank, so the content scan is an
+// index lookup. Queries that the parser reduces to nothing (only stopwords, or
+// too short to tokenise) fall back to the old ilike substring match so they
+// stay discoverable. Hashtag / mention / persona / trending searches keep their
+// word-bounded ilike / regex matching. Post results use OFFSET paging (small,
+// point-in-time result sets) since the relevance order isn't a stable keyset.
 // ---------------------------------------------------------------------------
 function escapeLike(input: string): string {
   return input.replace(/[\\%_]/g, (ch) => `\\${ch}`);
@@ -709,10 +788,21 @@ function buildPostMatch(parsed: ParsedQuery): { where: SQL; score: SQL<number> }
     const like = `%${escapeLike(parsed.bare)}%`;
     const prefix = `${escapeLike(parsed.bare)}%`;
     const wordRe = tokenRegex(parsed.bare);
+    // Free-text: full-text search against the STORED, GIN-indexed search_vector.
+    // websearch_to_tsquery gives multi-word AND semantics and tolerant parsing;
+    // ts_rank orders by how well each post matches. The text-search config is
+    // pinned to 'english' to match the generated column exactly.
+    const tsquery = sql`websearch_to_tsquery('english', ${parsed.bare})`;
+    // A query that reduces to no lexemes (only stopwords, or too short to
+    // tokenise) can never match the tsvector, so fall back to the old ilike
+    // substring match for those so short / stopword queries stay discoverable.
+    // GUARD ONLY: this is not a permanent OR, so real FTS ranking stays clean.
+    const empty = sql`numnode(${tsquery}) = 0`;
     return {
-      where: ilike(posts.content, like),
-      // whole-word = 3, starts-with = 2, loose substring = 1
-      score: sql<number>`(case when ${posts.content} ~* ${wordRe} then 3 when ${posts.content} ilike ${prefix} then 2 else 1 end)`,
+      where: sql`(case when ${empty} then ${posts.content} ilike ${like} else ${posts.searchVector} @@ ${tsquery} end)`,
+      // FTS path: ts_rank (a small positive float). Fallback path mirrors the
+      // old discrete scoring (whole-word = 3, starts-with = 2, substring = 1).
+      score: sql<number>`(case when ${empty} then (case when ${posts.content} ~* ${wordRe} then 3 when ${posts.content} ilike ${prefix} then 2 else 1 end) else ts_rank(${posts.searchVector}, ${tsquery}) end)`,
     };
   }
   // hashtag / mention: the token must be present, word-bounded
@@ -896,6 +986,8 @@ async function fetchNewer(
   viewerPersonaId: number,
   after: Cursor,
   limit = 40,
+  // mirrors pageFeed: when true the live "newer" sweep keeps replies too
+  includeReplies = false,
 ): Promise<PostView[]> {
   const rows = await db
     .select()
@@ -904,7 +996,7 @@ async function fetchNewer(
       and(
         eq(posts.campaignId, campaignId),
         visibleCondition(),
-        isNull(posts.replyToPostId),
+        includeReplies ? undefined : isNull(posts.replyToPostId),
         whereExtra,
         or(
           gt(posts.publishedAt, after.publishedAt),
@@ -951,6 +1043,24 @@ export async function getNewerPersonaPosts(
     and(eq(posts.personaId, personaId)),
     viewerPersonaId,
     after,
+  );
+}
+
+// Live "newer" sweep for the profile's "Replies" tab (posts and replies). The
+// limit is passed explicitly so the includeReplies flag lands in the right slot.
+export async function getNewerPersonaReplies(
+  campaignId: number,
+  personaId: number,
+  viewerPersonaId: number,
+  after: Cursor,
+): Promise<PostView[]> {
+  return fetchNewer(
+    campaignId,
+    and(eq(posts.personaId, personaId)),
+    viewerPersonaId,
+    after,
+    40,
+    true,
   );
 }
 
@@ -1068,6 +1178,25 @@ export async function getPersonaPosts(
     and(eq(posts.personaId, personaId)),
     viewerPersonaId,
     cursor,
+  );
+}
+
+// The persona's posts AND replies together (the profile's "Replies" tab).
+// Reuses the feed machinery with includeReplies, so the same visibility guard
+// (published, not future, not soft-deleted) applies. Reply cards render bare,
+// without their parent thread, which is acceptable for v1.
+export async function getPersonaReplies(
+  campaignId: number,
+  personaId: number,
+  viewerPersonaId: number,
+  cursor: Cursor | null,
+): Promise<Feed> {
+  return pageFeed(
+    campaignId,
+    and(eq(posts.personaId, personaId)),
+    viewerPersonaId,
+    cursor,
+    true,
   );
 }
 

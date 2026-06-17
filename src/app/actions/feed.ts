@@ -9,15 +9,17 @@ import {
   getNewerExploreFeed,
   getNewerHomeFeed,
   getNewerPersonaPosts,
+  getNewerPersonaReplies,
   getPersonaByHandle,
   getPersonaPosts,
+  getPersonaReplies,
   type Feed,
   type PostView,
 } from "@/lib/queries";
 
 export async function fetchFeedPageAction(
   slug: string,
-  type: "home" | "explore" | "profile" | "bookmarks",
+  type: "home" | "explore" | "profile" | "replies" | "bookmarks",
   cursor: string | null,
   handleLower?: string,
 ): Promise<Feed> {
@@ -33,6 +35,17 @@ export async function fetchFeedPageAction(
   if (type === "bookmarks") {
     return getBookmarksFeed(ctx.campaign.id, ctx.actingPersona.id, cur);
   }
+  if (type === "replies") {
+    if (!handleLower) return { posts: [], nextCursor: null };
+    const persona = await getPersonaByHandle(ctx.campaign.id, handleLower);
+    if (!persona) return { posts: [], nextCursor: null };
+    return getPersonaReplies(
+      ctx.campaign.id,
+      persona.id,
+      ctx.actingPersona.id,
+      cur,
+    );
+  }
   if (!handleLower) return { posts: [], nextCursor: null };
   const persona = await getPersonaByHandle(ctx.campaign.id, handleLower);
   if (!persona) return { posts: [], nextCursor: null };
@@ -43,7 +56,7 @@ export async function fetchFeedPageAction(
 // live "N new posts" pill and to surface the user's own just-sent post.
 export async function fetchNewerFeedAction(
   slug: string,
-  type: "home" | "explore" | "profile" | "bookmarks",
+  type: "home" | "explore" | "profile" | "replies" | "bookmarks",
   afterIso: string,
   afterId: number,
   handleLower?: string,
@@ -62,6 +75,17 @@ export async function fetchNewerFeedAction(
   }
   if (type === "explore") {
     return getNewerExploreFeed(ctx.campaign.id, ctx.actingPersona.id, after);
+  }
+  if (type === "replies") {
+    if (!handleLower) return [];
+    const persona = await getPersonaByHandle(ctx.campaign.id, handleLower);
+    if (!persona) return [];
+    return getNewerPersonaReplies(
+      ctx.campaign.id,
+      persona.id,
+      ctx.actingPersona.id,
+      after,
+    );
   }
   if (!handleLower) return [];
   const persona = await getPersonaByHandle(ctx.campaign.id, handleLower);

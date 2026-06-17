@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import {
   BarChart3,
   CalendarClock,
@@ -21,6 +21,14 @@ import {
   POLL_OPTION_MAX,
 } from "@/lib/validation";
 import type { PersonaSummary } from "@/lib/queries";
+import {
+  DRAFT_VERSION,
+  draftStorageKey,
+  isDraftEmpty,
+  parseDraft,
+  serializeDraft,
+  type ComposerDraft,
+} from "@/lib/composer-draft";
 import { Avatar } from "./Avatar";
 import { MentionTextarea } from "./MentionTextarea";
 import { Button } from "./ui";
@@ -67,6 +75,20 @@ export function Composer({
   const draftRef = useRef<HTMLInputElement>(null);
   const fileRefs = useRef<(HTMLInputElement | null)[]>([]);
 
+  // Local autosave. The feed composer and /compose share the root key on
+  // purpose (both render with no replyToPostId), so a draft started in one is
+  // offered in the other.
+  const storageKey = useMemo(
+    () => draftStorageKey(slug, replyToPostId),
+    [slug, replyToPostId],
+  );
+  // Guards the save effect against re-serializing immediately after restore, and
+  // skips the very first save so restoring identical data isn't a no-op write.
+  const hasRestoredRef = useRef(false);
+  // Shared handle for the pending debounced save, cleared in the success effect
+  // so a stale timer can't re-write the draft after it's been cleared.
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const author = personas.find((p) => p.id === authorId) ?? personas[0];
   const isThread = segments.length > 1;
   const anyOver = segments.some((s) => s.content.length > MAX_POST_LENGTH);
@@ -87,6 +109,84 @@ export function Composer({
     ? segments[0].content.trim().length > 0 && pollValid && !anyOver
     : hasContent && !anyOver;
 
+  // Restore a saved draft once, on mount. Done in an effect (not during render)
+  // so the controlled textareas hydrate from server-empty markup first and we
+  // don't trip a hydration mismatch. localStorage is wrapped because it throws
+  // in some private-mode / blocked-storage configs.
+  useEffect(() => {
+    if (hasRestoredRef.current) return;
+    hasRestoredRef.current = true;
+    let raw: string | null = null;
+    try {
+      raw = window.localStorage.getItem(storageKey);
+    } catch {
+      return;
+    }
+    const draft = parseDraft(raw);
+    if (!draft) return;
+
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setSegments(draft.segments.map((s) => ({ ...s })));
+    setPollOpen(draft.pollOpen);
+    setPollOptions(draft.pollOptions.length ? draft.pollOptions : ["", ""]);
+    setPollDays(draft.pollDays);
+    setAuthorId(draft.authorId);
+
+    if (draft.scheduleOpen) {
+      // Recompute the picker floor the same way toggleSchedule does, then drop a
+      // restored time that's now in the past so we never restore an
+      // unsubmittable schedule.
+      const d = new Date(Date.now() + 5 * 60 * 1000);
+      const off = d.getTimezoneOffset();
+      const min = new Date(d.getTime() - off * 60000).toISOString().slice(0, 16);
+      setMinDateTime(min);
+      setScheduleOpen(true);
+      setLocalWhen(draft.localWhen && draft.localWhen >= min ? draft.localWhen : "");
+    }
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [storageKey]);
+
+  // Debounced save on every draft change. Skips the first run right after
+  // restore, and skips entirely once a post has succeeded so it can't race the
+  // success effect's clear. All storage access is guarded.
+  useEffect(() => {
+    if (!hasRestoredRef.current || state.ok) return;
+    const draft: ComposerDraft = {
+      segments,
+      pollOpen,
+      pollOptions,
+      pollDays,
+      scheduleOpen,
+      localWhen,
+      authorId,
+      v: DRAFT_VERSION,
+    };
+    saveTimerRef.current = setTimeout(() => {
+      try {
+        if (isDraftEmpty(draft)) {
+          window.localStorage.removeItem(storageKey);
+        } else {
+          window.localStorage.setItem(storageKey, serializeDraft(draft));
+        }
+      } catch {
+        // QuotaExceededError / SecurityError in private modes: keep composing.
+      }
+    }, 500);
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, [
+    storageKey,
+    segments,
+    pollOpen,
+    pollOptions,
+    pollDays,
+    scheduleOpen,
+    localWhen,
+    authorId,
+    state.ok,
+  ]);
+
   // reset after a successful post, and nudge any visible feed to pull it in
   useEffect(() => {
     if (state.ok) {
@@ -98,9 +198,20 @@ export function Composer({
       setPollOptions(["", ""]);
       setPollDays(POLL_DAY_CHOICES[0]);
       /* eslint-enable react-hooks/set-state-in-effect */
+      // Cancel any pending debounced save before clearing so a stale timer can't
+      // re-write the draft we're about to remove.
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+      }
+      try {
+        window.localStorage.removeItem(storageKey);
+      } catch {
+        // ignore: storage blocked, nothing to clean up
+      }
       window.dispatchEvent(new Event("skald:posted"));
     }
-  }, [state]);
+  }, [state, storageKey]);
 
   function patchSegment(i: number, patch: Partial<Segment>) {
     setSegments((prev) =>
@@ -205,7 +316,11 @@ export function Composer({
           : "Post";
 
   return (
-    <form action={formAction} className="px-4 py-3">
+    <form
+      action={formAction}
+      onReset={(e) => e.preventDefault()}
+      className="px-4 py-3"
+    >
       <input type="hidden" name="slug" value={slug} />
       <input type="hidden" name="authorPersonaId" value={authorId} />
       <input type="hidden" name="segments" value={JSON.stringify(segments)} />

@@ -624,6 +624,8 @@ export async function toggleBoostAction(
     reposted = true;
   }
 
+  // count plain boosts only (content = ''); quotes have their own count, and the
+  // boost icon's optimistic +/-1 only ever moves the plain-boost number.
   const [{ c }] = await db
     .select({ c: sql<number>`count(*)::int` })
     .from(posts)
@@ -631,6 +633,7 @@ export async function toggleBoostAction(
       and(
         eq(posts.repostOfPostId, postId),
         eq(posts.campaignId, ctx.campaign.id),
+        eq(posts.content, ""),
         isNull(posts.deletedAt),
         sql`${posts.publishedAt} is not null and ${posts.publishedAt} <= now()`,
       ),
