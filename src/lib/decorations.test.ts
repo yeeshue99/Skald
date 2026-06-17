@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
 import {
   DEFAULT_THEME,
@@ -98,6 +100,35 @@ describe("campaignRenderProps", () => {
       backdrop({ imageUrl: "javascript:alert(1)" }),
     );
     expect(dataAttrs["data-texture"]).toBe("constellations");
+  });
+});
+
+// Guards the contract between the render layer and the stylesheet: a typo in a
+// var name (emit `--texture-image`, read `--texture-img`) would make the custom
+// backdrop silently not paint, which no pure-JS test would catch. This asserts
+// globals.css actually consumes every --texture-* var campaignRenderProps emits.
+describe("custom backdrop CSS contract", () => {
+  const css = readFileSync(
+    fileURLToPath(new URL("../app/globals.css", import.meta.url)),
+    "utf8",
+  );
+  const { cssVars } = campaignRenderProps(STRIX_THEME, backdrop());
+
+  it("globals.css reads every --texture-* var the render emits", () => {
+    const emitted = Object.keys(cssVars).filter((k) =>
+      k.startsWith("--texture-"),
+    );
+    expect(emitted.length).toBeGreaterThanOrEqual(4);
+    for (const v of emitted) {
+      expect(css, `globals.css must read var(${v})`).toContain(`var(${v}`);
+    }
+  });
+
+  it("has a [data-texture=custom] ::before rule that paints the image", () => {
+    expect(css).toMatch(/\[data-texture="custom"\]::before/);
+    expect(css).toMatch(
+      /data-texture="custom"\]::before\s*\{[^}]*var\(--texture-image/,
+    );
   });
 });
 
