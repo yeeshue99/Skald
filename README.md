@@ -119,24 +119,28 @@ dev and production, so there's no local Postgres to install.
 3. Add `DATABASE_URL` = your Neon connection string. (In the project's Storage
    tab you can create a Neon database and Vercel wires `DATABASE_URL` for you.)
    It must be available to the **Production** build, since migrations run there.
-4. Baseline the production database **once** (run locally with `.env.local`
-   pointing at the production Neon URL). This creates the tables and marks the
-   migration journal as applied, so the auto-migrate below starts clean:
-
-   ```bash
-   pnpm db:push                 # bring prod schema up to date with schema.ts
-   pnpm db:mark-migrations --yes  # record 0000..N as applied (needed once)
-   ```
-
-5. Deploy. From now on migrations run **automatically on every production
-   deploy**: `vercel.json` sets the build command to
+4. Deploy. Migrations run **automatically on every production deploy**:
+   `vercel.json` sets the build command to
    `node scripts/predeploy-migrate.mjs && pnpm build`, which runs
    `drizzle-kit migrate` (applying only new `drizzle/000N_*.sql` files) before
    the Next.js build. Preview/branch deploys skip migrating, so they never touch
-   the production schema. To add a schema change later: edit `schema.ts`, run
-   `pnpm db:generate` to emit the migration SQL, commit it, and push — the deploy
-   applies it.
-6. Visit the deployment, create a campaign, and share the invite code.
+   the production schema.
+   - A **brand-new empty** Neon database migrates from scratch on the first
+     deploy — nothing to do.
+   - A database that already has tables from an earlier `db:push` (no migration
+     journal) must be **baselined once**, or the build fails with instructions.
+     Run locally with `.env.local` pointing at that production Neon URL:
+
+     ```bash
+     pnpm db:push                   # bring prod schema up to date with schema.ts
+     pnpm db:mark-migrations --yes  # record 0000..N as applied (needed once)
+     ```
+
+   To add a schema change later: edit `schema.ts`, write the matching
+   `drizzle/000N_*.sql` (+ a `_journal.json` entry), commit, and push — the
+   deploy applies it. (`pnpm db:generate` can emit the SQL, but the chain is
+   currently drifted; see BACKLOG.)
+5. Visit the deployment, create a campaign, and share the invite code.
 
 ### Images (optional)
 
