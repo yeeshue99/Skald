@@ -28,7 +28,7 @@ The schema is code in `src/db/schema.ts` (14 tables, snake_case columns mapped t
 3. Sync to your dev DB: `pnpm db:push`.
 4. Update `src/lib/queries.ts` (reads) and the relevant action(s) (writes); both must filter by `campaignId`.
 5. If feed-shaped, extend `RawPost -> PostView` hydration rather than selecting raw rows into components.
-6. Update `src/db/seed.ts` / `seed-petalfall.ts` and any factory in `src/test/` if the new column is required.
+6. Update `src/db/seeds/seed.ts` / `seed-petalfall.ts` and any factory in `src/test/` if the new column is required.
 
 ## Gotchas
 

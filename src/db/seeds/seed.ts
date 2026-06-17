@@ -1,7 +1,7 @@
-import "./load-env";
+import "../load-env";
 import { eq, inArray } from "drizzle-orm";
 import bcrypt from "bcryptjs";
-import { db } from "./index";
+import { db } from "../index";
 import {
   campaigns,
   follows,
@@ -10,9 +10,9 @@ import {
   personas,
   posts,
   users,
-} from "./schema";
-import { STRIX_THEME } from "../lib/themes";
-import { generateInviteCode } from "../lib/ids";
+} from "../schema";
+import { STRIX_THEME } from "../../lib/themes";
+import { generateInviteCode } from "../../lib/ids";
 
 const SLUG = "strix";
 const PASSWORD = "password123";

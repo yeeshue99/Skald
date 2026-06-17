@@ -17,9 +17,9 @@ Turn a freeform description of a cast into a runnable seed script that fills a
 Skald campaign with believable, interconnected activity that exercises every
 feature the app currently has.
 
-The output is a TypeScript seed (`src/db/seed-<slug>.ts`) run with
-`pnpm tsx src/db/seed-<slug>.ts`. It inserts rows directly with Drizzle (it does
-NOT go through server actions), mirroring `src/db/seed.ts`.
+The output is a TypeScript seed (`src/db/seeds/<slug>.ts`) run with
+`pnpm tsx src/db/seeds/<slug>.ts`. It inserts rows directly with Drizzle (it does
+NOT go through server actions), mirroring `src/db/seeds/seed.ts`.
 
 ## Non-negotiable requirements
 
@@ -55,9 +55,10 @@ the feature list and row shapes from what is actually there now:
 
 - `src/db/schema.ts` — every table and column, enums, FKs, checks, unique
   indexes. Note generated columns you must NOT write (e.g. `posts.search_vector`).
-- `src/db/seed.ts` — the canonical seed conventions to mirror (env loading,
+- `src/db/seeds/seed.ts` — the canonical seed conventions to mirror (env loading,
   idempotent cleanup, insert order, acting-persona wiring, clean shutdown,
-  the logins printout).
+  the logins printout). Note its imports are one level deeper (`../index`,
+  `../../lib/...`); generated seeds in `src/db/seeds/` use the same paths.
 - `src/lib/validation.ts` — the live limits: handle regex and length, display
   name and bio caps, post length cap, poll option/length rules, avatar-frame set.
 - `src/lib/themes.ts` — the `PRESETS` to pick a campaign theme from (so the
@@ -178,13 +179,14 @@ starting point, not the source of truth.
 
 ### 8. Write, verify, and report
 
-- Write the seed to `src/db/seed-<slug>.ts` (a NEW file; never clobber
-  `seed.ts`). Use the same env import and clean-shutdown pattern as `seed.ts`.
+- Write the seed to `src/db/seeds/<slug>.ts` (a NEW file; never clobber
+  `seed.ts`). Use the same env import and clean-shutdown pattern as
+  `src/db/seeds/seed.ts`, including its `../`/`../../` import depth.
 - Make cleanup idempotent and SCOPED: delete the campaign by its slug (cascades
   its personas/posts/etc.) and delete only the users this seed creates (by
   `usernameLower`). Never delete data you did not create.
 - `pnpm typecheck` must pass on the new file.
-- If a dev database is reachable, run `pnpm tsx src/db/seed-<slug>.ts` and confirm
+- If a dev database is reachable, run `pnpm tsx src/db/seeds/<slug>.ts` and confirm
   it prints success + the coverage summary. The seed targets `DATABASE_URL` from
   `.env.local`; the DB must already have the current schema applied (`pnpm db:push`)
   or inserts referencing new columns will fail. If you cannot reach a DB, hand the
