@@ -50,7 +50,10 @@ under Unreleased.
   layer the campaign layout draws). All motion-driven pieces stay gated by
   `prefers-reduced-motion`. The decoration editor gains a "Custom image…" option
   per dimension (upload or paste a URL, tune opacity/size) plus the wordmark mode
-  toggle and an ambient-particle slot.
+  toggle and an ambient-particle slot. Each upload control has a live swatch that
+  mirrors the real render (matching the CSS `background-size`/repeat/placement),
+  so the effect of tiling, size, and opacity is visible as you drag the sliders,
+  not just in the merged preview at the bottom.
 - DM decorations: a DM can additionally share decorations campaign-wide (a
   `scope = "campaign"` decoration in the same table) so every member can pick them
   on their Appearance page, and promote one shared decoration to the campaign

@@ -279,8 +279,175 @@ function Thumb({ spec }: { spec: DecorationSpec }) {
   );
 }
 
-// Upload + tune a custom image for one decoration dimension: upload/paste,
-// opacity, an optional size knob, and (for the wordmark) a replace/ornament mode.
+// Human label for the per-dimension size knob.
+const SIZE_LABEL: Record<CustomImageDim, string> = {
+  divider: "Strip height",
+  cardFrame: "Size",
+  avatarFrame: "Size",
+  wordmark: "Image size",
+  reaction: "Burst size",
+  ambient: "Tile size",
+};
+
+// A live, isolated swatch showing exactly how one uploaded image renders for its
+// dimension with the current knobs. The background-size / repeat / placement
+// mirror the real globals.css "custom" branch, so what you see here is what the
+// feed shows — the point being to make tiling, size, and opacity legible while
+// you drag the sliders, without hunting in the merged preview below.
+function AssetSwatch({
+  dim,
+  imageUrl,
+  opacity,
+  size,
+  fit,
+  mode,
+}: {
+  dim: "backdrop" | CustomImageDim;
+  imageUrl: string;
+  opacity: number;
+  size: number;
+  fit?: DecorationFit;
+  mode?: WordmarkMode;
+}) {
+  const img = safeCssUrl(imageUrl);
+  if (img === "none") {
+    return (
+      <div className="grid h-20 place-items-center rounded-base border border-dashed border-border text-xs text-muted">
+        Upload an image to preview it
+      </div>
+    );
+  }
+  const layer = (style: CSSProperties) => (
+    <div aria-hidden className="pointer-events-none absolute inset-0" style={style} />
+  );
+
+  if (dim === "backdrop" || dim === "ambient") {
+    const cover = dim === "backdrop" && fit === "cover";
+    return (
+      <div className="relative h-28 overflow-hidden rounded-base border border-border bg-bg">
+        {layer({
+          backgroundImage: img,
+          backgroundSize: cover ? "cover" : `${size}px`,
+          backgroundRepeat: cover ? "no-repeat" : "repeat",
+          backgroundPosition: "center",
+          opacity,
+        })}
+        <p className="relative p-2 text-[13px] text-text">
+          Sample feed text over your {dim === "ambient" ? "particle" : "backdrop"}.
+        </p>
+      </div>
+    );
+  }
+  if (dim === "divider") {
+    return (
+      <div className="rounded-base border border-border bg-surface p-3">
+        <p className="text-[13px] text-text">A post.</p>
+        <div className="relative my-1" style={{ height: size }}>
+          {layer({
+            backgroundImage: img,
+            backgroundSize: `auto ${size}px`,
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "center",
+            opacity,
+          })}
+        </div>
+        <p className="text-[13px] text-text">The next post.</p>
+      </div>
+    );
+  }
+  if (dim === "cardFrame") {
+    return (
+      <div className="relative overflow-hidden rounded-base border border-border bg-surface p-4 text-[13px] text-text">
+        {layer({
+          backgroundImage: img,
+          backgroundSize: "100% 100%",
+          backgroundRepeat: "no-repeat",
+          opacity,
+        })}
+        <span className="relative">A standalone card (composer, panel, quote).</span>
+      </div>
+    );
+  }
+  if (dim === "avatarFrame") {
+    return (
+      <div className="flex items-center gap-3 rounded-base border border-border bg-surface p-3">
+        <span className="relative inline-grid size-12 place-items-center rounded-full bg-surface-hover text-xs font-semibold text-muted">
+          AV
+          {layer({
+            inset: "-10%",
+            backgroundImage: img,
+            backgroundSize: "contain",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "center",
+            opacity,
+          })}
+        </span>
+        <span className="text-[13px] text-muted">around every avatar</span>
+      </div>
+    );
+  }
+  if (dim === "wordmark") {
+    return (
+      <div className="rounded-base border border-border bg-bg p-3">
+        {mode === "replace" ? (
+          <div
+            aria-hidden
+            style={{
+              height: size,
+              width: "100%",
+              maxWidth: "14em",
+              backgroundImage: img,
+              backgroundSize: "contain",
+              backgroundPosition: "left center",
+              backgroundRepeat: "no-repeat",
+              opacity,
+            }}
+          />
+        ) : (
+          <div className="flex items-center font-display text-lg font-bold text-primary">
+            <span
+              aria-hidden
+              className="inline-block"
+              style={{
+                width: size,
+                height: size,
+                marginRight: "0.3em",
+                backgroundImage: img,
+                backgroundSize: "contain",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "center",
+                opacity,
+              }}
+            />
+            Your campaign
+          </div>
+        )}
+      </div>
+    );
+  }
+  // reaction
+  return (
+    <div className="flex items-center gap-3 rounded-base border border-border bg-surface p-3 text-[13px] text-muted">
+      <span
+        aria-hidden
+        className="inline-block shrink-0"
+        style={{
+          width: size,
+          height: size,
+          backgroundImage: img,
+          backgroundSize: "contain",
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: "center",
+          opacity,
+        }}
+      />
+      bursts on the like / boost button when a post is reacted to
+    </div>
+  );
+}
+
+// Upload + tune a custom image for one decoration dimension: upload/paste, a live
+// swatch, opacity, an optional size knob, and (for the wordmark) a mode toggle.
 function CustomImageField({
   dim,
   value,
@@ -380,10 +547,18 @@ function CustomImageField({
         </div>
       ) : null}
 
+      <AssetSwatch
+        dim={dim}
+        imageUrl={value.imageUrl}
+        opacity={value.opacity}
+        size={value.size}
+        mode={value.mode}
+      />
+
       {sizeCfg ? (
         <label className="block space-y-1">
           <span className="flex items-center justify-between text-xs font-medium text-text">
-            <span>Size</span>
+            <span>{SIZE_LABEL[dim]}</span>
             <span className="font-mono text-muted">{value.size}px</span>
           </span>
           <input
@@ -626,6 +801,14 @@ export function DecorationManager({
                 Uploads aren&apos;t configured on this server — paste an image URL.
               </span>
             ) : null}
+
+            <AssetSwatch
+              dim="backdrop"
+              imageUrl={draft.backdrop.imageUrl}
+              opacity={draft.backdrop.opacity}
+              size={draft.backdrop.size}
+              fit={draft.backdrop.fit}
+            />
 
             <div className="space-y-1.5">
               <span className="block text-xs font-medium text-text">Fit</span>
