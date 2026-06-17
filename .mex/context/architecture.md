@@ -54,8 +54,8 @@ A read (rendering a feed) flows: a server page under `src/app/c/[slug]/` calls `
 
 ## What Does NOT Exist Here
 
-- No background worker, cron, or job queue. Scheduling is purely time-based: a post is visible once `publishedAt` has passed.
-- No read-side REST/GraphQL API. The only HTTP endpoints are `POST /api/c/<slug>/posts` (write-only campaign API) and `/api/upload`. Everything else is server components plus server actions.
+- No worker for features. Scheduling is purely time-based: a post is visible once `publishedAt` has passed, no job flips it live. The only scheduled job is housekeeping: a daily Vercel cron `GET /api/cron/blob-sweep` (04:00 UTC, guarded by `CRON_SECRET`, 503 until set) that deletes orphaned blob images.
+- No read-side REST/GraphQL API. The only HTTP routes are `POST /api/c/<slug>/posts` (write-only campaign API), `/api/upload` (image upload), and `/api/cron/blob-sweep` (the cron above). Everything else is server components plus server actions.
 - No client state library (Redux/Zustand) and no WebSockets/real-time. Feed freshness comes from `revalidatePath` and a polling "new posts" pill.
 - No email or external notifications; notifications are in-app rows only.
 - No permission system beyond the two membership roles, `dm` and `player`.

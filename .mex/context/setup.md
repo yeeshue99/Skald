@@ -39,6 +39,7 @@ last_updated: 2026-06-16
 - `TEST_DATABASE_URL` (required for `pnpm test:integration`): a Postgres URL the integration suite truncates and seeds. Do not point it at real data.
 - `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (optional): cross-instance rate limiting; falls back to in-memory when unset.
 - `IMAGE_GEN_API_KEY` (optional, plus `IMAGE_GEN_PROVIDER` / `IMAGE_GEN_MODEL`): let the seeder generate real avatars/images instead of placeholders.
+- `CRON_SECRET` (required for the blob-sweep cron): Bearer token Vercel Cron sends to `GET /api/cron/blob-sweep`. The route 503s until it's set, so the daily orphaned-image cleanup is a no-op without it.
 
 ## Common Commands
 
