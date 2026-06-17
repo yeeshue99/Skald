@@ -5,11 +5,18 @@ import type {
   DecorationSpec,
   DecorationFit,
   BackdropImage,
+  ImageAsset,
+  WordmarkAsset,
+  CustomImageDim,
 } from "./theme-types";
 import {
   DECORATION_SIZE_MIN,
   DECORATION_SIZE_MAX,
   DECORATION_SIZE_DEFAULT,
+  CUSTOM_IMAGE_DIMS,
+  CUSTOM_IMAGE_SIZE,
+  CUSTOM_IMAGE_OPACITY,
+  WORDMARK_MODES,
 } from "./theme-types";
 import { DECORATION_VALUES, AMBIENT_EFFECT_VALUES } from "./decoration-options";
 
@@ -22,6 +29,10 @@ export type {
   DecorationSpec,
   DecorationFit,
   BackdropImage,
+  ImageAsset,
+  WordmarkAsset,
+  WordmarkMode,
+  CustomImageDim,
 } from "./theme-types";
 
 // ---------------------------------------------------------------------------
@@ -499,11 +510,43 @@ export function normalizeOverrides(
   return out;
 }
 
+const clampNum = (n: unknown, lo: number, hi: number, def: number): number => {
+  const r = Number(n);
+  return Number.isFinite(r) ? Math.min(hi, Math.max(lo, r)) : def;
+};
+
+/** Clamp a custom image asset for a given dimension (opacity 0..1; size per the
+ *  dimension's range, or dropped where size is unused). Pure. */
+export function normalizeImageAsset(dim: CustomImageDim, a: ImageAsset): ImageAsset {
+  const sizeCfg = CUSTOM_IMAGE_SIZE[dim];
+  const size = sizeCfg
+    ? Math.round(clampNum(a.size, sizeCfg.min, sizeCfg.max, sizeCfg.def))
+    : 0;
+  return {
+    imageUrl: a.imageUrl,
+    opacity: clampNum(a.opacity, 0, 1, CUSTOM_IMAGE_OPACITY[dim]),
+    size,
+  };
+}
+
+function normalizeWordmark(a: WordmarkAsset): WordmarkAsset {
+  const mode = (WORDMARK_MODES as readonly string[]).includes(a.mode)
+    ? a.mode
+    : "ornament";
+  return { ...normalizeImageAsset("wordmark", a), mode };
+}
+
 /** Clamp a stored/submitted decoration mod into its valid ranges. Pure. */
 export function normalizeDecorationSpec(spec: DecorationSpec): DecorationSpec {
-  const overrides = normalizeOverrides(spec.overrides);
-  const backdrop = spec.backdrop ? normalizeBackdrop(spec.backdrop) : null;
-  return backdrop ? { overrides, backdrop } : { overrides };
+  const out: DecorationSpec = { overrides: normalizeOverrides(spec.overrides) };
+  if (spec.backdrop) out.backdrop = normalizeBackdrop(spec.backdrop);
+  if (spec.divider) out.divider = normalizeImageAsset("divider", spec.divider);
+  if (spec.cardFrame) out.cardFrame = normalizeImageAsset("cardFrame", spec.cardFrame);
+  if (spec.avatarFrame) out.avatarFrame = normalizeImageAsset("avatarFrame", spec.avatarFrame);
+  if (spec.wordmark) out.wordmark = normalizeWordmark(spec.wordmark);
+  if (spec.reaction) out.reaction = normalizeImageAsset("reaction", spec.reaction);
+  if (spec.ambient) out.ambient = normalizeImageAsset("ambient", spec.ambient);
+  return out;
 }
 
 /** Build a safe CSS `url("…")` token from a user-supplied image URL. Returns
@@ -535,6 +578,8 @@ export function campaignRenderProps(
   dataAttrs: Record<string, string>;
   cssVars: CSSProperties;
   effects: Decorations["effects"];
+  /** custom ambient particle to render as a feed layer (the layout draws it) */
+  ambient: ImageAsset | null;
 } {
   // merge the mod's named overrides into the campaign decorations, then run the
   // existing data-attr + var derivation over the merged theme so divider, card
@@ -568,9 +613,32 @@ export function campaignRenderProps(
     }
   }
 
+  // every other upload-backed dimension: point its data-attr at "custom" and emit
+  // the --<prefix>-image/opacity/size vars the matching globals.css branch reads.
+  // ambient has no data-attr (it is a feed layer the layout draws separately).
+  let ambient: ImageAsset | null = null;
+  const m = mod as Record<string, ImageAsset | WordmarkAsset | null | undefined> | null | undefined;
+  for (const { key, dataAttr, varPrefix, hasSize, hasMode } of CUSTOM_IMAGE_DIMS) {
+    const raw = m?.[key];
+    if (!raw) continue;
+    const cssImage = safeCssUrl(raw.imageUrl);
+    if (cssImage === "none") continue;
+    const a =
+      key === "wordmark"
+        ? normalizeWordmark(raw as WordmarkAsset)
+        : normalizeImageAsset(key, raw);
+    if (dataAttr) dataAttrs[dataAttr] = "custom";
+    cssVars[`--${varPrefix}-image`] = cssImage;
+    cssVars[`--${varPrefix}-opacity`] = String(a.opacity);
+    if (hasSize) cssVars[`--${varPrefix}-size`] = `${a.size}px`;
+    if (hasMode) dataAttrs["data-wordmark-mode"] = (a as WordmarkAsset).mode;
+    if (key === "ambient") ambient = a;
+  }
+
   return {
     dataAttrs,
     cssVars: cssVars as CSSProperties,
     effects: mergedDecor.effects,
+    ambient,
   };
 }

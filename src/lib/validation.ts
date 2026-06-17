@@ -6,6 +6,7 @@ import {
   DECORATION_SIZE_MIN,
   DECORATION_SIZE_MAX,
   DECORATION_SIZE_DEFAULT,
+  WORDMARK_MODES,
 } from "./theme-types";
 import {
   DECORATION_FIELDS,
@@ -131,16 +132,41 @@ const backdropSchema = z.object({
   scroll: z.enum(tuple(DECORATION_VALUES.bgScroll)).optional().default("static"),
 });
 
+// the other upload-backed dimensions: an image URL + opacity + a size knob
+// (clamped per dimension at normalize time, so a generous range here is fine).
+const imageAssetSchema = z.object({
+  imageUrl: z
+    .string()
+    .trim()
+    .min(1, "Upload or paste an image first")
+    .max(2000)
+    .refine((v) => safeCssUrl(v) !== "none", "That image URL isn't supported"),
+  opacity: z.coerce.number().min(0).max(1).optional().default(1),
+  size: z.coerce.number().int().min(1).max(1024).optional().default(24),
+});
+const wordmarkAssetSchema = imageAssetSchema.extend({
+  mode: z.enum(WORDMARK_MODES).optional().default("ornament"),
+});
+
 export const decorationSpecSchema = z
   .object({
     overrides: decorationOverridesSchema.optional().default({}),
     backdrop: backdropSchema.nullish(),
+    divider: imageAssetSchema.nullish(),
+    cardFrame: imageAssetSchema.nullish(),
+    avatarFrame: imageAssetSchema.nullish(),
+    wordmark: wordmarkAssetSchema.nullish(),
+    reaction: imageAssetSchema.nullish(),
+    ambient: imageAssetSchema.nullish(),
   })
   .refine(
     (s) =>
-      (s.backdrop && safeCssUrl(s.backdrop.imageUrl) !== "none") ||
-      Object.keys(s.overrides ?? {}).length > 0,
-    "Pick at least one decoration or add a backdrop image",
+      Object.keys(s.overrides ?? {}).length > 0 ||
+      [
+        s.backdrop, s.divider, s.cardFrame, s.avatarFrame,
+        s.wordmark, s.reaction, s.ambient,
+      ].some((a) => a && safeCssUrl(a.imageUrl) !== "none"),
+    "Pick at least one decoration or add a custom image",
   );
 
 export const decorationSchema = z.object({

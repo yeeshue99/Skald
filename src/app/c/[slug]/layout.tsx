@@ -81,7 +81,7 @@ export default async function CampaignLayout({
 
   // campaign theme + this viewer's active decoration layered on top: their own
   // pick if they made one, else the campaign default the DM set, else nothing.
-  const { dataAttrs, cssVars, effects } = campaignRenderProps(
+  const { dataAttrs, cssVars, effects, ambient } = campaignRenderProps(
     ctx.campaign.theme,
     ctx.selectedDecoration ?? ctx.worldDecoration,
   );
@@ -141,6 +141,8 @@ export default async function CampaignLayout({
             <div key={e} className={`fx fx-${e}`} />
           ),
         )}
+        {/* custom uploaded ambient particle (from the active decoration mod) */}
+        {ambient ? <div className="fx fx-ambient-custom" /> : null}
       </div>
       <MobileNav
         slug={slug}

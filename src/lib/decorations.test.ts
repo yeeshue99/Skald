@@ -159,7 +159,63 @@ describe("custom backdrop CSS contract", () => {
   });
 });
 
+describe("custom upload-backed dimensions", () => {
+  const full = (): DecorationSpec => ({
+    overrides: {},
+    divider: { imageUrl: IMG, opacity: 0.8, size: 20 },
+    cardFrame: { imageUrl: IMG, opacity: 0.5, size: 0 },
+    avatarFrame: { imageUrl: IMG, opacity: 1, size: 0 },
+    wordmark: { imageUrl: IMG, opacity: 1, size: 30, mode: "replace" },
+    reaction: { imageUrl: IMG, opacity: 1, size: 32 },
+    ambient: { imageUrl: IMG, opacity: 0.4, size: 160 },
+  });
+
+  it("points each dimension's data-attr at custom and emits its --image var", () => {
+    const { dataAttrs, cssVars, ambient } = campaignRenderProps(DEFAULT_THEME, full());
+    expect(dataAttrs["data-divider"]).toBe("custom");
+    expect(dataAttrs["data-card-frame"]).toBe("custom");
+    expect(dataAttrs["data-avatar-frame"]).toBe("custom");
+    expect(dataAttrs["data-wordmark"]).toBe("custom");
+    expect(dataAttrs["data-wordmark-mode"]).toBe("replace");
+    expect(dataAttrs["data-reactions"]).toBe("custom");
+    for (const v of ["--divider-image", "--card-frame-image", "--avatar-frame-image", "--wordmark-image", "--reaction-image", "--ambient-image"]) {
+      expect(String(cssVars[v as keyof typeof cssVars])).toContain("url(");
+    }
+    expect(cssVars["--divider-size" as keyof typeof cssVars]).toBe("20px");
+    expect(cssVars["--divider-opacity" as keyof typeof cssVars]).toBe("0.8");
+    // ambient is a feed layer, returned for the layout (no data-attr)
+    expect(ambient?.imageUrl).toBe(IMG);
+  });
+
+  it("ignores an unsafe custom image url (keeps the campaign value)", () => {
+    const { dataAttrs } = campaignRenderProps(DEFAULT_THEME, {
+      overrides: {},
+      divider: { imageUrl: "javascript:alert(1)", opacity: 1, size: 18 },
+    });
+    expect(dataAttrs["data-divider"]).not.toBe("custom");
+  });
+
+  it("clamps custom opacity/size and coerces an unknown wordmark mode", () => {
+    const out = normalizeDecorationSpec({
+      overrides: {},
+      divider: { imageUrl: IMG, opacity: 5, size: 9999 },
+      wordmark: { imageUrl: IMG, opacity: -1, size: 0, mode: "bogus" as never },
+    });
+    expect(out.divider!.opacity).toBe(1);
+    expect(out.divider!.size).toBe(64); // divider size max
+    expect(out.wordmark!.opacity).toBe(0);
+    expect(out.wordmark!.mode).toBe("ornament");
+  });
+});
+
 describe("decorationSchema", () => {
+  it("accepts a spec with only a custom image and no overrides", () => {
+    const r = decorationSchema.safeParse({
+      name: "Logo",
+      spec: { wordmark: { imageUrl: IMG, mode: "replace" } },
+    });
+    expect(r.success).toBe(true);
+  });
   it("accepts named overrides and defaults scope to personal", () => {
     const r = decorationSchema.safeParse({
       name: "My look",

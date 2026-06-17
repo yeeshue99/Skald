@@ -110,15 +110,80 @@ export interface BackdropImage {
   scroll: Decorations["bgScroll"];
 }
 
+/** A custom uploaded image for a decoration dimension other than the backdrop.
+ *  `size` is interpreted per dimension (strip height / particle tile / ornament
+ *  px); ignored where the image is stretched or cover-fit. */
+export interface ImageAsset {
+  imageUrl: string;
+  opacity: number;
+  size: number;
+}
+
+/** Whether a custom wordmark image replaces the app-name text or sits beside it. */
+export const WORDMARK_MODES = ["ornament", "replace"] as const;
+export type WordmarkMode = (typeof WORDMARK_MODES)[number];
+
+export interface WordmarkAsset extends ImageAsset {
+  mode: WordmarkMode;
+}
+
 /** A decoration mod. `overrides` replaces any subset of the campaign's named
- *  decoration dimensions for one viewer; `backdrop`, when set, supplies the
- *  texture backdrop as a custom uploaded image instead of a named texture. A
- *  viewer sees exactly one active mod (their personal pick, else the campaign
- *  default) applied over the campaign theme. */
+ *  decoration dimensions for one viewer; the optional image fields supply a
+ *  custom uploaded image for that dimension instead of a named value. A viewer
+ *  sees exactly one active mod (their personal pick, else the campaign default)
+ *  applied over the campaign theme. */
 export interface DecorationSpec {
   overrides: Partial<Decorations>;
+  /** custom feed backdrop (the texture dimension) */
   backdrop?: BackdropImage | null;
+  /** custom post-divider strip */
+  divider?: ImageAsset | null;
+  /** custom standalone-card frame (stretched over the card) */
+  cardFrame?: ImageAsset | null;
+  /** custom avatar-frame overlay (drawn over the avatar) */
+  avatarFrame?: ImageAsset | null;
+  /** custom wordmark image (logo replace, or ornament beside the text) */
+  wordmark?: WordmarkAsset | null;
+  /** custom reaction burst played on like/boost */
+  reaction?: ImageAsset | null;
+  /** custom always-on ambient particle drifting across the feed */
+  ambient?: ImageAsset | null;
 }
+
+/** Upload-backed dimensions beyond the backdrop, driving render + editor.
+ *  `dataAttr` is the attribute campaignRenderProps sets to "custom" (null for
+ *  ambient, which is a feed layer not an attribute); `varPrefix` names the CSS
+ *  vars `--<prefix>-image` / `-opacity` / `-size`. */
+export const CUSTOM_IMAGE_DIMS = [
+  { key: "divider", label: "Post divider", dataAttr: "data-divider", varPrefix: "divider", hasSize: true, hasMode: false },
+  { key: "cardFrame", label: "Card frame", dataAttr: "data-card-frame", varPrefix: "card-frame", hasSize: false, hasMode: false },
+  { key: "avatarFrame", label: "Avatar frame", dataAttr: "data-avatar-frame", varPrefix: "avatar-frame", hasSize: false, hasMode: false },
+  { key: "wordmark", label: "Wordmark", dataAttr: "data-wordmark", varPrefix: "wordmark", hasSize: true, hasMode: true },
+  { key: "reaction", label: "Reaction burst", dataAttr: "data-reactions", varPrefix: "reaction", hasSize: true, hasMode: false },
+  { key: "ambient", label: "Ambient particle", dataAttr: null, varPrefix: "ambient", hasSize: true, hasMode: false },
+] as const;
+
+export type CustomImageDim = (typeof CUSTOM_IMAGE_DIMS)[number]["key"];
+
+/** Per-dimension `size` clamp + default (px), or null where size is unused. */
+export const CUSTOM_IMAGE_SIZE: Record<CustomImageDim, { min: number; max: number; def: number } | null> = {
+  divider: { min: 8, max: 64, def: 18 },
+  cardFrame: null,
+  avatarFrame: null,
+  wordmark: { min: 12, max: 80, def: 24 },
+  reaction: { min: 12, max: 96, def: 24 },
+  ambient: { min: 24, max: 512, def: 140 },
+};
+
+/** Per-dimension default opacity. */
+export const CUSTOM_IMAGE_OPACITY: Record<CustomImageDim, number> = {
+  divider: 1,
+  cardFrame: 1,
+  avatarFrame: 1,
+  wordmark: 1,
+  reaction: 1,
+  ambient: 0.5,
+};
 
 /** Whether a decoration is the author's own (personal) or shared campaign-wide
  *  by the DM. A campaign-scoped decoration is offered to every member and is the

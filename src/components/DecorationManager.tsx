@@ -27,6 +27,8 @@ import {
   type DecorationSpec,
   type DecorationFit,
   type Theme,
+  type CustomImageDim,
+  type WordmarkMode,
 } from "@/lib/themes";
 import { DECORATION_FIELDS, EFFECT_OPTIONS } from "@/lib/decoration-options";
 import {
@@ -34,6 +36,10 @@ import {
   DECORATION_SIZE_MAX,
   DECORATION_SIZE_DEFAULT,
   DECORATION_NAME_MAX,
+  CUSTOM_IMAGE_DIMS,
+  CUSTOM_IMAGE_SIZE,
+  CUSTOM_IMAGE_OPACITY,
+  WORDMARK_MODES,
 } from "@/lib/theme-types";
 import { Avatar } from "@/components/Avatar";
 import { ThemePreviewFrame } from "@/components/ThemePreviewFrame";
@@ -47,15 +53,47 @@ const TEXTURE_FIELD = DECORATION_FIELDS.find((f) => f.key === "texture")!;
 const OTHER_FIELDS = DECORATION_FIELDS.filter((f) => f.key !== "texture");
 const CUSTOM = "__custom__";
 
+// dropdown dimensions that gain a "Custom image…" option, mapped to the spec's
+// custom-asset field (note the named dimension `reactions` -> custom `reaction`).
+const CUSTOM_FOR_FIELD: Record<string, CustomImageDim> = {
+  divider: "divider",
+  avatarFrame: "avatarFrame",
+  cardFrame: "cardFrame",
+  wordmark: "wordmark",
+  reactions: "reaction",
+};
+
+type CustomDraft = {
+  imageUrl: string;
+  opacity: number;
+  size: number;
+  mode: WordmarkMode;
+};
+
 type Draft = {
   name: string;
   scope: "personal" | "campaign";
-  // per single-select dimension: "" = inherit; for texture, CUSTOM = uploaded image
+  // per single-select dimension: "" = inherit; CUSTOM = a custom uploaded image
   overrides: Record<string, string>;
   effectsMode: "inherit" | "override";
   effects: string[];
   backdrop: { imageUrl: string; fit: DecorationFit; size: number; opacity: number };
+  // custom uploaded images for the non-backdrop dimensions (+ ambient particle)
+  custom: Record<CustomImageDim, CustomDraft>;
 };
+
+const emptyCustom = (): Record<CustomImageDim, CustomDraft> =>
+  Object.fromEntries(
+    CUSTOM_IMAGE_DIMS.map((d) => [
+      d.key,
+      {
+        imageUrl: "",
+        opacity: CUSTOM_IMAGE_OPACITY[d.key],
+        size: CUSTOM_IMAGE_SIZE[d.key]?.def ?? 0,
+        mode: "ornament" as WordmarkMode,
+      },
+    ]),
+  ) as Record<CustomImageDim, CustomDraft>;
 
 const EMPTY_DRAFT: Draft = {
   name: "",
@@ -64,37 +102,82 @@ const EMPTY_DRAFT: Draft = {
   effectsMode: "inherit",
   effects: [],
   backdrop: { imageUrl: "", fit: "tile", size: DECORATION_SIZE_DEFAULT, opacity: 0.25 },
+  custom: emptyCustom(),
 };
+
+// Upload a file to Vercel Blob; returns the URL, or a pasted URL (501 fallback),
+// or null (cancelled / failed). Shared by the backdrop uploader and every
+// per-dimension CustomImageField.
+async function uploadToBlob(file: File): Promise<string | null> {
+  const fd = new FormData();
+  fd.append("file", file);
+  const res = await fetch("/api/upload", { method: "POST", body: fd });
+  if (res.ok) return (await res.json()).url as string;
+  if (res.status === 501) {
+    const p = window.prompt(
+      "Image upload isn't configured. Paste an image URL instead:",
+    );
+    return p ? p.trim() : null;
+  }
+  const data = await res.json().catch(() => ({ error: "Upload failed." }));
+  window.alert(data.error ?? "Upload failed.");
+  return null;
+}
 
 // Build the stored spec from the editor draft.
 function buildSpec(draft: Draft): DecorationSpec {
   const overrides: Record<string, unknown> = {};
   for (const f of DECORATION_FIELDS) {
     const v = draft.overrides[f.key] ?? "";
-    if (f.key === "texture") {
-      if (v && v !== CUSTOM) overrides.texture = v; // a named texture
-      continue;
-    }
-    if (v) overrides[f.key] = v;
+    if (v && v !== CUSTOM) overrides[f.key] = v; // a named value (CUSTOM handled below)
   }
   if (draft.effectsMode === "override") overrides.effects = draft.effects;
 
-  const useCustom = (draft.overrides.texture ?? "") === CUSTOM;
-  const backdrop =
-    useCustom && draft.backdrop.imageUrl
-      ? { ...draft.backdrop, scroll: draft.overrides.bgScroll || "static" }
-      : null;
-  return (backdrop ? { overrides, backdrop } : { overrides }) as DecorationSpec;
+  const spec: Record<string, unknown> = { overrides };
+
+  // texture custom -> backdrop (motion from the bgScroll override)
+  if ((draft.overrides.texture ?? "") === CUSTOM && draft.backdrop.imageUrl) {
+    spec.backdrop = {
+      ...draft.backdrop,
+      scroll: draft.overrides.bgScroll || "static",
+    };
+  }
+  // dropdown-driven custom dimensions
+  for (const [field, dim] of Object.entries(CUSTOM_FOR_FIELD)) {
+    if ((draft.overrides[field] ?? "") !== CUSTOM) continue;
+    const c = draft.custom[dim];
+    if (!c.imageUrl) continue;
+    spec[dim] =
+      dim === "wordmark"
+        ? { imageUrl: c.imageUrl, opacity: c.opacity, size: c.size, mode: c.mode }
+        : { imageUrl: c.imageUrl, opacity: c.opacity, size: c.size };
+  }
+  // ambient particle (no dropdown; enabled simply by having an image)
+  if (draft.custom.ambient.imageUrl) {
+    const a = draft.custom.ambient;
+    spec.ambient = { imageUrl: a.imageUrl, opacity: a.opacity, size: a.size };
+  }
+  return spec as unknown as DecorationSpec;
 }
 
+const CUSTOM_SPEC_KEYS = [
+  "backdrop", "divider", "cardFrame", "avatarFrame", "wordmark", "reaction", "ambient",
+] as const;
+
 function specIsEmpty(spec: DecorationSpec): boolean {
-  return Object.keys(spec.overrides).length === 0 && !spec.backdrop;
+  const s = spec as unknown as Record<string, unknown>;
+  return (
+    Object.keys(spec.overrides).length === 0 &&
+    !CUSTOM_SPEC_KEYS.some((k) => s[k])
+  );
 }
 
 function summarize(spec: DecorationSpec): string {
+  const s = spec as unknown as Record<string, unknown>;
   const n = Object.keys(spec.overrides).filter((k) => k !== "effects").length;
+  const custom = CUSTOM_SPEC_KEYS.filter((k) => s[k]).length;
   const parts: string[] = [];
-  if (spec.backdrop) parts.push("custom backdrop");
+  if (custom) parts.push(`${custom} custom image${custom === 1 ? "" : "s"}`);
   if (n) parts.push(`${n} style${n === 1 ? "" : "s"}`);
   if (spec.overrides.effects?.length) parts.push("effects");
   return parts.join(" · ") || "no changes";
@@ -196,6 +279,144 @@ function Thumb({ spec }: { spec: DecorationSpec }) {
   );
 }
 
+// Upload + tune a custom image for one decoration dimension: upload/paste,
+// opacity, an optional size knob, and (for the wordmark) a replace/ornament mode.
+function CustomImageField({
+  dim,
+  value,
+  onChange,
+  uploadEnabled,
+}: {
+  dim: CustomImageDim;
+  value: CustomDraft;
+  onChange: (next: CustomDraft) => void;
+  uploadEnabled: boolean;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const sizeCfg = CUSTOM_IMAGE_SIZE[dim];
+  const hasMode = CUSTOM_IMAGE_DIMS.find((d) => d.key === dim)?.hasMode;
+
+  async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setBusy(true);
+    try {
+      const url = await uploadToBlob(file);
+      if (url) onChange({ ...value, imageUrl: url });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2 rounded-base border border-border/70 bg-bg/40 p-3">
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPick} />
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          disabled={busy}
+          onClick={() => fileRef.current?.click()}
+        >
+          {busy ? (
+            <>
+              <Loader2 className="size-4 animate-spin" /> Uploading…
+            </>
+          ) : (
+            <>
+              <ImagePlus className="size-4" /> Upload image
+            </>
+          )}
+        </Button>
+        <button
+          type="button"
+          onClick={() => {
+            const p = window.prompt("Paste an image URL:", value.imageUrl);
+            if (p !== null) onChange({ ...value, imageUrl: p.trim() });
+          }}
+          className="text-xs text-muted hover:text-text hover:underline"
+        >
+          paste URL
+        </button>
+        {value.imageUrl ? (
+          <>
+            <span className="text-xs text-repost">image set</span>
+            <button
+              type="button"
+              onClick={() => onChange({ ...value, imageUrl: "" })}
+              className="inline-flex items-center gap-1 text-xs text-muted hover:text-like"
+            >
+              <Trash2 className="size-3.5" /> remove
+            </button>
+          </>
+        ) : null}
+      </div>
+      {!uploadEnabled ? (
+        <span className="block text-xs text-muted">
+          Uploads aren&apos;t configured — paste an image URL.
+        </span>
+      ) : null}
+
+      {hasMode ? (
+        <div className="flex gap-2">
+          {WORDMARK_MODES.map((mo) => (
+            <button
+              key={mo}
+              type="button"
+              onClick={() => onChange({ ...value, mode: mo })}
+              className={cn(
+                "flex-1 rounded-base border px-3 py-1.5 text-sm",
+                value.mode === mo
+                  ? "border-primary text-primary"
+                  : "border-border text-muted hover:bg-surface-hover",
+              )}
+            >
+              {mo === "replace" ? "Replace text" : "Ornament"}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {sizeCfg ? (
+        <label className="block space-y-1">
+          <span className="flex items-center justify-between text-xs font-medium text-text">
+            <span>Size</span>
+            <span className="font-mono text-muted">{value.size}px</span>
+          </span>
+          <input
+            type="range"
+            min={sizeCfg.min}
+            max={sizeCfg.max}
+            step={2}
+            value={value.size}
+            onChange={(e) => onChange({ ...value, size: Number(e.target.value) })}
+            className="w-full accent-primary"
+          />
+        </label>
+      ) : null}
+
+      <label className="block space-y-1">
+        <span className="flex items-center justify-between text-xs font-medium text-text">
+          <span>Opacity</span>
+          <span className="font-mono text-muted">{Math.round(value.opacity * 100)}%</span>
+        </span>
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.05}
+          value={value.opacity}
+          onChange={(e) => onChange({ ...value, opacity: Number(e.target.value) })}
+          className="w-full accent-primary"
+        />
+      </label>
+    </div>
+  );
+}
+
 export function DecorationManager({
   slug,
   isDm,
@@ -235,6 +456,9 @@ export function DecorationManager({
         : [...d.effects, value],
     }));
   }
+  function setCustom(dim: CustomImageDim, next: CustomDraft) {
+    setDraft((d) => ({ ...d, custom: { ...d.custom, [dim]: next } }));
+  }
 
   async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -242,22 +466,8 @@ export function DecorationManager({
     if (!file) return;
     setUploading(true);
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: fd });
-      if (res.ok) {
-        const data = await res.json();
-        setDraft((d) => ({ ...d, backdrop: { ...d.backdrop, imageUrl: data.url } }));
-      } else if (res.status === 501) {
-        const pasted = window.prompt(
-          "Image upload isn't configured. Paste an image URL instead:",
-        );
-        if (pasted)
-          setDraft((d) => ({ ...d, backdrop: { ...d.backdrop, imageUrl: pasted.trim() } }));
-      } else {
-        const data = await res.json().catch(() => ({ error: "Upload failed." }));
-        window.alert(data.error ?? "Upload failed.");
-      }
+      const url = await uploadToBlob(file);
+      if (url) setDraft((d) => ({ ...d, backdrop: { ...d.backdrop, imageUrl: url } }));
     } finally {
       setUploading(false);
     }
@@ -298,9 +508,10 @@ export function DecorationManager({
   return (
     <div className="space-y-6">
       <p className="text-sm text-muted">
-        Make your own look and wear it just in this campaign: override any
-        decoration and/or add a custom backdrop image. It stays yours until you
-        change it; everyone else keeps the campaign default.
+        Make your own look and wear it just in this campaign: pick any named
+        decoration, or upload your own image for the backdrop, post divider, card
+        frame, avatar frame, wordmark, reaction burst, or an ambient particle. It
+        stays yours until you change it; everyone else keeps the campaign default.
         {isDm
           ? " As DM you can also share decorations with the whole campaign and set the campaign default."
           : null}
@@ -479,24 +690,39 @@ export function DecorationManager({
           </div>
         ) : null}
 
-        {/* every other named dimension: inherit or override */}
+        {/* every other named dimension: inherit, a named value, or a custom upload */}
         <div className="grid gap-3 sm:grid-cols-2">
-          {OTHER_FIELDS.map((f) => (
-            <Field key={f.key} label={f.label}>
-              <select
-                value={draft.overrides[f.key] ?? ""}
-                onChange={(e) => setOverride(f.key, e.target.value)}
-                className="w-full rounded-base border border-border bg-bg/60 px-3 py-2 text-text"
-              >
-                <option value="">Inherit (campaign)</option>
-                {f.options.map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          ))}
+          {OTHER_FIELDS.map((f) => {
+            const dim = CUSTOM_FOR_FIELD[f.key];
+            const val = draft.overrides[f.key] ?? "";
+            return (
+              <Field key={f.key} label={f.label}>
+                <select
+                  value={val}
+                  onChange={(e) => setOverride(f.key, e.target.value)}
+                  className="w-full rounded-base border border-border bg-bg/60 px-3 py-2 text-text"
+                >
+                  <option value="">Inherit (campaign)</option>
+                  {f.options.map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                  {dim ? <option value={CUSTOM}>Custom image…</option> : null}
+                </select>
+                {dim && val === CUSTOM ? (
+                  <div className="mt-2">
+                    <CustomImageField
+                      dim={dim}
+                      value={draft.custom[dim]}
+                      onChange={(n) => setCustom(dim, n)}
+                      uploadEnabled={uploadEnabled}
+                    />
+                  </div>
+                ) : null}
+              </Field>
+            );
+          })}
         </div>
 
         {/* ambient effects */}
@@ -540,12 +766,29 @@ export function DecorationManager({
           ) : null}
         </div>
 
+        {/* custom ambient particle (an uploaded image that drifts across the feed) */}
+        <div className="space-y-1.5">
+          <span className="block text-sm font-medium text-text">
+            Custom ambient particle
+          </span>
+          <p className="text-xs text-muted">
+            Optional. An image that drifts across the whole feed, always on.
+          </p>
+          <CustomImageField
+            dim="ambient"
+            value={draft.custom.ambient}
+            onChange={(n) => setCustom("ambient", n)}
+            uploadEnabled={uploadEnabled}
+          />
+        </div>
+
         {/* preview */}
         <div className="space-y-1.5">
           <span className="block text-sm font-medium text-text">Preview</span>
           <SpecPreview theme={campaignTheme} spec={spec} />
           <span className="block text-xs text-muted">
-            Backdrop motion + ambient effects show on the real feed, not here.
+            Background motion, the ambient particle, and the reaction burst show on
+            the real feed, not in this preview.
           </span>
         </div>
 

@@ -169,6 +169,86 @@ body {
   background-position: center;
 }
 
+/* ---- Custom uploaded decorations (data-*="custom") -------------------------
+   Each dimension below points its data-attr at "custom" and reads a
+   --<prefix>-image / -opacity / -size var emitted by campaignRenderProps (the
+   same pattern as the custom texture above). The reaction burst + ambient
+   particle are motion-driven, so they live in the reduced-motion block. */
+
+/* custom post divider: the uploaded strip, centered on the card's bottom edge.
+   The :not([data-divider="plain"]) base already lays out the ::after box. */
+[data-campaign][data-divider="custom"] .post-card::after {
+  height: var(--divider-size, 18px);
+  bottom: calc(var(--divider-size, 18px) * -0.5);
+  background-image: var(--divider-image, none);
+  background-size: auto var(--divider-size, 18px);
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: var(--divider-opacity, 1);
+}
+
+/* custom card frame: the uploaded art stretched over standalone cards. */
+[data-campaign][data-card-frame="custom"] .ui-card,
+[data-campaign][data-card-frame="custom"] .quote-card {
+  position: relative;
+}
+[data-campaign][data-card-frame="custom"] .ui-card::before,
+[data-campaign][data-card-frame="custom"] .quote-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: var(--card-frame-image, none);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  opacity: var(--card-frame-opacity, 1);
+  pointer-events: none;
+}
+
+/* custom avatar frame: the uploaded overlay drawn over the avatar ring. */
+[data-campaign][data-avatar-frame="custom"] .avatar-frame::after {
+  content: "";
+  position: absolute;
+  inset: -10%;
+  background-image: var(--avatar-frame-image, none);
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: var(--avatar-frame-opacity, 1);
+  pointer-events: none;
+}
+
+/* custom wordmark, ornament mode: the uploaded image sits before the app name. */
+[data-campaign][data-wordmark="custom"][data-wordmark-mode="ornament"] .wordmark::before {
+  content: "";
+  display: inline-block;
+  width: var(--wordmark-size, 24px);
+  height: var(--wordmark-size, 24px);
+  margin-right: 0.3em;
+  vertical-align: middle;
+  background-image: var(--wordmark-image, none);
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: var(--wordmark-opacity, 1);
+}
+
+/* custom wordmark, replace mode: the uploaded logo replaces the app-name text. */
+[data-campaign][data-wordmark="custom"][data-wordmark-mode="replace"] .wordmark {
+  display: inline-block;
+  height: var(--wordmark-size, 28px);
+  width: 100%;
+  max-width: 14em;
+  color: transparent;
+  font-size: 0;
+  line-height: 0;
+  background-image: var(--wordmark-image, none);
+  background-size: contain;
+  background-position: left center;
+  background-repeat: no-repeat;
+  opacity: var(--wordmark-opacity, 1);
+}
+
 /* The static wash layer. Present only for the three real textures. */
 [data-campaign][data-texture="starchart"]::after,
 [data-campaign][data-texture="parchment"]::after,
@@ -1930,6 +2010,55 @@ body {
     }
     50% {
       transform: rotate(var(--lrot, 28deg));
+    }
+  }
+
+  /* ---- Custom uploaded reaction + ambient particle (motion-gated) ---- */
+  /* custom reaction burst: the uploaded image pops + fades inside the like/boost
+     chip (the .reaction-burst span PostActions remounts on each reaction-on). */
+  [data-campaign][data-reactions="custom"] .reaction-burst {
+    width: var(--reaction-size, 24px);
+    height: var(--reaction-size, 24px);
+    margin: calc(var(--reaction-size, 24px) * -0.5) 0 0
+      calc(var(--reaction-size, 24px) * -0.5);
+    border-radius: 0;
+    background-image: var(--reaction-image, none);
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0;
+    animation: reaction-custom 0.6s ease-out 1;
+  }
+  @keyframes reaction-custom {
+    0% {
+      transform: scale(0.3);
+      opacity: 0;
+    }
+    25% {
+      opacity: var(--reaction-opacity, 1);
+    }
+    100% {
+      transform: scale(1.7);
+      opacity: 0;
+    }
+  }
+
+  /* custom ambient particle: the uploaded image tiled across the feed, drifting
+     up by one tile in a seamless loop. */
+  .fx-ambient-custom {
+    background-image: var(--ambient-image, none);
+    background-size: var(--ambient-size, 140px);
+    background-repeat: repeat;
+    opacity: var(--ambient-opacity, 0.5);
+    will-change: transform;
+    animation: ambient-drift 26s linear infinite;
+  }
+  @keyframes ambient-drift {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(0, calc(var(--ambient-size, 140px) * -1), 0);
     }
   }
 }

@@ -30,12 +30,6 @@ how grounded each item is: concrete gaps first, then ideas.
 - [ ] Parent context on reply cards. The profile Replies tab renders bare reply
       cards (no "Replying to @x" line). `PostView` carries only `replyToPostId`;
       surfacing the parent author would touch hydration and `PostCard`.
-- [ ] More upload-backed decoration dimensions. A `DecorationSpec` overrides all
-      named dimensions today, but the only *uploaded* asset is the backdrop image
-      (`spec.backdrop`). Natural next custom assets: a divider image, an
-      avatar-frame overlay, a card-frame border. Each needs a field on the spec, a
-      `campaignRenderProps` branch emitting its vars/attrs, and a CSS hook
-      (mirroring the `[data-texture="custom"]` rule), plus an editor control.
 - [ ] Reuse a decoration across campaigns. A decoration is scoped to the campaign
       it was made in (`decorations.campaign_id`). A user-level library plus a
       per-membership selection would let one upload be worn in several campaigns.

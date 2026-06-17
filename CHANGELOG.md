@@ -27,8 +27,8 @@ under Unreleased.
   first-party modding SDK. A mod overrides any subset of the campaign's named
   decoration dimensions (backdrop texture, post divider, button FX, avatar frame,
   card depth, reaction flourish, card frame, wordmark, top-bar chrome, background
-  motion, ambient effects) and/or supplies a custom uploaded backdrop image (the
-  one upload-backed dimension: tile or cover, tile size, opacity, motion). It
+  motion, ambient effects) and/or uploads a custom image for any upload-backed
+  dimension (see the next entry). It
   applies to your view until you change it; everyone else keeps the campaign
   default. A decoration is a declarative spec (`{ overrides, backdrop }`, never
   raw CSS/JS), stored in a new `decorations` table; your pick is
@@ -38,6 +38,19 @@ under Unreleased.
   custom backdrop; image URLs pass a `safeCssUrl` guard so nothing can break out
   of the `url("…")` wrapper. Resolution per viewer is: your personal pick, else
   the campaign default, else the campaign theme's named values.
+- Upload-backed decoration dimensions. Beyond the backdrop, a decoration can now
+  carry a custom uploaded image for the post divider, card frame, avatar frame,
+  wordmark (replace the app name with a logo, or sit as an ornament beside it),
+  the reaction burst played on like/boost, and an always-on ambient particle that
+  drifts across the feed. Each is an optional `ImageAsset` on `DecorationSpec`
+  (image URL + opacity + a per-dimension size knob; the wordmark adds a mode);
+  `campaignRenderProps` points the dimension's `data-*` at `"custom"` and emits a
+  `--<dim>-image` var that a matching `globals.css` branch consumes (the reaction
+  reuses the existing `.reaction-burst` element; the ambient particle is a feed
+  layer the campaign layout draws). All motion-driven pieces stay gated by
+  `prefers-reduced-motion`. The decoration editor gains a "Custom image…" option
+  per dimension (upload or paste a URL, tune opacity/size) plus the wordmark mode
+  toggle and an ambient-particle slot.
 - DM decorations: a DM can additionally share decorations campaign-wide (a
   `scope = "campaign"` decoration in the same table) so every member can pick them
   on their Appearance page, and promote one shared decoration to the campaign
