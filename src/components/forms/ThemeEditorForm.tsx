@@ -16,6 +16,7 @@ import {
 import { DECORATION_FIELDS, EFFECT_OPTIONS } from "@/lib/decoration-options";
 import { emptyFormState } from "@/lib/form";
 import { Avatar } from "@/components/Avatar";
+import { ThemePreviewFrame } from "@/components/ThemePreviewFrame";
 import { Button, ErrorText, Field, TextInput } from "@/components/ui";
 import { SubmitButton } from "@/components/SubmitButton";
 import { cn } from "@/lib/cn";
@@ -297,12 +298,13 @@ export function ThemeEditorForm({
       {/* live preview */}
       <div>
         <span className="mb-2 block text-sm font-medium text-text">Preview</span>
-        <div
-          {...themeDataAttrs(theme)}
-          style={themeToCssVars(theme)}
-          className="overflow-hidden rounded-base border border-border"
+        <ThemePreviewFrame
+          dataAttrs={themeDataAttrs(theme)}
+          cssVars={themeToCssVars(theme)}
+          title="Theme preview"
+          className="block w-full rounded-base border border-border"
         >
-          <div className="bg-bg font-body text-text">
+          <div className="font-body text-text">
             {/* chrome-bar so the top-bar chrome decoration previews */}
             <div className="chrome-bar px-4 py-3">
               <div className="wordmark font-display text-2xl font-bold text-primary">
@@ -340,7 +342,7 @@ export function ThemeEditorForm({
             </button>
             </div>
           </div>
-        </div>
+        </ThemePreviewFrame>
       </div>
 
       <ErrorText>{state.error}</ErrorText>

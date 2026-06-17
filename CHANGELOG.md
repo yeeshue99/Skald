@@ -47,15 +47,21 @@ under Unreleased.
   DM theme editor and this editor share one option list (`decoration-options.ts`).
   All managed on the Appearance page (`/c/<slug>/appearance`), linked from the
   sidebar and the mobile header.
-- Decoration preview shows every dimension. The live preview's sample now carries
-  one element per previewable dimension (`.chrome-bar`, `.wordmark`, `.post-card`,
-  a single `.avatar-frame`, `.ui-card`, `.ui-button`), so card depth, card frame,
-  and top-bar chrome — which target `.ui-card`/`.chrome-bar` and previously had no
-  element to style — now render. The redundant nested `.avatar-frame` that drew
-  the ring twice was collapsed. (Same enrichment applied to the DM theme editor
-  preview.) Backdrop motion, ambient effects, reaction flourishes, and named
-  textures still only show on the real feed; they are motion/event/fixed-layer
-  driven, not static.
+- Decoration preview shows every dimension, faithfully. The live preview's sample
+  carries one element per previewable dimension (`.chrome-bar`, `.wordmark`,
+  `.post-card`, a single `.avatar-frame`, `.ui-card`, `.ui-button`), so card depth,
+  card frame, and top-bar chrome — which target `.ui-card`/`.chrome-bar` and had
+  no element to style — now render, and the doubled `.avatar-frame` ring was
+  collapsed. The preview now renders inside an isolated iframe
+  (`ThemePreviewFrame`, used by both the decoration editor and the DM theme
+  editor): its own document with a single `[data-campaign]`, so the page's own
+  theme can't leak in (previously, on a non-default campaign, attribute-driven
+  dims like divider/wordmark/card frame/chrome could tie at equal specificity and
+  the campaign's value won by stylesheet order). Because the iframe contains the
+  fixed texture `::before`, named textures, custom backdrops, and background
+  motion now preview too. The app's stylesheets are cloned into the frame by
+  element (not by reading cross-origin `.cssRules`). Ambient effects and reaction
+  flourishes are still feed-only (event/particle driven).
 - Multi-post threads: the composer can author a self-thread. "Add another post"
   chains a run of segments (each with its own text, image, and counter), posted
   in order as replies to one another and sharing one publish / schedule / draft

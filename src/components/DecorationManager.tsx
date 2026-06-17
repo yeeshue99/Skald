@@ -36,6 +36,7 @@ import {
   DECORATION_NAME_MAX,
 } from "@/lib/theme-types";
 import { Avatar } from "@/components/Avatar";
+import { ThemePreviewFrame } from "@/components/ThemePreviewFrame";
 import { Button, ErrorText, Field, TextInput } from "@/components/ui";
 import { cn } from "@/lib/cn";
 
@@ -115,42 +116,36 @@ function backdropLayer(
   };
 }
 
-// A contained preview of a spec over the campaign theme. The sample carries one
-// element per previewable dimension so every preset has something to render:
+// A preview of a spec over the campaign theme, rendered in an isolated iframe
+// (ThemePreviewFrame) so the page's own [data-campaign] decorations can't leak
+// in — every dimension, attribute-driven ones included, reflects the draft
+// regardless of how the campaign itself is themed. Isolation also lets the real
+// texture ::before render contained, so a named texture or a custom backdrop
+// previews here too (no manual layer, no stripping data-texture).
+//
+// The sample carries one element per previewable dimension:
 //   .chrome-bar  -> top-bar chrome      .wordmark   -> wordmark
 //   .post-card   -> post divider        .avatar-frame (Avatar's own) -> avatar frame
 //   .ui-card     -> card depth + frame  .ui-button  -> button FX
-// The fixed texture layer is stripped (it would escape the box); a custom
-// backdrop is drawn as a contained layer instead. Note: because this wrapper is
-// nested inside the page's own [data-campaign], attribute-driven dimensions
-// (divider, wordmark, avatar frame, card frame, chrome) can show the campaign's
-// value instead of the draft's on a campaign whose theme is NON-default — an
-// equal-specificity tie resolved by stylesheet order. Inline-var dimensions
-// (depth, buttons) and the backdrop always reflect the draft. See BACKLOG.
+// Motion (bgScroll), ambient effects, and reaction flourishes are runtime/event
+// driven and still only show on the real feed.
 function SpecPreview({ theme, spec }: { theme: Theme; spec: DecorationSpec }) {
   const { dataAttrs, cssVars } = campaignRenderProps(theme, spec);
-  const attrs: Record<string, string> = { ...dataAttrs };
-  delete attrs["data-texture"];
-  delete attrs["data-bg-scroll"];
-  const bg = spec.backdrop ? backdropLayer(spec.backdrop) : null;
   return (
-    <div
-      data-campaign
-      {...attrs}
-      style={cssVars}
-      className="decoration-preview relative overflow-hidden rounded-base border border-border"
+    <ThemePreviewFrame
+      dataAttrs={dataAttrs}
+      cssVars={cssVars}
+      title="Decoration preview"
+      className="block w-full rounded-base border border-border"
     >
-      {bg ? (
-        <div aria-hidden className="pointer-events-none absolute inset-0" style={bg} />
-      ) : null}
-      <div className="relative font-body text-text">
+      <div className="font-body text-text">
         {/* top-bar chrome + wordmark */}
         <div className="chrome-bar flex items-center border-b border-border px-3 py-2">
           <span className="wordmark font-display text-lg font-bold text-primary">
             Your campaign
           </span>
         </div>
-        <div className="space-y-3 bg-bg/70 p-4">
+        <div className="space-y-3 p-4">
           {/* feed post: divider + avatar frame (Avatar renders its own single
               .avatar-frame, so we don't wrap it in a second one) */}
           <div className="post-card rounded-base border border-border bg-surface p-3">
@@ -183,7 +178,7 @@ function SpecPreview({ theme, spec }: { theme: Theme; spec: DecorationSpec }) {
           </button>
         </div>
       </div>
-    </div>
+    </ThemePreviewFrame>
   );
 }
 
