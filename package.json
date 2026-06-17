@@ -17,7 +17,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:migrate:deploy": "node scripts/predeploy-migrate.mjs",
     "db:studio": "drizzle-kit studio",
-    "seed": "tsx src/db/seeds/seed.ts",
+    "seed": "tsx src/db/seeds/run.ts",
     "seed:petalfall": "tsx src/db/seeds/seed-petalfall.ts",
     "blob:sweep": "tsx src/db/blob-sweep.ts",
     "db:mark-migrations": "tsx scripts/mark-migrations.ts"

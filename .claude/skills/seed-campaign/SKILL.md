@@ -17,9 +17,14 @@ Turn a freeform description of a cast into a runnable seed script that fills a
 Skald campaign with believable, interconnected activity that exercises every
 feature the app currently has.
 
-The output is a TypeScript seed (`src/db/seeds/<slug>.ts`) run with
-`pnpm tsx src/db/seeds/<slug>.ts`. It inserts rows directly with Drizzle (it does
-NOT go through server actions), mirroring `src/db/seeds/seed.ts`.
+The output is a TypeScript seed (`src/db/seeds/<slug>.ts`) run by name with
+`pnpm seed <slug>`. A generic dispatcher (`src/db/seeds/run.ts`, wired to the
+`seed` script) resolves any `src/db/seeds/<name>.ts` by filename and forwards
+extra args, so a new seed needs NO new package.json entry — dropping the file in
+that folder is enough. (`pnpm seed` with no name runs the STR/X demo;
+`pnpm seed petalfall` resolves `seed-petalfall.ts`.) The seed inserts rows
+directly with Drizzle (it does NOT go through server actions), mirroring
+`src/db/seeds/seed.ts`.
 
 ## Non-negotiable requirements
 
@@ -129,6 +134,22 @@ the schema constraints from step 1 (e.g. a post is a reply XOR a quote, never
 both; a plain boost has empty content and is unique per persona+post; timestamps
 are timezone-aware; content stays under the post-length cap).
 
+**Make it fun.** This is in-world social media, so the feed should be lively, not
+a lore dump. Write in the register of an actual feed: jokes, banter, pettiness,
+running bits and in-world memes, dramatic overreactions, shitposts, a character
+who is just bad at posting, hashtags people pile onto, replies that drag each
+other. Give each persona a distinct posting voice (some terse, some chaotic, some
+overly formal, some unhinged) and let the comedy come from the contrast. Even a
+grim setting has levity, gallows humor, and characters who cope by joking. A
+couple of heavy or earnest beats are good for contrast, but the default should be
+flavorful and entertaining, never uniformly solemn.
+
+**Run every post through the humanizer.** Once the post copy is drafted, pass all
+of it through the humanizer skill and apply its fixes before writing the file, so
+nothing reads as AI-generated: no em or en dashes, straight quotes only, varied
+sentence length, no forced rule-of-three, no AI-tell vocabulary, filler cut. The
+posts should sound like real people (in character) actually wrote them.
+
 Lay down the social graph: a follow edge for most pairs, likes scattered across
 posts, a few bookmarks, and notifications for the replies/quotes/follows/mentions
 you created (via `notify()` so dedup is correct).
@@ -181,16 +202,18 @@ starting point, not the source of truth.
 
 - Write the seed to `src/db/seeds/<slug>.ts` (a NEW file; never clobber
   `seed.ts`). Use the same env import and clean-shutdown pattern as
-  `src/db/seeds/seed.ts`, including its `../`/`../../` import depth.
+  `src/db/seeds/seed.ts`, including its `../`/`../../` import depth. No
+  package.json change is needed: the `pnpm seed <slug>` dispatcher
+  (`src/db/seeds/run.ts`) finds the file by name.
 - Make cleanup idempotent and SCOPED: delete the campaign by its slug (cascades
   its personas/posts/etc.) and delete only the users this seed creates (by
   `usernameLower`). Never delete data you did not create.
 - `pnpm typecheck` must pass on the new file.
-- If a dev database is reachable, run `pnpm tsx src/db/seeds/<slug>.ts` and confirm
-  it prints success + the coverage summary. The seed targets `DATABASE_URL` from
+- If a dev database is reachable, run `pnpm seed <slug>` and confirm it prints
+  success + the coverage summary. The seed targets `DATABASE_URL` from
   `.env.local`; the DB must already have the current schema applied (`pnpm db:push`)
   or inserts referencing new columns will fail. If you cannot reach a DB, hand the
-  user the exact run command and say it was not executed here.
+  user the run command (`pnpm seed <slug>`) and say it was not executed here.
 - Report the campaign slug, the logins (username + the shared password), the
   invite code, and the feature/interaction coverage.
 

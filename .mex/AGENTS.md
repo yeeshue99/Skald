@@ -24,7 +24,7 @@ A private, self-hostable, themeable Twitter-style feed for a tabletop RPG group:
 - Test: `pnpm test` (unit), `pnpm test:integration` (needs a Postgres `TEST_DATABASE_URL`)
 - Typecheck / Lint / Build: `pnpm typecheck` / `pnpm lint` / `pnpm build`
 - DB: `pnpm db:push` (sync schema to DB), `pnpm db:generate` / `pnpm db:migrate`, `pnpm db:studio`
-- Seed: `pnpm seed` (STR/X demo), `pnpm seed:petalfall`
+- Seed: `pnpm seed [name]` (runs `src/db/seeds/<name>.ts` by filename; no name = STR/X demo), `pnpm seed:petalfall` (JSON worldbuilder demo)
 
 ## Scaffold Growth
 

@@ -48,7 +48,7 @@ last_updated: 2026-06-16
 - `pnpm test:integration`: integration suite against `TEST_DATABASE_URL`.
 - `pnpm typecheck`: `tsc --noEmit`. `pnpm lint`: ESLint. `pnpm build`: production build.
 - `pnpm db:push`: sync schema. `pnpm db:studio`: browse data. `pnpm db:generate` / `pnpm db:migrate`: generate / apply migrations.
-- `pnpm seed` / `pnpm seed:petalfall`: load a demo campaign. `pnpm blob:sweep`: delete orphaned blobs.
+- `pnpm seed [name]`: run a seed by filename via `src/db/seeds/run.ts` (no name = STR/X demo; `pnpm seed <name>` runs `src/db/seeds/<name>.ts`, no per-seed script). `pnpm seed:petalfall`: JSON-driven worldbuilder demo. `pnpm blob:sweep`: delete orphaned blobs.
 
 ## Common Issues
 

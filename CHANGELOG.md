@@ -239,6 +239,11 @@ under Unreleased.
 
 ### Campaign seeding
 
+- Generic seed dispatcher (`src/db/seeds/run.ts`, wired to `pnpm seed`): run any
+  seed by filename with `pnpm seed <name>` (resolves `src/db/seeds/<name>.ts`, or
+  `seed-<name>.ts`), forwarding extra args to that seed. No name runs the STR/X
+  demo. New seeds need no package.json entry, just a file in the folder. The
+  `seed-campaign` skill now generates seeds run this way.
 - Reusable JSON seeder (`src/db/seeds/seed-petalfall.ts`, `pnpm seed:petalfall`):
   validates a world payload, then creates the campaign, NPC and PC personas,
   posts (replies / quotes / boosts), likes, and follows. Idempotent re-runs.

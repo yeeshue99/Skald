@@ -101,7 +101,9 @@ dev and production, so there's no local Postgres to install.
    ```
 
    This creates the STR/X demo at `/c/strix` and prints logins (default password
-   `password123`: `dm`, `tasha`, `kael`) plus an invite code.
+   `password123`: `dm`, `tasha`, `kael`) plus an invite code. `pnpm seed` runs
+   any seed by filename: `pnpm seed <name>` runs `src/db/seeds/<name>.ts`, so a
+   new seed needs no package.json entry.
 
 5. Run it:
 
@@ -234,7 +236,7 @@ a persona the key can't post as gets `403`/`404`. Full contract:
 | `pnpm db:push` | Sync the schema to the database |
 | `pnpm db:generate` / `pnpm db:migrate` | Generate / apply Drizzle migrations |
 | `pnpm db:studio` | Browse data in Drizzle Studio |
-| `pnpm seed` | Load the STR/X demo campaign |
+| `pnpm seed [name]` | Run a seed by filename via `src/db/seeds/run.ts`: no name loads the STR/X demo, `pnpm seed <name>` runs `src/db/seeds/<name>.ts` (no per-seed script needed) |
 | `pnpm seed:petalfall` | Load the Petalfall demo (or a custom world JSON) |
 | `pnpm blob:sweep` | Delete orphaned Vercel Blob images |
 | `pnpm db:mark-migrations` | Backfill the drizzle journal so `db:migrate` is a no-op on a hand-built dev DB |
