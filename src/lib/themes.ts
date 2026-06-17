@@ -1,5 +1,10 @@
 import type { CSSProperties } from "react";
-import type { Theme, Decorations } from "./theme-types";
+import type { Theme, Decorations, DecorationSpec, DecorationFit } from "./theme-types";
+import {
+  DECORATION_SIZE_MIN,
+  DECORATION_SIZE_MAX,
+  DECORATION_SIZE_DEFAULT,
+} from "./theme-types";
 
 export type {
   Theme,
@@ -7,6 +12,9 @@ export type {
   ThemeMode,
   Decorations,
   AmbientEffect,
+  DecorationSpec,
+  DecorationFit,
+  BackdropDecoration,
 } from "./theme-types";
 
 // ---------------------------------------------------------------------------
@@ -434,4 +442,84 @@ export function themeToCssVars(theme: Theme): CSSProperties {
     "--texture-opacity": textureOpacity,
     colorScheme: t.mode,
   } as CSSProperties;
+}
+
+// ---------------------------------------------------------------------------
+// Player decoration mods. A member's selected decoration is layered over the
+// campaign theme at render time (in the campaign layout), for that member's
+// request only — so "all others default to the world default" needs no extra
+// work: a member with no selection just gets the campaign theme unchanged.
+// ---------------------------------------------------------------------------
+
+const BG_SCROLLS: Decorations["bgScroll"][] = [
+  "static",
+  "down",
+  "up",
+  "left",
+  "right",
+  "diagonal",
+  "sineDown",
+  "sway",
+  "sineUp",
+];
+
+/** Clamp a stored/submitted backdrop spec into its valid ranges. Pure. */
+export function normalizeDecorationSpec(spec: DecorationSpec): DecorationSpec {
+  const fit: DecorationFit = spec.fit === "cover" ? "cover" : "tile";
+  const rawSize = Math.round(Number(spec.size));
+  const size = Number.isFinite(rawSize)
+    ? Math.min(DECORATION_SIZE_MAX, Math.max(DECORATION_SIZE_MIN, rawSize))
+    : DECORATION_SIZE_DEFAULT;
+  const rawOpacity = Number(spec.opacity);
+  const opacity = Number.isFinite(rawOpacity)
+    ? Math.min(1, Math.max(0, rawOpacity))
+    : 0.2;
+  const scroll = BG_SCROLLS.includes(spec.scroll) ? spec.scroll : "static";
+  return { kind: "backdrop", imageUrl: spec.imageUrl, fit, size, opacity, scroll };
+}
+
+/** Build a safe CSS `url("…")` token from a user-supplied image URL. Returns
+ *  "none" when the URL is missing, isn't http(s), or contains characters that
+ *  could break out of the quoted url() (quotes, backslash, whitespace, control
+ *  chars). The render layer treats "none" as "no custom backdrop", and the
+ *  create action rejects such URLs up front so the user sees a clear error. */
+export function safeCssUrl(url: string | null | undefined): string {
+  if (!url) return "none";
+  if (!/^https?:\/\//i.test(url)) return "none";
+  if (/["'\\]/.test(url) || /[\u0000-\u0020\u007f]/.test(url)) return "none";
+  return `url("${url}")`;
+}
+
+/**
+ * The data-* attributes and inline CSS vars for the campaign wrapper, with an
+ * optional player decoration layered on top. Without `custom` this is exactly
+ * `themeDataAttrs` + `themeToCssVars`; with a backdrop mod it repoints the
+ * texture machinery at the custom image (and takes over its motion + opacity).
+ */
+export function campaignRenderProps(
+  theme: Theme,
+  custom?: DecorationSpec | null,
+): { dataAttrs: Record<string, string>; cssVars: CSSProperties } {
+  const dataAttrs: Record<string, string> = { ...themeDataAttrs(theme) };
+  const cssVars: Record<string, string | number | undefined> = {
+    ...(themeToCssVars(theme) as Record<string, string | number | undefined>),
+  };
+
+  if (custom && custom.kind === "backdrop") {
+    const spec = normalizeDecorationSpec(custom);
+    const cssImage = safeCssUrl(spec.imageUrl);
+    if (cssImage !== "none") {
+      dataAttrs["data-texture"] = "custom";
+      // a custom backdrop fully owns motion: set its own scroll, or clear the
+      // campaign's so a "static" pick really is static
+      if (spec.scroll !== "static") dataAttrs["data-bg-scroll"] = spec.scroll;
+      else delete dataAttrs["data-bg-scroll"];
+      cssVars["--texture-image"] = cssImage;
+      cssVars["--texture-opacity"] = String(spec.opacity);
+      cssVars["--texture-size"] = spec.fit === "cover" ? "cover" : `${spec.size}px`;
+      cssVars["--texture-repeat"] = spec.fit === "cover" ? "no-repeat" : "repeat";
+    }
+  }
+
+  return { dataAttrs, cssVars: cssVars as CSSProperties };
 }

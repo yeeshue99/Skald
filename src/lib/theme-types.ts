@@ -80,6 +80,47 @@ export interface Decorations {
   effects: AmbientEffect[];
 }
 
+// ---------------------------------------------------------------------------
+// Player decoration "mods". A member can author their own decoration and apply
+// it to themselves in one campaign; everyone else keeps the campaign (world)
+// default. To keep this a safe "first-party modding SDK" — never arbitrary CSS
+// or JS — a mod is a declarative spec the render layer maps onto the existing
+// decoration machinery. v1 ships one kind (a feed backdrop); the discriminated
+// union on `kind` is the extension point for future kinds (divider, frame, …).
+// ---------------------------------------------------------------------------
+
+/** How a backdrop image fills the field behind the feed. */
+export type DecorationFit = "tile" | "cover";
+
+/** A custom feed backdrop: an uploaded (or pasted) image plus a few declarative
+ *  knobs. Reuses the campaign backdrop's opacity dial and the bgScroll motions,
+ *  so it animates and dims exactly like a built-in texture. */
+export interface BackdropDecoration {
+  kind: "backdrop";
+  /** image asset URL (our Vercel Blob upload, or a pasted http(s) image URL) */
+  imageUrl: string;
+  /** tile the image at `size`px, or scale one copy to cover the viewport */
+  fit: DecorationFit;
+  /** tile edge length in px when fit === "tile" (ignored for cover) */
+  size: number;
+  /** backdrop opacity, 0..1 */
+  opacity: number;
+  /** drift direction; reuses the campaign bgScroll vocabulary ("static" = none) */
+  scroll: Decorations["bgScroll"];
+}
+
+/** A player-authored decoration mod. Discriminated on `kind` so more dimensions
+ *  can be added without reworking storage or the render layer. */
+export type DecorationSpec = BackdropDecoration;
+
+/** Clamp bounds for a custom backdrop, shared by the normalizer and validator. */
+export const DECORATION_SIZE_MIN = 24;
+export const DECORATION_SIZE_MAX = 1024;
+export const DECORATION_SIZE_DEFAULT = 240;
+export const DECORATION_NAME_MAX = 40;
+
+export const DECORATION_FITS: DecorationFit[] = ["tile", "cover"];
+
 /** Individually selectable ambient effects (combine any). */
 export type AmbientEffect =
   | "embers"

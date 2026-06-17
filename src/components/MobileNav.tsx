@@ -8,6 +8,7 @@ import {
   CalendarClock,
   Compass,
   Home,
+  Palette,
   Plus,
   Search,
   User,
@@ -78,6 +79,13 @@ export function MobileNav({
             className="fx-btn rounded-full p-2 text-text hover:bg-surface-hover"
           >
             <Bookmark className="size-5" />
+          </Link>
+          <Link
+            href={`${base}/appearance`}
+            aria-label="Appearance"
+            className="fx-btn rounded-full p-2 text-text hover:bg-surface-hover"
+          >
+            <Palette className="size-5" />
           </Link>
           <div className="w-32 sm:w-44">
             <PersonaSwitcher

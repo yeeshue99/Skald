@@ -22,6 +22,18 @@ under Unreleased.
   "default" inherits the campaign frame; any other value (none, mana halo,
   medallion, HUD bracket, wreath, blossom) overrides it for that persona's avatar
   wherever it appears, via a `data-frame` attribute the per-avatar CSS keys off.
+- Personal decorations (player "mods"): any member can author their own feed
+  backdrop in a campaign and wear it just for themselves, like a small first-party
+  modding SDK. Upload an image (or paste a URL), tune fit (tile or cover), tile
+  size, opacity, and motion in a live preview, then it applies to your view until
+  you change it; everyone else keeps the campaign default. A decoration is a
+  declarative spec (never raw CSS/JS), stored in a new `decorations` table; your
+  pick is `memberships.selected_decoration_id`. The campaign layout layers your
+  selection over the campaign theme with `campaignRenderProps`, repointing the
+  texture backdrop at your image (and taking over its opacity + drift) for your
+  request only. Image URLs pass a `safeCssUrl` guard so nothing can break out of
+  the `url("…")` wrapper. Managed on a new Appearance page
+  (`/c/<slug>/appearance`), linked from the sidebar and the mobile header.
 - Multi-post threads: the composer can author a self-thread. "Add another post"
   chains a run of segments (each with its own text, image, and counter), posted
   in order as replies to one another and sharing one publish / schedule / draft

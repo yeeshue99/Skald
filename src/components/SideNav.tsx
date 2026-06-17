@@ -9,6 +9,7 @@ import {
   Compass,
   Home,
   LogOut,
+  Palette,
   PenSquare,
   Search,
   Settings,
@@ -65,6 +66,7 @@ export function SideNav({
     { href: `${base}/queue`, label: "Queue", icon: CalendarClock },
     { href: `${base}/bookmarks`, label: "Bookmarks", icon: Bookmark },
     { href: `${base}/u/${myHandle.toLowerCase()}`, label: "Profile", icon: User },
+    { href: `${base}/appearance`, label: "Appearance", icon: Palette },
     ...(isDm
       ? [{ href: `${base}/settings`, label: "Settings", icon: Settings } as Item]
       : []),

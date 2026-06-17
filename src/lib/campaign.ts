@@ -6,11 +6,13 @@ import {
   campaigns,
   memberships,
   personas,
+  decorations,
   type Campaign,
   type Membership,
   type Persona,
   type Role,
 } from "@/db/schema";
+import type { DecorationSpec } from "./theme-types";
 import { getCurrentUser, type PublicUser } from "./auth";
 
 export const getCampaignBySlug = cache(
@@ -33,6 +35,10 @@ export type CampaignContext = {
   actingPersona: Persona;
   /** every persona this user may act as in this campaign (own PC + any NPCs they own) */
   myPersonas: Persona[];
+  /** this member's chosen personal decoration to layer over the campaign theme,
+   *  or null to use the campaign (world) default. Resolved server-side from the
+   *  membership, so it only ever reflects this user's own pick. */
+  selectedDecoration: DecorationSpec | null;
 };
 
 export const getCampaignContext = cache(
@@ -72,6 +78,24 @@ export const getCampaignContext = cache(
     if (!membership) return null;
     if (myPersonas.length === 0) return null;
 
+    // resolve the member's personal decoration, if any. Filter by owner +
+    // campaign too, so a stale/foreign selection silently falls back to default.
+    let selectedDecoration: DecorationSpec | null = null;
+    if (membership.selectedDecorationId != null) {
+      const decoRows = await db
+        .select({ spec: decorations.spec })
+        .from(decorations)
+        .where(
+          and(
+            eq(decorations.id, membership.selectedDecorationId),
+            eq(decorations.campaignId, campaign.id),
+            eq(decorations.ownerUserId, user.id),
+          ),
+        )
+        .limit(1);
+      selectedDecoration = decoRows[0]?.spec ?? null;
+    }
+
     const actingPersona =
       myPersonas.find((p) => p.id === membership.actingPersonaId) ??
       myPersonas[0];
@@ -83,6 +107,7 @@ export const getCampaignContext = cache(
       role: membership.role,
       actingPersona,
       myPersonas,
+      selectedDecoration,
     };
   },
 );

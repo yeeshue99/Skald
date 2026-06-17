@@ -1,5 +1,12 @@
 import { z } from "zod";
-import { PERSONA_AVATAR_FRAMES } from "./theme-types";
+import {
+  PERSONA_AVATAR_FRAMES,
+  DECORATION_NAME_MAX,
+  DECORATION_SIZE_MIN,
+  DECORATION_SIZE_MAX,
+  DECORATION_SIZE_DEFAULT,
+} from "./theme-types";
+import { safeCssUrl } from "./themes";
 
 export const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
 export const HANDLE_RE = /^[a-zA-Z0-9_]{2,24}$/;
@@ -78,6 +85,48 @@ export const personaSchema = z.object({
   bannerUrl: optionalUrl,
   avatarFrame: z.enum(PERSONA_AVATAR_FRAMES).optional().default("default"),
 });
+
+// A player-authored decoration "mod". Declarative only: an image asset plus a
+// few bounded knobs that the render layer maps onto the existing backdrop. The
+// image must pass the same url() safety check used at render time (safeCssUrl),
+// so a URL that would be dropped on screen is rejected at creation instead.
+export const decorationSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Name your decoration")
+    .max(DECORATION_NAME_MAX, `Keep it under ${DECORATION_NAME_MAX} characters`),
+  imageUrl: z
+    .string()
+    .trim()
+    .min(1, "Upload or paste an image first")
+    .max(2000)
+    .refine((v) => safeCssUrl(v) !== "none", "That image URL isn't supported"),
+  fit: z.enum(["tile", "cover"]).optional().default("tile"),
+  size: z.coerce
+    .number()
+    .int()
+    .min(DECORATION_SIZE_MIN)
+    .max(DECORATION_SIZE_MAX)
+    .optional()
+    .default(DECORATION_SIZE_DEFAULT),
+  opacity: z.coerce.number().min(0).max(1).optional().default(0.2),
+  scroll: z
+    .enum([
+      "static",
+      "down",
+      "up",
+      "left",
+      "right",
+      "diagonal",
+      "sineDown",
+      "sway",
+      "sineUp",
+    ])
+    .optional()
+    .default("static"),
+});
+export type DecorationInput = z.infer<typeof decorationSchema>;
 
 export const profileSchema = z.object({
   displayName,

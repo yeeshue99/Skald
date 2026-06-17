@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { Metadata } from "next";
 import { requireCampaignContext } from "@/lib/campaign";
-import { themeToCssVars, themeDataAttrs, normalizeTheme } from "@/lib/themes";
+import { campaignRenderProps, normalizeTheme } from "@/lib/themes";
 import { cn } from "@/lib/cn";
 import type { PersonaSummary } from "@/lib/queries";
 import { getUnreadNotificationCount } from "@/lib/queries";
@@ -79,6 +79,13 @@ export default async function CampaignLayout({
   const { slug } = await params;
   const ctx = await requireCampaignContext(slug);
 
+  // campaign theme + this member's personal decoration (if any) layered on top.
+  // Other members have no selection, so they render the campaign default.
+  const { dataAttrs, cssVars } = campaignRenderProps(
+    ctx.campaign.theme,
+    ctx.selectedDecoration,
+  );
+
   const enabled = new Set(normalizeTheme(ctx.campaign.theme).decorations!.effects);
   const particleEffects = PARTICLE_EFFECTS.filter((e) => enabled.has(e));
   const cardEffectClasses = CARD_EFFECTS.filter((e) => enabled.has(e)).map(
@@ -101,8 +108,8 @@ export default async function CampaignLayout({
 
   return (
     <div
-      {...themeDataAttrs(ctx.campaign.theme)}
-      style={themeToCssVars(ctx.campaign.theme)}
+      {...dataAttrs}
+      style={cssVars}
       className={cn("min-h-dvh bg-bg font-body text-text", cardEffectClasses)}
     >
       {/* texture backdrop is drawn by [data-campaign]::before in globals.css */}

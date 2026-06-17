@@ -36,6 +36,13 @@
       "when": 1781665857208,
       "tag": "0004_better_search",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1781760000000,
+      "tag": "0005_personal_decorations",
+      "breakpoints": true
     }
   ]
 }

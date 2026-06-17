@@ -155,6 +155,20 @@ body {
   display: none;
 }
 
+/* custom (player-uploaded) backdrop. The image and sizing come from inline vars
+   (--texture-image / --texture-size / --texture-repeat) emitted by
+   campaignRenderProps; opacity (--texture-opacity) and any drift (data-bg-scroll)
+   reuse the shared texture machinery on this same ::before layer. Only the
+   selecting member's own request gets data-texture="custom"; everyone else keeps
+   their campaign texture. */
+[data-campaign][data-texture="custom"]::before {
+  display: block;
+  background-image: var(--texture-image, none);
+  background-size: var(--texture-size, 240px);
+  background-repeat: var(--texture-repeat, repeat);
+  background-position: center;
+}
+
 /* The static wash layer. Present only for the three real textures. */
 [data-campaign][data-texture="starchart"]::after,
 [data-campaign][data-texture="parchment"]::after,

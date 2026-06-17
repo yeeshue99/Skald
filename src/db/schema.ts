@@ -14,7 +14,7 @@ import {
   check,
   customType,
 } from "drizzle-orm/pg-core";
-import type { Theme } from "../lib/theme-types";
+import type { Theme, DecorationSpec } from "../lib/theme-types";
 import { PERSONA_AVATAR_FRAMES } from "../lib/theme-types";
 
 // All instants are timestamptz so scheduling and feed ordering are timezone-safe.
@@ -90,6 +90,13 @@ export const memberships = pgTable(
       (): typeof personas.id => personas.id,
       { onDelete: "set null" },
     ),
+    // this member's chosen personal decoration in this campaign (nullable ->
+    // null means "use the campaign/world default"). Set to null if that
+    // decoration is deleted, so the member silently falls back to the default.
+    selectedDecorationId: integer("selected_decoration_id").references(
+      (): typeof decorations.id => decorations.id,
+      { onDelete: "set null" },
+    ),
     joinedAt: tstz("joined_at").notNull().defaultNow(),
   },
   (t) => [
@@ -139,6 +146,32 @@ export const personas = pgTable(
     unique("personas_id_campaign_unique").on(t.id, t.campaignId),
     index("personas_owner_idx").on(t.ownerUserId, t.campaignId),
   ],
+);
+
+// ---------------------------------------------------------------------------
+// decorations — player-authored decoration "mods". A member creates one in a
+// campaign (an uploaded backdrop image + a declarative spec) and may select it
+// for themselves via memberships.selectedDecorationId; everyone else keeps the
+// campaign default. Scoped to (campaign, owner): a decoration lives in the one
+// campaign it was made for, and is owned by its author.
+// ---------------------------------------------------------------------------
+export const decorations = pgTable(
+  "decorations",
+  {
+    id: serial("id").primaryKey(),
+    campaignId: integer("campaign_id")
+      .notNull()
+      .references(() => campaigns.id, { onDelete: "cascade" }),
+    ownerUserId: integer("owner_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    // the declarative decoration spec (see DecorationSpec). Never executed; the
+    // render layer maps it onto the existing decoration CSS machinery.
+    spec: jsonb("spec").$type<DecorationSpec>().notNull(),
+    createdAt: tstz("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("decorations_owner_idx").on(t.ownerUserId, t.campaignId)],
 );
 
 // ---------------------------------------------------------------------------
@@ -482,6 +515,7 @@ export type User = typeof users.$inferSelect;
 export type Campaign = typeof campaigns.$inferSelect;
 export type Membership = typeof memberships.$inferSelect;
 export type Persona = typeof personas.$inferSelect;
+export type Decoration = typeof decorations.$inferSelect;
 export type Post = typeof posts.$inferSelect;
 export type Follow = typeof follows.$inferSelect;
 export type Like = typeof likes.$inferSelect;

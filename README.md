@@ -30,6 +30,10 @@ members, personas, theme, and invite code, all isolated from each other.
   ambient motion), applied at runtime via data attributes and CSS variables and
   gated by `prefers-reduced-motion`. Presets for arcane academia, parchment
   fantasy, sci-fi cyberpunk, and botanical, plus a neutral default.
+- Personal decorations: on top of the campaign theme, any member can upload their
+  own feed backdrop (a declarative "mod", not raw CSS) and apply it just to
+  themselves in that campaign from an Appearance page. Everyone else keeps the
+  world default.
 - Accounts: invite-code registration, DM member provisioning, self-service change
   password, DM password reset, and first-sign-in onboarding.
 - Images upload to Vercel Blob (avatars, banners, post images), with a pasted-URL
