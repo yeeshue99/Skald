@@ -1,9 +1,9 @@
-import "./load-env";
+import "../load-env";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { eq, inArray } from "drizzle-orm";
 import bcrypt from "bcryptjs";
-import { db } from "./index";
+import { db } from "../index";
 import {
   campaigns,
   follows,
@@ -12,23 +12,23 @@ import {
   personas,
   posts,
   users,
-} from "./schema";
-import { getPreset } from "../lib/themes";
-import { generateInviteCode } from "../lib/ids";
-import { generateAvatar, generatePostImage } from "../lib/image-gen";
+} from "../schema";
+import { getPreset } from "../../lib/themes";
+import { generateInviteCode } from "../../lib/ids";
+import { generateAvatar, generatePostImage } from "../../lib/image-gen";
 import {
   HANDLE_RE,
   MAX_BIO_LENGTH,
   MAX_DISPLAY_NAME,
   MAX_POST_LENGTH,
-} from "../lib/validation";
+} from "../../lib/validation";
 
 // ---------------------------------------------------------------------------
 // Seeds a campaign from a JSON payload (the shape produced by the worldbuilder
 // prompt). Idempotent: re-running wipes the prior campaign of the same slug and
 // the user accounts it created, then rebuilds. Run with:
 //   pnpm seed:petalfall            (defaults to scripts/seed.petalfall.json)
-//   pnpm tsx src/db/seed-petalfall.ts path/to/other.json my-slug
+//   pnpm tsx src/db/seeds/seed-petalfall.ts path/to/other.json my-slug
 // ---------------------------------------------------------------------------
 
 const DATA_FILE = process.argv[2] ?? "scripts/seed.petalfall.json";

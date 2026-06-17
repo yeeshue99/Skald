@@ -239,7 +239,7 @@ under Unreleased.
 
 ### Campaign seeding
 
-- Reusable JSON seeder (`src/db/seed-petalfall.ts`, `pnpm seed:petalfall`):
+- Reusable JSON seeder (`src/db/seeds/seed-petalfall.ts`, `pnpm seed:petalfall`):
   validates a world payload, then creates the campaign, NPC and PC personas,
   posts (replies / quotes / boosts), likes, and follows. Idempotent re-runs.
   Supports an optional per-persona `account` login (real name to sign in, alias

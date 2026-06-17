@@ -174,7 +174,7 @@ of posts with likes and follows) from a prompt, then load it in one command.
 2. Seed it:
 
    ```bash
-   pnpm tsx src/db/seed-petalfall.ts scripts/seed.myworld.json my-world
+   pnpm tsx src/db/seeds/seed-petalfall.ts scripts/seed.myworld.json my-world
    ```
 
    (`pnpm seed:petalfall` with no args loads the bundled Petalfall demo.)

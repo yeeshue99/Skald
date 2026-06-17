@@ -2,7 +2,7 @@
 
 Give this prompt to a capable LLM to generate a `seed.json` for a new campaign,
 then load it with the seeder (see the README's "Seeding a campaign from a world"
-section). The JSON shape here is exactly what `src/db/seed-petalfall.ts` reads.
+section). The JSON shape here is exactly what `src/db/seeds/seed-petalfall.ts` reads.
 
 Replace the bracketed inputs, then paste everything below to the model.
 
